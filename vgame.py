@@ -97,12 +97,12 @@ class artist:
     # 所有舞台、资源的存储以及调配
     #====================================================================
     '''
-    def __init__(self, screen, ticks, entry):
+    def __init__(self, screen, ticks):
         self.screen     = screen
         self.ticks      = ticks
         self.theaters   = {}
         self.framerate  = pygame.time.Clock()
-        self.currrent   = entry
+        self.currrent   = None
 
     def update(self):
         self.framerate.tick(self.ticks)
@@ -139,7 +139,8 @@ class artist:
         # 在B场景内的东西就自动改变，一种设计思路。
         self.theaters[theater.theater_name] = theater
         theater.artist = self
-
+        if not self.currrent:
+            self.currrent = theater.theater_name # 第一次注册的舞台将默认作为入口舞台
 
 
     # test func. 随机切换到非当前场景的其他场景的方法，只有一个场景的话不会切换，用于测试
@@ -165,7 +166,8 @@ class theater:
                  bg_filename,       # 背景图片（不确定开发：动态背景？例如白天黑夜效果？其实，白天黑夜可以通过加一层半透明黑的actor实现。）
                  theater_name,      # 场景名字，用于定位、调整、切换场景使用
                  screen_pos=(0,0),  # 后期扩展，扩大缩小地图时候可能需要的参数（可能不仅限于此）
-                 gametype='slg',    # 后期扩展，用于配置该场景的游戏类型
+                 blocks=None,       # 后期扩展，用于配置该场景是否需要切分细块，可指定两个数字参数的tuple或list，作为横纵切分数量
+                 singles=[(40,40),(60,60),(80,80),(100,100)], # 单元大小，blocks被设定时，该参数会被使用，默认使用第一个，扩展地图缩放
                  music=None         # 后期扩展，音乐
                  ):
         self.theater_name   = theater_name
@@ -173,12 +175,15 @@ class theater:
         self.group          = pygame.sprite.Group()
         self.background     = None
         self.artist         = None
+        self.blocks         = blocks # 用于被actor调用，检查是否对单位进行缩放到单元格大小的操作
+        self.singles        = singles
+        self.single         = singles[0]
 
         # 创建每个场景都需要一个默认的背景，图片加载失败就会用默认的某种颜色填充
         self._add_background(bg_filename)
 
-
-        self._slg_mk_map(10,10)
+        if blocks:
+            self._mk_blocks_map(*blocks) # 对背景切块,blocks切块参数传递的地方
 
     def regist(self,actor):
         if actor.image:
@@ -189,27 +194,37 @@ class theater:
             actor.theater = self
 
 
-    # 创建slg游戏类型的地图信息
-    def _slg_mk_map(self, nraws, ncols):
-##        测试函数内容
-##        v = self.background.image
-##        for i in dir(v):
-##            print(i)
-##        print(v.get_size())
+    # 创建切块的地图信息，slg，2drpg...绝大多数非动作类游戏都有这样的需求。
+    def _mk_blocks_map(self,ncols,nraws):
 
         # 背景大小，一般用这个作为地图切割
         width, height = self.background.image.get_size()
-        
-        ncols, nraws
+        singlew, singleh = self.single
+        width,   height  = self.background.image.get_size()
+        new_w,   new_h   = singlew*ncols, singleh*nraws
 
+        cur_single = int(width/ncols),int(height/nraws)
+        if self.single != cur_single:
+            self.background.image = pygame.transform.scale(self.background.image,(new_w,new_h))
+
+        # 画网格线条，用于后续扩展
+        color = (255,255,255)
+        for i in range(1,ncols):
+            pygame.draw.line(self.background.image,color,(i*singlew,0),(i*singlew,new_h),1)
+        for i in range(1,nraws):
+            pygame.draw.line(self.background.image,color,(0,i*singleh),(new_w,i*singleh),1)
+
+        print(self.single,(width, height),(ncols, nraws))
 
 
 
     # 每个场景的创建必须要一张图片作为背景。
     def _add_background(self, bg_filename):
+
+        # 背景也是actor实现
         act = actor(bg_filename)
         act.update = lambda screen, ticks: screen.blit(act.image, self.screen_pos) if act.image else \
-                     lambda screen, ticks: screen.fill((0,0,100)) # 默认背景，暂时有点bug，以后再改
+                     lambda screen, ticks: screen.fill((0,0,100)) # 默认背景，暂时有点非破坏性bug，以后再改
         if act.image:
             self.group.add(act)
             self.background = act
@@ -248,7 +263,7 @@ class actor(pygame.sprite.Sprite):
         # 如果图片以例如 someimg_100x100_32.png 的名字存储的话，则会识别成动态图
         # 100x100代表单帧图片的大小，32代表了动态速率
         # 请尽量将名字配置中的100x100与长宽成倍数比，详细判定规则见下面这行代码
-        # 下面的代码还是在配置上稍微有一些局限，比如原图有200x200只取三张图，这点就无法配置
+        # 下面的代码还是在配置上稍微有一些局限，比如原图有200x200只取三张100x100的图，目前就无法配置
         # 后续遇到其他情况再改
         # ...
         move = re.findall('_(\d+)x(\d+)_(\d+)\.',img.lower())
@@ -258,12 +273,13 @@ class actor(pygame.sprite.Sprite):
             src_h,src_w = image.get_height(),image.get_width()
             pro_h,pro_w = move[:2]
             nraws,ncols = int(src_h/pro_h),int(src_w/pro_w)
-            mfunc = lambda i:(i[0]*pro_w, i[1]*pro_h, pro_w, pro_h)
+            mfunc       = lambda i:(i[0]*pro_w, i[1]*pro_h, pro_w, pro_h)
+            all_rects   = list(map(mfunc,product(range(ncols),range(nraws)))) # 后期可以添加配置参数考虑用切片方式操作这里
 
             self.src_image  = image
             self.rate       = move[2] # 用于控制速率
             self.cur_tick   = 0
-            self.rects      = cycle(map(mfunc,product(range(ncols),range(nraws))))
+            self.rects      = cycle(all_rects)
 
         return image
 
@@ -276,10 +292,12 @@ class actor(pygame.sprite.Sprite):
         if self.active and self._time_update(ticks):
             self.image = self.src_image.subsurface(next(self.rects))
 
-        # 通过这样的方法可以实现修改图片大小，不过由于修改大小这部应该会消耗资源，
+        # 通过以下方法可以实现修改图片大小，不过由于修改大小这部应该会消耗资源，
         # 每次加载都要修改一次大小，所以之后考虑优化的方式，让速度变得更快一些
-        # 或者可以考虑放在 self.load_img函数当中
-        self.image = pygame.transform.scale(self.image, (200,100))
+        # 或者可以考虑放在 self.load_img函数当中，地图切块时需要考虑单元块的适配
+        # 将 actor注册进 theater可以获取 theater里面设定的单位大小，后续可能需要扩展多格单位
+        if self.theater.blocks:
+            self.image = pygame.transform.scale(self.image,self.theater.single) 
 
         # 测试鼠标跟随，后期删除
         x, y = pygame.mouse.get_pos()
@@ -288,10 +306,8 @@ class actor(pygame.sprite.Sprite):
         self.rect[0] = x
         self.rect[1] = y
         
-        # self.rect.fit(self.rect.inflate(-50,-50)) # rect对象只能修改区域大小，不能修改图片大小
-
         # 测试删除对象本身，后期删除
-        if pygame.key.get_pressed()[K_s]:
+        if pygame.key.get_pressed()[K_s]:# 键盘s键删除自身单位
             self.kill()
 
 
@@ -307,13 +323,11 @@ class initer:
                  size   = (640, 480),    # screen
                  flag   = 0,
                  depth  = 32,
-                 entry  = 'entry'
                  ):
 
         self.ticks      = ticks
-        self.entry      = entry
         self.screen     = pygame.display.set_mode(size, flag, depth)
-        self.artist     = artist(self.screen,self.ticks,self.entry)
+        self.artist     = artist(self.screen,self.ticks)
         pygame.display.set_caption(title)
 
     def regist(self,theater):
@@ -337,8 +351,8 @@ class initer:
         while True:
             self.artist.update()
 
-            # 一些非常全局，关闭之类的事件可以考虑放在这里
-            # 不过另一些关于触发式的关闭保存类就还是尽量放在场景里面会更好一些
+            # 一些非常全局，关闭之类的事件可以考虑放在这里，快照存档之类也可
+            # 不过另一些关于触发式的关闭保存类就还是尽量放在舞台里面会更好一些
             if pygame.key.get_pressed()[K_ESCAPE]:
                 exit()
         
@@ -355,12 +369,12 @@ if __name__ == "__main__":
     cur = 'sprite_100x100_32.png'
 
     s = initer()
-    v1 = theater(bg1,'entry')
+    v1 = theater(bg1,'123') # theater必须要指定两个元素，背景图片地址，舞台名字（舞台切换用）
     actor1 = actor(cur)
     v1.regist(actor1)
     
 
-    v2 = theater(bg2,'sea')
+    v2 = theater(bg2,'sea',blocks=(16,12))
     actor2 = actor(cur)
     v2.regist(actor2)
 
