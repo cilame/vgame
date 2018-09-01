@@ -3,6 +3,7 @@ from pygame.locals import *
 
 import re
 import random
+import time
 from itertools import cycle, product
 
 
@@ -108,21 +109,20 @@ class artist:
         self.framerate.tick(self.ticks)
         ticks = pygame.time.get_ticks()
 
+        # 先把底层涂黑
+        self.screen.fill((0,0,0))
+
         # 这里就需要对指定的剧场进行更新，就是场景切换的扩展就在这里
         self.theaters[self.currrent].group.update(self.screen, ticks)
         self.theaters[self.currrent].group.draw(self.screen)
 
-
-
-
-        # 测试按键，后期删除
+        # 测试按键，后期删除，一般关于舞台的控制操作尽量封装在舞台类里面会更好一些
         #============================================
         for event in pygame.event.get():
             if event.type == QUIT :exit()
             if event.type == KEYDOWN:
                 if event.key == K_c :self._random_change()# 键盘C测试切换触发随机场景的变化
         #============================================
-
 
 
         pygame.display.flip()
@@ -167,7 +167,8 @@ class theater:
                  theater_name,      # 场景名字，用于定位、调整、切换场景使用
                  screen_pos=(0,0),  # 后期扩展，扩大缩小地图时候可能需要的参数（可能不仅限于此）
                  blocks=None,       # 后期扩展，用于配置该场景是否需要切分细块，可指定两个数字参数的tuple或list，作为横纵切分数量
-                 singles=[(40,40),(60,60),(80,80),(100,100)], # 单元大小，blocks被设定时，该参数会被使用，默认使用第一个，扩展地图缩放
+                 singles=[(30,30),(40,40),(60,60),(80,80)], # 单元大小，blocks被设定时，该参数会被使用，默认使用第一个，扩展地图缩放
+                 single_line=[(255,255,255),1],               # 单元格分割线的颜色和粗细
                  music=None         # 后期扩展，音乐
                  ):
         self.theater_name   = theater_name
@@ -175,15 +176,19 @@ class theater:
         self.group          = pygame.sprite.Group()
         self.background     = None
         self.artist         = None
-        self.blocks         = blocks # 用于被actor调用，检查是否对单位进行缩放到单元格大小的操作
-        self.singles        = singles
+
+        self.blocks         = blocks
         self.single         = singles[0]
+        self.singles        = singles
+        self.singles_image  = {}
+        self.single_color   = single_line[0] if single_line else None
+        self.single_thick   = single_line[1] if single_line else None
 
         # 创建每个场景都需要一个默认的背景，图片加载失败就会用默认的某种颜色填充
         self._add_background(bg_filename)
 
         if blocks:
-            self._mk_blocks_map(*blocks) # 对背景切块,blocks切块参数传递的地方
+            self._mk_blocks_map() # 对背景切块,blocks切块参数传递的地方
 
     def regist(self,actor):
         if actor.image:
@@ -195,40 +200,88 @@ class theater:
 
 
     # 创建切块的地图信息，slg，2drpg...绝大多数非动作类游戏都有这样的需求。
-    def _mk_blocks_map(self,ncols,nraws):
+    def _mk_blocks_map(self):
 
-        # 背景大小，一般用这个作为地图切割
-        width, height = self.background.image.get_size()
+        # 背景大小，一般用这个作为地图切割。必须要有扩展地图的缩放，否则该类型游戏表现力将会很差
+        ncols,   nraws   = self.blocks
         singlew, singleh = self.single
         width,   height  = self.background.image.get_size()
         new_w,   new_h   = singlew*ncols, singleh*nraws
-
         cur_single = int(width/ncols),int(height/nraws)
-        if self.single != cur_single:
-            self.background.image = pygame.transform.scale(self.background.image,(new_w,new_h))
 
-        # 画网格线条，用于后续扩展
-        color = (255,255,255)
-        for i in range(1,ncols):
-            pygame.draw.line(self.background.image,color,(i*singlew,0),(i*singlew,new_h),1)
-        for i in range(1,nraws):
-            pygame.draw.line(self.background.image,color,(0,i*singleh),(new_w,i*singleh),1)
+        if self.single != cur_single:
+            # 节约资源的做法，同时也能保证不会因为尺寸变化丢失背景图片精度
+            if self.single in self.singles_image:
+                self.background.image = self.singles_image[self.single]
+            else:
+                self.singles_image[self.single] = pygame.transform.scale(self.background.image,(new_w,new_h))
+                self.background.image = pygame.transform.scale(self.background.image,(new_w,new_h))
+
+        # 画网格线条，便于查看显示，这里没有与背景一体化是考虑可能会有动态关闭显示方块线的功能
+        # 当然也有其他扩展的方法能更节省资源，不过这不是重点以后再考虑
+        if self.single_color:
+            color,thick = self.single_color,self.single_thick
+            for i in range(1,ncols):
+                pygame.draw.line(self.background.image,color,(i*singlew,0),(i*singlew,new_h),thick)
+            for i in range(1,nraws):
+                pygame.draw.line(self.background.image,color,(0,i*singleh),(new_w,i*singleh),thick)
 
         print(self.single,(width, height),(ncols, nraws))
 
-
-
     # 每个场景的创建必须要一张图片作为背景。
     def _add_background(self, bg_filename):
-
+        
         # 背景也是actor实现
         act = actor(bg_filename)
-        act.update = lambda screen, ticks: screen.blit(act.image, self.screen_pos) if act.image else \
-                     lambda screen, ticks: screen.fill((0,0,100)) # 默认背景，暂时有点非破坏性bug，以后再改
+        def _default_theater(screen, ticks):
+            # 键盘 + - 控制缩放
+            self._change_size() 
+
+            sw,sh = screen.get_size()
+            bw,bh = self.background.image.get_size()
+            px = (sw-bw)/2 if bw<=sw else 0
+            py = (sh-bh)/2 if bh<=sh else 0
+
+            # 通过修改rect来修改放置的中心点
+            act.rect[0] = px
+            act.rect[1] = py
+
+
+
+
+            # 目前的工作就需要在这里处理完中心缩放以及后续添加一个找地图坐标点的函数
+            #=======================================================================
+
+            
+
+        act.update = _default_theater
+        
         if act.image:
             self.group.add(act)
             self.background = act
 
+
+    # 目前用简单的 + 和 - 键来控制地图缩放
+    def _change_size(self):
+
+        def _change_blocks(toggle):
+            v = list(range(len(self.singles)))
+            x = self.singles.index(self.single)
+            if toggle == '+': ret = self.singles[x+1] if x+1 in v else self.single
+            if toggle == '-': ret = self.singles[x-1] if x-1 in v else self.single
+            if self.single != ret:
+                self.single = ret
+                self._mk_blocks_map()
+
+        # 这里需要设计两种放大缩小的方式，一种是blocks式的缩放，另一种只是单纯的缩放。
+        # 这里暂时想不到更巧妙的按键设计，pygame.event.get() 属于消耗型事件，所以不能随便堆加使用。
+        if pygame.key.get_pressed()[K_KP_PLUS]:
+            if self.blocks:
+                _change_blocks('+'); time.sleep(.1)
+        if pygame.key.get_pressed()[K_KP_MINUS]:
+            if self.blocks:
+                _change_blocks('-'); time.sleep(.1)
+        
 
 class actor(pygame.sprite.Sprite):
     '''
@@ -355,8 +408,7 @@ class initer:
             # 不过另一些关于触发式的关闭保存类就还是尽量放在舞台里面会更好一些
             if pygame.key.get_pressed()[K_ESCAPE]:
                 exit()
-        
-                
+
 
 
 
@@ -364,7 +416,7 @@ class initer:
 
 
 if __name__ == "__main__":
-    bg1 = 'sushiplate.jpg'
+    bg1 = 'sushipla1te.jpg'
     bg2 = 'sea.jpg'
     cur = 'sprite_100x100_32.png'
 
