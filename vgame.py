@@ -176,7 +176,7 @@ class theater:
         self.background     = None
         self.artist         = None
 
-        # 用于缩放功能的参数
+        # 用于缩放功能的参数，后续考虑默认最大屏的接口
         self.blocks         = blocks
         self.single         = singles[0]
         self.singles        = singles
@@ -189,8 +189,8 @@ class theater:
         self._add_background(bg_filename)
 
         # 用于坐标定位的参数
-        self.point2map      = None
-        self.map2point      = None
+        self.point2coord      = None
+        self.coord2point      = None
 
         if blocks:
             self._mk_blocks_map() # 对背景切块,blocks切块参数传递的地方
@@ -206,13 +206,20 @@ class theater:
     # 创建切块的地图信息，slg，2drpg...绝大多数非动作类游戏都有这样的需求。
     def _mk_blocks_map(self):
 
-        # 背景大小，一般用这个作为地图切割。必须要有扩展地图的缩放，否则该类型游戏表现力将会很差
+        # 背景大小，一般用这个作为地图切割。扩展地图的缩放功能，否则该类型游戏表现力将会很差
         ncols,   nraws   = self.blocks
         singlew, singleh = self.single
         width,   height  = self.background.image.get_size()
         new_w,   new_h   = singlew*ncols, singleh*nraws
         cur_single       = int(width/ncols),int(height/nraws)
 
+        # 角色坐标与地图坐标的双向dict寻址，方便 actor的计算
+        px,py = list(range(ncols)),         list(range(nraws))
+        qx,qy = map(lambda i:i*singlew,px), map(lambda i:i*singleh,py)
+        point = list(product(px,py))
+        coord = list(product(qx,qy))
+        self.point2coord = dict(zip(point,coord))
+        self.coord2point = dict(zip(coord,point))
 
         # 节约资源的做法，同时也能保证不会因为尺寸变化丢失背景图片精度
         if self.single in self.singles_image:
@@ -223,14 +230,14 @@ class theater:
         if self.single != cur_single:
             self.background.image = self.singles_image[self.single]
 
-        # 当然也有其他扩展的方法能更节省资源。目前没有动态开关线条的功能，后续再考虑开发。
+        # 画切割线，当然也有其他扩展的方法能更节省资源。目前没有动态开关线条的功能，后续再考虑开发。
         if self.single_color:
             color,thick = self.single_color,self.single_thick
             for i in range(1,ncols):
                 pygame.draw.line(self.background.image,color,(i*singlew,0),(i*singlew,new_h),thick)
             for i in range(1,nraws):
                 pygame.draw.line(self.background.image,color,(0,i*singleh),(new_w,i*singleh),thick)
-            self.single_color = None # 解决由于地图缩放，导致的线条重绘制使得显示线条变粗
+            self.single_color = None # 解决由于地图缩放，导致的线条重绘制使得显示线条变粗的问题
 
 
     # 每个场景的创建必须要一张图片作为背景。
@@ -244,7 +251,7 @@ class theater:
             if self._change_size():
                 self.toggle = True
 
-            # 控制缩放时的坐标。用toggle的好处为：在初始化时能够执行一次，之后需要缩放成功才会再度执行修改配置的代码
+            # 控制缩放时的坐标。用toggle的好处为：在初始化时能够执行一次，之后需要缩放成功修改配置
             if self.toggle:
                 sw,sh = screen.get_size()
                 bw,bh = self.background.image.get_size()
@@ -352,9 +359,9 @@ class actor(pygame.sprite.Sprite):
 
     def update(self,screen,ticks):
 
-        rate = self._time_update(ticks) # 由于 actor天生需要非常多的速度控制，所以 rate复用性很高
+        _flash = self._time_update(ticks) # 由于 actor天生需要非常多的速度控制，所以 rate复用性很高
         
-        if self.active and rate:
+        if self.active and _flash:
             self.image = self.src_image.subsurface(next(self.rects))
 
         # 通过以下方法可以实现修改图片大小，不过由于修改大小这部应该会消耗资源，
@@ -369,6 +376,9 @@ class actor(pygame.sprite.Sprite):
         x, y = pygame.mouse.get_pos()
         x-= self.image.get_width() // 2
         y-= self.image.get_height() // 2
+        v = self.rect_viscous() # 方块黏性测试
+        if v:
+            x,y = v
         self.rect[0] = x
         self.rect[1] = y
         
@@ -376,9 +386,40 @@ class actor(pygame.sprite.Sprite):
         if pygame.key.get_pressed()[K_s]:# 键盘s键删除自身单位
             self.kill()
 
-    # 黏性方块，让该对象具备黏性，传入参数可以是地图坐标，或者是一个鼠标坐标
-    def rect_viscous(self,point):
-        pass
+    # 黏性方块，让该对象具备blocks黏性，传入参数可以是地图坐标，或者是一个鼠标坐标
+    # 如果该 actor所在的 theater没有进行 blocks切分，那么就返回空，不整齐的地址也会返回空
+    def rect_viscous(self,point=None):
+
+        # 需要参与计算的环境参数有
+        sizex,sizey = self.theater.artist.screen.get_size()
+        diffw,diffh = self.theater.screen_pos
+        singw,singh = self.theater.single
+        point2coord = self.theater.point2coord
+
+        if self.theater.blocks:
+            # 如果 point为一个地图坐标，就获取坐标的界面坐标地址
+            if point:
+                if point in point2coord:
+                    _mapx,_mapy = point2coord[point]
+                    _mapx,_mapy = _mapx + diffw,_mapy + diffh
+                    return int(_mapx),int(_mapy)
+
+            # 如果 point为 None就获取的是鼠标地址下的方块左上角的坐标
+            else:
+                posx,posy = pygame.mouse.get_pos()
+                # 判断 diff* 参数是为了兼容地图小于界面时的情况
+                if diffw>0:
+                    if posx>sizex-diffw: posx = sizex-diffw-singw*.5
+                    elif posx<diffw: posx = diffw
+                if diffh>0:
+                    if posy>sizey-diffh: posy = sizey-diffh-singh*.5
+                    elif posy<diffh: posy = diffh
+                mapx,mapy = posx - diffw,posy - diffh
+                point = int(mapx/singw),int(mapy/singh)
+                if point in point2coord:
+                    _mapx,_mapy = point2coord[point]
+                    _mapx,_mapy = _mapx + diffw,_mapy + diffh
+                    return int(_mapx),int(_mapy)
 
 
 class initer:
@@ -437,7 +478,7 @@ if __name__ == "__main__":
     bg2 = 'sea.jpg'
     cur = 'sprite_100x100_32.png'
 
-    s = initer(50) # 第一个参数为全局帧率，默认60
+    s = initer(120) # 第一个参数为全局帧率，默认60
     v1 = theater(bg1,'123') # theater必须要指定两个元素，背景图片地址，舞台名字（舞台切换用）
     actor1 = actor(cur)
     v1.regist(actor1)
