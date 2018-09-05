@@ -176,6 +176,10 @@ class theater:
         self.background     = None
         self.artist         = None
 
+        # *暂未使用的参数，后续要考虑入场和出场的动画表演，否则切换场景会非常僵硬（至少要提供配置接口）
+        self.enter          = None
+        self.leave          = None
+
         # 用于缩放功能的参数，后续考虑默认最大屏的接口
         self.blocks         = blocks
         self.single         = singles[0]
@@ -314,6 +318,8 @@ class actor(pygame.sprite.Sprite):
         self.theater    = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
         self.viscous    = False
 
+        self.events     = pygame.sprite.Group()
+
     def load_img(self,img):
         if img is None: return None
         try:
@@ -357,20 +363,48 @@ class actor(pygame.sprite.Sprite):
             self.cur_tick = ticks
             return True
 
+
+    def regist(self,event):
+        
+        # 目前的任务就是将actor扩展出一个 event类的接口，和 theater类似的处理方法
+        # 该处理方法可以很方便的添加一些类似于对话框一类的插件，让插件和 actor对象进行分离
+        # 因为同一个剧场内的游戏表现方式会非常之多，有很多表演呈叠加状态，在同一剧场实现表演
+        # 所以让一些对象来承载这些功能可能会更好一些。这样的话也可以让游戏更好开发。
+        # 例如： slg 类型游戏可以通过实现一个光标（actor类实例），添加一个event，让光标承载显示属性框功能
+        #        slg 类型游戏可以通过实现一个角色（actor类实例），添加一个event，让角色承载某些触发型对话的实现
+        # 这样开发会更加自由
+        #
+        # 而基本的 theater 和 actor 就提供一些非常常用到的大类接口：
+        #     方块分割类游戏：方块黏着，坐标点之类的函数
+        #==============================================================================
+        self.events.add(event)
+        event.actor = self # 让事件对象能找到宿主本身
+
+
     def update(self,screen,ticks):
 
-        _flash = self._time_update(ticks) # 由于 actor天生需要非常多的速度控制，所以 rate复用性很高
+        _flash = self._time_update(ticks) # 由于 actor天生需要非常多的速度控制，所以 _flash这个数值复用性很高
         
-        if self.active and _flash:
+        if _flash and self.active:
             self.image = self.src_image.subsurface(next(self.rects))
+            # 通过以下方法可以实现修改图片大小，不过由于修改大小这部应该会消耗资源，
+            # 每次加载都要修改一次大小，所以之后考虑优化的方式，让速度变得更快一些
+            # 或者可以考虑放在 self.load_img函数当中，地图切块时需要考虑单元块的适配
+            # 将 actor注册进 theater可以获取 theater里面设定的单位大小，后续可能需要扩展多格单位
+            # 另外，这里的配置也不太科学。如果有blocks必然会修改尺寸，写太死了，后续再改。目前用于测试比较方便。
+            if self.theater.blocks:
+                self.image = pygame.transform.scale(self.image,self.theater.single)
 
-        # 通过以下方法可以实现修改图片大小，不过由于修改大小这部应该会消耗资源，
-        # 每次加载都要修改一次大小，所以之后考虑优化的方式，让速度变得更快一些
-        # 或者可以考虑放在 self.load_img函数当中，地图切块时需要考虑单元块的适配
-        # 将 actor注册进 theater可以获取 theater里面设定的单位大小，后续可能需要扩展多格单位
-        # 另外，这里的配置也不太科学。如果有blocks必然会修改尺寸，写太死了，后续再改。目前用于测试比较方便。
-        if self.theater.blocks:
-            self.image = pygame.transform.scale(self.image,self.theater.single) 
+
+        # 事件对象的更新执行可能需要放在这里，且Sprite对象需要image和rect参数
+        # 所以用group.update不能没有image单单考虑逻辑问题~~~或者后续这里根据image的有无来判断是否用group.update来跟新？
+        # 还要考虑图层的问题，直接通过对self.theater.artist.screen来用draw函数的话，是不行的
+        # 因为这样的会被theater自己的后置执行的background覆盖，所以考虑直接画在background（Sprite）的image上面会比较好一些
+        # 但是这个图层的问题还是很难解决，如果只是把
+        #==============================================================================
+        self.events.update()
+        self.events.draw(self.theater.background.image)
+
 
         # 测试鼠标跟随，后期删除
         x, y = pygame.mouse.get_pos()
@@ -378,7 +412,7 @@ class actor(pygame.sprite.Sprite):
         y-= self.image.get_height() // 2
         v = self.rect_viscous() # 方块黏性测试
         if v:
-            x,y = v
+            x,y = v[0]
         self.rect[0] = x
         self.rect[1] = y
         
@@ -415,11 +449,71 @@ class actor(pygame.sprite.Sprite):
                     if posy>sizey-diffh: posy = sizey-diffh-singh*.5
                     elif posy<diffh: posy = diffh
                 mapx,mapy = posx - diffw,posy - diffh
-                point = int(mapx/singw),int(mapy/singh)
+                cols,raws = self.theater.blocks
+                point = min(int(mapx/singw),cols-1),min(int(mapy/singh),raws-1)
                 if point in point2coord:
                     _mapx,_mapy = point2coord[point]
                     _mapx,_mapy = _mapx + diffw,_mapy + diffh
-                    return int(_mapx),int(_mapy)
+                    return (int(_mapx),int(_mapy)),point # 该函数同样返回坐标点数据，便于鼠标与数据交互
+
+
+
+
+
+
+
+# 重要！！！后续可能不将event作为一个sprite对象来处理
+# 因为sprite对象非常局限 # 后面都可能将events对象用来捕捉行为和调度功能！！！
+# 所以下面的注释之类的和相关的一切代码都会受到修改。慢慢开发吧。后续可能会修改关键字为events。
+
+
+
+
+
+# 感觉有必要抽象出一个事件类出来 # 但是有点复杂 # 必要性暂不可考证
+# 暂时就用 event 这个关键字了，暂时找不到更合适的单词，使用时候注意不要和pygame.event冲突就行
+class event(pygame.sprite.Sprite):
+    '''
+    #====================================================================
+    # 事件对象，主要用于实现各式各样依附于角色的事件
+    #====================================================================
+    '''
+    def __init__(self,img=None):
+        pygame.sprite.Sprite.__init__(self)
+        self.actor = None
+
+
+        # 需要定义这两个参数 # 仅用于测试
+        # 没有image和rect参数的话是不能被group.update执行的
+        self.image  = pygame.image.load(img).convert_alpha() if img else None
+        self.rect   = self.image.get_rect() if self.image else None
+        
+
+
+    def update(self):
+        pass
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class initer:
@@ -465,6 +559,7 @@ class initer:
             # 一些非常全局，关闭之类的事件可以考虑放在这里，快照存档之类也可
             # 不过另一些关于触发式的关闭保存类就还是尽量放在舞台里面会更好一些
             if pygame.key.get_pressed()[K_ESCAPE]:
+                pygame.quit()
                 exit()
 
 
@@ -479,8 +574,12 @@ if __name__ == "__main__":
     cur = 'sprite_100x100_32.png'
 
     s = initer(120) # 第一个参数为全局帧率，默认60
-    v1 = theater(bg1,'123') # theater必须要指定两个元素，背景图片地址，舞台名字（舞台切换用）
+    v1 = theater(bg1,'123') # theater必须要指定两个元素，背景图片地址，舞台名字（舞台切换用，键盘C键测试切换）
     actor1 = actor(cur)
+
+    e = event(cur)
+    
+    actor1.regist(e)
     v1.regist(actor1)
     
 
