@@ -66,7 +66,6 @@ from itertools import cycle, product
 #
 # 逻辑判断写在什么地方好呢？
 #
-#
 # 用initer  类生成主要的类，该类里面封装了一个artist类
 # 用theater 类生成舞台
 # 用actor   类生成演员
@@ -83,6 +82,8 @@ from itertools import cycle, product
 #
 # 演员（actor）对象注册进舞台
 # 舞台（theater）对象注册进总的表演类
+# 事件（events）默认每个actor对象默认自带一个，可以通过actor的参数进行一定程度的配置
+#       events 的实现就是这个框架比较功能性的核心扩展部分，所有我能想到的游戏功能就将会再events里面实现。
 #
 # 注册函数都包含一个反向关联的方法
 # 这样的方式可以让所有的演员（actor）也能有结构的找到全局数据
@@ -166,7 +167,7 @@ class theater:
     #====================================================================
     '''
     def __init__(self,
-                 bg_filename,       # 背景图片（不确定开发：动态背景？例如白天黑夜效果？其实，白天黑夜可以通过加一层半透明黑的actor实现。）
+                 bg_filename,       # 背景图片（不确定开发：动态背景？例如白天黑夜效果？其实，白天黑夜可以通过加一层半透明的actor实现。）
                  theater_name,      # 场景名字，用于定位、调整、切换场景使用
                  blocks=None,       # 后期扩展，用于配置该场景是否需要切分细块，可指定两个数字参数的tuple或list，作为横纵切分数量
                  singles=[(30,30),(40,40),(60,60),(80,80)],   # 单元大小，blocks被设定时，该参数会被使用，默认使用第一个，扩展地图缩放，以后考虑扩展更顺滑的缩放
@@ -478,18 +479,23 @@ class events:
         self.rate       = event_rate
         self.cur_tick   = 0
 
+        # 对象创建默认为未被控制，按照一般slg思路而已，控制的触发需要通过光标对象来修改实现
+        self.be_controlled = False
+
     def update(self,ticks):
         # 放弃使用 _flash 因为这个参数只有True或False，可控性为零，所以还是需要theater里传过来ticks来控制
         # 也比较方便配置按键的延迟速度。# 不配置时候，默认什么都不做
+        # 这里的ticks也可以通过self想上级类获取，但是直接传的话比较直观而已
+        if self.action == 'cursor' and self._key_delay(ticks):
+            self.general_direction_key()
 
-        if self.action == 'cursor':
-            self.up_down_left_right()
-            print(ticks)
-        pass
 
+        # 这里对action的判断可能有优化空间，后续再看。
+
+    def update_select_box(self,ticks):
+        # 光标的核心功能应该是改变当前坐标下的单位的被选择状态 # 这里需要着重处理鼠标事件的多样性
+        # 因为鼠标对于被选择而言有非常多的种类，单击选择，按住超过几秒进入拖拽模式，拖拽，或者是复选的实现需要打磨
         
-
-    def update_cursor(self,ticks):
         # 这里实现一般的选择框的功能。
         # 考虑是否有黏着框
         # 考虑方向键事件
@@ -498,64 +504,130 @@ class events:
         # 考虑展示框的问题
         pass
 
-
-    def update_info(self,ticks):
+    def update_character_info(self,ticks):
         # 最开始我写这个游戏框架就有奔着slg去的，所以我会先在这里实现信息展示的功能
         # 战场上的单位信息框就在这里实现，一般游戏中被选择后就实现简单的属性展示
         pass
 
+    def update_dialog(self,ticks):
+        # 顾名思义，对话框。任何现代的的游戏没有对话框的实现都是非常难以接受的。
+        # 哪怕像是矮人要塞那种游戏也有一个界面用来展示人物情绪一类的界面。
+        # 这个接口就是任何需要显示大段文字时提供一个文字展示框。
+        pass
 
 
-    def up_down_left_right(self):
+
+
+
+
+
+
+    def general_direction_key(self):
+        # 普通方向键处理（一般单个单位的方向移动处理）
+        
         # 处理一般的方向键的按键事件处理，一般用于角色移动或光标移动，（角色和光标都可以通过actor实现）
-
-        # 判断剧场是否使用粘性方块设计，然后再选择响应的方式
+        # 判断剧场是否使用粘性方块设计，然后再选择响应的方式，总之这个函数返回的是一个坐标或是像素坐标
         if self.actor.theater.blocks:
 
             # 控制粘性方块的上下左右需要的参数
             point = self.actor.point
             pw,ph = self.actor.theater.blocks
-            print(point,pw,ph) ################ 简单打印测试
-            key = pygame.key.get_pressed()
-
-            # 使用粘性方块的时候还需要考虑到是否point不为空
-            # 另外还需要考虑当前角色是否被控制，如果自己被控制才会执行控制参数
-
-            # 直接修改point，光标的地图跟随功能需要考虑
+            # 使用粘性方块的时候还需要考虑到是否point不为空 # 另外还需要考虑当前角色是否被控制（新参数）
             # 方向操作需要实现的各个参数，而且不良组合键需要考虑，比如同时按上和下不需要执行任何动作
-            a = key[pygame.K_UP]
-            b = key[pygame.K_DOWN]
-            c = key[pygame.K_LEFT]
-            d = key[pygame.K_RIGHT]
-            e = key[pygame.HAT_UP]
-            f = key[pygame.HAT_DOWN]
-            g = key[pygame.HAT_LEFT]
-            h = key[pygame.HAT_RIGHT]
-            i = key[pygame.HAT_LEFTUP]
-            j = key[pygame.HAT_LEFTDOWN]
-            k = key[pygame.HAT_RIGHTUP]
-            l = key[pygame.HAT_RIGHTDOWN]
-
-
-
-
-            # 目前任务，暂时还在考虑怎么处理按键的反馈
-            #===========================================================================
-
-
-
             
-            #if key[]
+            ret = self._key_pressed() # 获取当前按键（或组合键）的方向，以小键盘八方向数字为准
+            print(ret)
+
+
+
+
+            # 目前任务，暂时还在考虑怎么处理按键的反馈，直接修改point？光标的地图跟随功能需要考虑？
+            #===========================================================================
             pass
 
-        # 非粘性方块设计的操作通过这里实现
+
+
+
+
+        # 非粘性方块设计的操作通过这里实现，不规则光标移动在很多游戏里面非常常见，所以有必要更好的考虑这点
+        # 等我slg这边能够实现之后再考虑吧，
         else:
             pass
 
+    def combined_direction_key(self):
+        # 组合体的方向键处理问题（处理多个物体同时移动的状况）
+        
+        # 暂时只能缓存一个开发的轮廓概念，因为这部分在写完一般方向键处理之后，
+        # 再估计一下组合体用一般方向键函数处理实现的难度再考虑后续的是否需要单独出这个函数出来。
+        pass
+
+
+
+
+    def _mouse_pressed(self):
+        # 鼠标的话需要考虑几个状态
+
+        # 1 左键单击（持续按，不超过一个很微小的时间，然后松开）
+        # 2 左键持续（持续按，超过一个很微小的时间）
+        # 3 右键同理
+        # 4 右键同理
+        # 5 复选模式（可能需要返回一个界面区域的rect交给后续处理，返回值也要考虑
+
+        
+        pass
+
+    def _key_pressed(self):
+        # 一个简单获取八个方向的函数，如果是方向键则优先方向键
+        # 方向键最大同时按两个方向组合键，且要合法（不能同时上下之类）
+        # 如果没有用方向键用小键盘则只能同时按一个按键
+        # 返回参数为小键盘上八个方向的数字，没有则为0，其他函数根据数字进行后续操作即可
+        key = pygame.key.get_pressed()
+        ret = 0
+        a = key[pygame.K_UP]
+        b = key[pygame.K_DOWN]
+        c = key[pygame.K_LEFT]
+        d = key[pygame.K_RIGHT]
+        v = [a,b,c,d]
+        if any(v):
+            if v.count(1) == 1:
+                if a: ret = 8
+                if b: ret = 2
+                if c: ret = 4
+                if d: ret = 6
+            if v.count(1) == 2:
+                if a and c: ret = 7
+                if a and d: ret = 9
+                if b and c: ret = 1
+                if b and d: ret = 3
+
+        if ret == 0:
+            e = key[pygame.K_KP8]
+            f = key[pygame.K_KP2]
+            g = key[pygame.K_KP4]
+            h = key[pygame.K_KP6]
+            i = key[pygame.K_KP7]
+            j = key[pygame.K_KP1]
+            k = key[pygame.K_KP9]
+            l = key[pygame.K_KP3]
+            v = [e,f,g,h,i,j,k,l]
+            if v.count(1) == 1:
+                if e: ret = 8
+                if f: ret = 2
+                if g: ret = 4
+                if h: ret = 6
+                if i: ret = 7
+                if j: ret = 1
+                if k: ret = 9
+                if l: ret = 3
+        return ret
+
+
+
     def _key_delay(self,ticks):
-        # 因为之后设计的所有按键操作都将会放弃通过 pygame.event.get() 获取事件的方式来获取控制
+        # 因为之后设计的所有按键操作都将会“放弃”通过 pygame.event.get() 获取事件的方式来获取控制
         # 因为 pygame.event.get() 得到的事件属于消耗品，这里获取到的话，别的地方就不能得到这个事件。
-        # 所以这里一律使用 pygame.key.get_pressed() 来实现功能。通过延迟来实现按键执行的速率。
+        # 这无疑是对单击事件是非常灾难性的。# 所以这里一律使用 pygame.key.get_pressed() 来实现功能，
+        # 这里通过延迟来实现按键执行的速率，避免方向事件五连发卡式的漂移。
         if ticks - self.cur_tick > self.rate:
             self.cur_tick = ticks
             return True
@@ -571,11 +643,9 @@ class events:
 
 
 # 对了，单位的属性和计算需要封装在什么地方好呢？
-# 装载的地方可以是放在全局的artist里面，但是也有一些数据仅仅只在theater舞台初始化
-# 所以需要考虑一些舞台初始化的数据
+# 装载的地方可以是放在全局的artist里面，但是也有一些数据仅仅只在theater舞台初始化时候才会出现
 # 例如一些角色的等级经验肯定是需要全局存储的
 # 例如一些角色进入新的战场后血量需要初始化为满值一类的，不同的单位之间的战斗也需要考虑到数据怎么交互和计算
-# 慢慢来了
 
 
 
@@ -662,7 +732,7 @@ if __name__ == "__main__":
     # 指定blocks之后会按照列行数量对图片切分，然后以每块大小默认为（30，30）进行缩放显示，支持动态缩放
     v2 = theater(bg2,'sea',blocks=(16,12))
     actor2 = actor(cur)
-    actor3 = actor(cur,(3,3),action='cursor')
+    actor3 = actor(cur,(3,3),'cursor',32)
     v2.regist(actor2)
     v2.regist(actor3)
 
