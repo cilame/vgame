@@ -110,7 +110,7 @@ class artist:
         ticks = pygame.time.get_ticks()
 
         # 先把底层涂黑
-        self.screen.fill((0,0,0))
+        self.screen.fill((0,0,100))
 
         # 这里就需要对指定的剧场进行更新，就是场景切换的扩展就在这里
         self.theaters[self.currrent].group.update(self.screen, ticks)
@@ -151,6 +151,9 @@ class artist:
             name = random.choice(v)
             self.change_theater(name)
     
+
+
+
 
 class theater:
     '''
@@ -301,16 +304,23 @@ class theater:
                 return v
         
 
+
 class actor(pygame.sprite.Sprite):
     '''
     #====================================================================
     # 行为对象，主要用于实现更方便的加载图片资源的方法
     #====================================================================
     '''
-    def __init__(self, img=None):
+    def __init__(self, img=None, point=None, action=None):
         pygame.sprite.Sprite.__init__(self)
 
         self.active     = False
+        self.point      = point# point参数，如果theater里面存在blocks，point被设置就放置在坐标位置
+
+        # 一些默认配置，用于图片动画的刷新率，可以通过图片名字进行配置，注意这里的配置要放在self.load_img(img)函数之前
+        # self.load_img(img)函数过后，如果有匹配到图片名字的配置，会自动配置新的参数。
+        self.rate       = 0
+        self.cur_tick   = 0
 
         # 加载图片倘若名字符合动图处理规则加载函数内就会修改self.active，用动图处理方式
         self.image      = self.load_img(img)
@@ -318,42 +328,42 @@ class actor(pygame.sprite.Sprite):
         self.theater    = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
         self.viscous    = False
 
-        self.events     = pygame.sprite.Group()
+        self.events     = self.regist(events(action))
 
     def load_img(self,img):
         if img is None: return None
         try:
             image = pygame.image.load(img).convert_alpha()
+            # 后面判断是否使用动态展示图片
+            # 就是一种更为方便的配置图片数据的方法。原本打算用gif的，不过考虑到gif需要外部库
+            # 而且经过测试，图片缩小方法似乎并不好用。所以暂时放弃兼容gif。
+            # 后续必须考虑兼容，因为用任意gif作为角色确实很有意思。
+            # ...
+            #
+            # 如果图片以例如 someimg_100x100_32.png 的名字存储的话，则会识别成动态图
+            # 100x100代表单帧图片的大小，32代表了动态速率
+            # 请尽量将名字配置中的100x100与长宽成倍数比，详细判定规则见下面这行代码
+            # 下面的代码还是在配置上稍微有一些局限，比如原图有200x200只取三张100x100的图，目前就无法配置
+            # 后续遇到其他情况再改
+            # ...
+            move = re.findall('_(\d+)x(\d+)_(\d+)\.',img.lower())
+            if move:
+                move = list(map(int,move[0]))
+                self.active = True
+                src_h,src_w = image.get_height(),image.get_width()
+                pro_h,pro_w = move[:2]
+                nraws,ncols = int(src_h/pro_h),int(src_w/pro_w)
+                mfunc       = lambda i:(i[0]*pro_w, i[1]*pro_h, pro_w, pro_h)
+                all_rects   = list(map(mfunc,product(range(ncols),range(nraws)))) # 后期可以添加配置参数考虑用切片方式操作这里
+
+                self.src_image  = image
+                self.rate       = move[2] # 用于控制速率
+                self.cur_tick   = 0
+                self.rects      = cycle(all_rects)
+
         except:
             print("无法加载图片.",img)
             image = None
-
-        # 后面判断是否使用动态展示图片
-        # 就是一种更为方便的配置图片数据的方法。原本打算用gif的，不过考虑到gif需要外部库
-        # 而且经过测试，图片缩小方法似乎并不好用。所以暂时放弃兼容gif。
-        # 后续必须考虑兼容，因为用任意gif作为角色确实很有意思。
-        # ...
-        #
-        # 如果图片以例如 someimg_100x100_32.png 的名字存储的话，则会识别成动态图
-        # 100x100代表单帧图片的大小，32代表了动态速率
-        # 请尽量将名字配置中的100x100与长宽成倍数比，详细判定规则见下面这行代码
-        # 下面的代码还是在配置上稍微有一些局限，比如原图有200x200只取三张100x100的图，目前就无法配置
-        # 后续遇到其他情况再改
-        # ...
-        move = re.findall('_(\d+)x(\d+)_(\d+)\.',img.lower())
-        if move:
-            move = list(map(int,move[0]))
-            self.active = True
-            src_h,src_w = image.get_height(),image.get_width()
-            pro_h,pro_w = move[:2]
-            nraws,ncols = int(src_h/pro_h),int(src_w/pro_w)
-            mfunc       = lambda i:(i[0]*pro_w, i[1]*pro_h, pro_w, pro_h)
-            all_rects   = list(map(mfunc,product(range(ncols),range(nraws)))) # 后期可以添加配置参数考虑用切片方式操作这里
-
-            self.src_image  = image
-            self.rate       = move[2] # 用于控制速率
-            self.cur_tick   = 0
-            self.rects      = cycle(all_rects)
 
         return image
 
@@ -364,28 +374,20 @@ class actor(pygame.sprite.Sprite):
             return True
 
 
-    def regist(self,event):
+    def regist(self,events):
         
-        # 目前的任务就是将actor扩展出一个 event类的接口，和 theater类似的处理方法
-        # 该处理方法可以很方便的添加一些类似于对话框一类的插件，让插件和 actor对象进行分离
-        # 因为同一个剧场内的游戏表现方式会非常之多，有很多表演呈叠加状态，在同一剧场实现表演
-        # 所以让一些对象来承载这些功能可能会更好一些。这样的话也可以让游戏更好开发。
-        # 例如： slg 类型游戏可以通过实现一个光标（actor类实例），添加一个event，让光标承载显示属性框功能
-        #        slg 类型游戏可以通过实现一个角色（actor类实例），添加一个event，让角色承载某些触发型对话的实现
-        # 这样开发会更加自由
-        #
-        # 而基本的 theater 和 actor 就提供一些非常常用到的大类接口：
-        #     方块分割类游戏：方块黏着，坐标点之类的函数
+        # 目前大改，所有actor对象内部默认生成一个 events对象，直接通过action关键字来配置默认功能即可
         #==============================================================================
-        self.events.add(event)
-        event.actor = self # 让事件对象能找到宿主本身
+        events.actor = self # 让事件对象能找到宿主本身
+        self.events = events # 这里是为了兼容外部events的注册
+        return events
 
 
     def update(self,screen,ticks):
 
         _flash = self._time_update(ticks) # 由于 actor天生需要非常多的速度控制，所以 _flash这个数值复用性很高
-        
-        if _flash and self.active:
+
+        if self.active and _flash:
             self.image = self.src_image.subsurface(next(self.rects))
             # 通过以下方法可以实现修改图片大小，不过由于修改大小这部应该会消耗资源，
             # 每次加载都要修改一次大小，所以之后考虑优化的方式，让速度变得更快一些
@@ -396,21 +398,18 @@ class actor(pygame.sprite.Sprite):
                 self.image = pygame.transform.scale(self.image,self.theater.single)
 
 
-        # 事件对象的更新执行可能需要放在这里，且Sprite对象需要image和rect参数
-        # 所以用group.update不能没有image单单考虑逻辑问题~~~或者后续这里根据image的有无来判断是否用group.update来跟新？
-        # 还要考虑图层的问题，直接通过对self.theater.artist.screen来用draw函数的话，是不行的
-        # 因为这样的会被theater自己的后置执行的background覆盖，所以考虑直接画在background（Sprite）的image上面会比较好一些
-        # 但是这个图层的问题还是很难解决，如果只是把
+        # events将放弃继承 Sprite类，因为events用于调度角色的功能，
+        # 不应该让其变成sprite增加配置其函数帧率变化配置的麻烦。可以考虑在events内部配置别的actor类作为调度功能
         #==============================================================================
-        self.events.update()
-        self.events.draw(self.theater.background.image)
+        self.events.update(_flash)
+
 
 
         # 测试鼠标跟随，后期删除
         x, y = pygame.mouse.get_pos()
         x-= self.image.get_width() // 2
         y-= self.image.get_height() // 2
-        v = self.rect_viscous() # 方块黏性测试
+        v = self.rect_viscous(self.point) # 方块黏性测试
         if v:
             x,y = v[0]
         self.rect[0] = x
@@ -436,7 +435,7 @@ class actor(pygame.sprite.Sprite):
                 if point in point2coord:
                     _mapx,_mapy = point2coord[point]
                     _mapx,_mapy = _mapx + diffw,_mapy + diffh
-                    return int(_mapx),int(_mapy)
+                    return (int(_mapx),int(_mapy)),point
 
             # 如果 point为 None就获取的是鼠标地址下的方块左上角的坐标
             else:
@@ -460,48 +459,47 @@ class actor(pygame.sprite.Sprite):
 
 
 
-
-
-# 重要！！！后续可能不将event作为一个sprite对象来处理
-# 因为sprite对象非常局限 # 后面都可能将events对象用来捕捉行为和调度功能！！！
-# 所以下面的注释之类的和相关的一切代码都会受到修改。慢慢开发吧。后续可能会修改关键字为events。
-
-
-
-
-
-# 感觉有必要抽象出一个事件类出来 # 但是有点复杂 # 必要性暂不可考证
-# 暂时就用 event 这个关键字了，暂时找不到更合适的单词，使用时候注意不要和pygame.event冲突就行
-class event(pygame.sprite.Sprite):
+class events:
     '''
     #====================================================================
     # 事件对象，主要用于实现各式各样依附于角色的事件
     #====================================================================
     '''
-    def __init__(self,img=None):
-        pygame.sprite.Sprite.__init__(self)
-        self.actor = None
+    def __init__(self, action=None):
+        # 作为一个良性发展中的框架，每个actor都会生成一个属于他们自身的events对象在类内部
+        # 而且后续也会写一些比较适合一般游戏配置的框架，这就这个框架所要事项的功能主要做的事情了
+        # 状态转化 # 战斗计算 # 血条显示之类 # 属性配置之类 # 子弹发射 # 我个人想到什么就扩展什么，各种功能...
+        # 让开发者只需要通过 actor 进行配置即可拥有这些功能，通过action来配置这些场景内的功能。
+        # 如果实现功能太过专一就有点像是写游戏而非框架了。
+        #
+        # 主要是在这个类里面实现对操作的捕捉功能
+        self.action = action
+        self.actor  = None
 
-
-        # 需要定义这两个参数 # 仅用于测试
-        # 没有image和rect参数的话是不能被group.update执行的
-        self.image  = pygame.image.load(img).convert_alpha() if img else None
-        self.rect   = self.image.get_rect() if self.image else None
-        
-
-
-    def update(self):
+    def update(self,_flash):
+        # _flash 是用于控制刷星速率的参数，一般用于角色自身运动的刷新率，默认与角色自身运动同频率
+        # 之后会考虑暴露出去一些可以操作的接口
+        # 不配置时候，默认什么都不做
         pass
+
         
 
+    def update_cursor(self,_flash):
+        # 这里实现一般的选择框的功能。
+
+        # 考虑是否有黏着框
+
+        # 考虑方向键事件
+
+        # 考虑移动时候地图跟随的问题
+
+        # 考虑选择框按下事件以及属性查看的功能（这个还是能够轻松获取到该点下的坐标点以及坐标下角色坐标的属性）
+
+        # 考虑展示框的问题
+        pass
 
 
-
-
-
-
-
-
+    
 
 
 
@@ -576,17 +574,21 @@ if __name__ == "__main__":
     s = initer(120) # 第一个参数为全局帧率，默认60
     v1 = theater(bg1,'123') # theater必须要指定两个元素，背景图片地址，舞台名字（舞台切换用，键盘C键测试切换）
     actor1 = actor(cur)
+    # 现在每个actor内部都会产生一个events对象来实现自身的功能，不过仍然可以通过外部注册的方式将外部events对象注入actor内部
 
-    e = event(cur)
-    
+    e = events(cur)
     actor1.regist(e)
+
+    
     v1.regist(actor1)
     
 
     # 指定blocks之后会按照列行数量对图片切分，然后以每块大小默认为（30，30）进行缩放显示，支持动态缩放
     v2 = theater(bg2,'sea',blocks=(16,12))
     actor2 = actor(cur)
+    actor3 = actor(cur,(3,3))
     v2.regist(actor2)
+    v2.regist(actor3)
 
     s.regist(v1)
     s.regist(v2)
