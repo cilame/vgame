@@ -311,14 +311,14 @@ class actor(pygame.sprite.Sprite):
     # 行为对象，主要用于实现更方便的加载图片资源的方法
     #====================================================================
     '''
-    def __init__(self, img=None, point=None, action=None):
+    def __init__(self, img=None, point=None, action=None, event_rate=60):
         pygame.sprite.Sprite.__init__(self)
 
         self.active     = False
-        self.point      = point# point参数，如果theater里面存在blocks，point被设置就放置在坐标位置
+        self.point      = point # point参数，如果theater里面存在blocks，point被设置就放置在坐标位置
 
         # 一些默认配置，用于图片动画的刷新率，可以通过图片名字进行配置，注意这里的配置要放在self.load_img(img)函数之前
-        # self.load_img(img)函数过后，如果有匹配到图片名字的配置，会自动配置新的参数。
+        # self.load_img(img)函数过后，如果有匹配到图片名字的配置，会自动配置新的参数。防止图片加载失败报错弹出。
         self.rate       = 0
         self.cur_tick   = 0
 
@@ -328,7 +328,7 @@ class actor(pygame.sprite.Sprite):
         self.theater    = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
         self.viscous    = False
 
-        self.events     = self.regist(events(action))
+        self.events     = self.regist(events(action, event_rate))
 
     def load_img(self,img):
         if img is None: return None
@@ -391,7 +391,7 @@ class actor(pygame.sprite.Sprite):
             self.image = self.src_image.subsurface(next(self.rects))
             # 通过以下方法可以实现修改图片大小，不过由于修改大小这部应该会消耗资源，
             # 每次加载都要修改一次大小，所以之后考虑优化的方式，让速度变得更快一些
-            # 或者可以考虑放在 self.load_img函数当中，地图切块时需要考虑单元块的适配
+            # 或者可以考虑放在 self.load_img函数当中，地图切块时需要考虑单元块的适配？
             # 将 actor注册进 theater可以获取 theater里面设定的单位大小，后续可能需要扩展多格单位
             # 另外，这里的配置也不太科学。如果有blocks必然会修改尺寸，写太死了，后续再改。目前用于测试比较方便。
             if self.theater.blocks:
@@ -399,9 +399,9 @@ class actor(pygame.sprite.Sprite):
 
 
         # events将放弃继承 Sprite类，因为events用于调度角色的功能，
-        # 不应该让其变成sprite增加配置其函数帧率变化配置的麻烦。可以考虑在events内部配置别的actor类作为调度功能
+        # 不应该让其变成sprite增加配置其函数帧率变化配置的麻烦。可以考虑在events内部配置别的actor类作为子弹一类功能的实现
         #==============================================================================
-        self.events.update(_flash)
+        self.events.update(ticks)
 
 
 
@@ -465,7 +465,7 @@ class events:
     # 事件对象，主要用于实现各式各样依附于角色的事件
     #====================================================================
     '''
-    def __init__(self, action=None):
+    def __init__(self, action=None, event_rate=60):
         # 作为一个良性发展中的框架，每个actor都会生成一个属于他们自身的events对象在类内部
         # 而且后续也会写一些比较适合一般游戏配置的框架，这就这个框架所要事项的功能主要做的事情了
         # 状态转化 # 战斗计算 # 血条显示之类 # 属性配置之类 # 子弹发射 # 我个人想到什么就扩展什么，各种功能...
@@ -473,33 +473,109 @@ class events:
         # 如果实现功能太过专一就有点像是写游戏而非框架了。
         #
         # 主要是在这个类里面实现对操作的捕捉功能
-        self.action = action
-        self.actor  = None
+        self.action     = action
+        self.actor      = None
+        self.rate       = event_rate
+        self.cur_tick   = 0
 
-    def update(self,_flash):
-        # _flash 是用于控制刷星速率的参数，一般用于角色自身运动的刷新率，默认与角色自身运动同频率
-        # 之后会考虑暴露出去一些可以操作的接口
-        # 不配置时候，默认什么都不做
+    def update(self,ticks):
+        # 放弃使用 _flash 因为这个参数只有True或False，可控性为零，所以还是需要theater里传过来ticks来控制
+        # 也比较方便配置按键的延迟速度。# 不配置时候，默认什么都不做
+
+        if self.action == 'cursor':
+            self.up_down_left_right()
+            print(ticks)
         pass
 
         
 
-    def update_cursor(self,_flash):
+    def update_cursor(self,ticks):
         # 这里实现一般的选择框的功能。
-
         # 考虑是否有黏着框
-
         # 考虑方向键事件
-
         # 考虑移动时候地图跟随的问题
-
         # 考虑选择框按下事件以及属性查看的功能（这个还是能够轻松获取到该点下的坐标点以及坐标下角色坐标的属性）
-
         # 考虑展示框的问题
         pass
 
 
-    
+    def update_info(self,ticks):
+        # 最开始我写这个游戏框架就有奔着slg去的，所以我会先在这里实现信息展示的功能
+        # 战场上的单位信息框就在这里实现，一般游戏中被选择后就实现简单的属性展示
+        pass
+
+
+
+    def up_down_left_right(self):
+        # 处理一般的方向键的按键事件处理，一般用于角色移动或光标移动，（角色和光标都可以通过actor实现）
+
+        # 判断剧场是否使用粘性方块设计，然后再选择响应的方式
+        if self.actor.theater.blocks:
+
+            # 控制粘性方块的上下左右需要的参数
+            point = self.actor.point
+            pw,ph = self.actor.theater.blocks
+            print(point,pw,ph) ################ 简单打印测试
+            key = pygame.key.get_pressed()
+
+            # 使用粘性方块的时候还需要考虑到是否point不为空
+            # 另外还需要考虑当前角色是否被控制，如果自己被控制才会执行控制参数
+
+            # 直接修改point，光标的地图跟随功能需要考虑
+            # 方向操作需要实现的各个参数，而且不良组合键需要考虑，比如同时按上和下不需要执行任何动作
+            a = key[pygame.K_UP]
+            b = key[pygame.K_DOWN]
+            c = key[pygame.K_LEFT]
+            d = key[pygame.K_RIGHT]
+            e = key[pygame.HAT_UP]
+            f = key[pygame.HAT_DOWN]
+            g = key[pygame.HAT_LEFT]
+            h = key[pygame.HAT_RIGHT]
+            i = key[pygame.HAT_LEFTUP]
+            j = key[pygame.HAT_LEFTDOWN]
+            k = key[pygame.HAT_RIGHTUP]
+            l = key[pygame.HAT_RIGHTDOWN]
+
+
+
+
+            # 目前任务，暂时还在考虑怎么处理按键的反馈
+            #===========================================================================
+
+
+
+            
+            #if key[]
+            pass
+
+        # 非粘性方块设计的操作通过这里实现
+        else:
+            pass
+
+    def _key_delay(self,ticks):
+        # 因为之后设计的所有按键操作都将会放弃通过 pygame.event.get() 获取事件的方式来获取控制
+        # 因为 pygame.event.get() 得到的事件属于消耗品，这里获取到的话，别的地方就不能得到这个事件。
+        # 所以这里一律使用 pygame.key.get_pressed() 来实现功能。通过延迟来实现按键执行的速率。
+        if ticks - self.cur_tick > self.rate:
+            self.cur_tick = ticks
+            return True
+
+
+
+
+
+
+
+
+
+
+
+# 对了，单位的属性和计算需要封装在什么地方好呢？
+# 装载的地方可以是放在全局的artist里面，但是也有一些数据仅仅只在theater舞台初始化
+# 所以需要考虑一些舞台初始化的数据
+# 例如一些角色的等级经验肯定是需要全局存储的
+# 例如一些角色进入新的战场后血量需要初始化为满值一类的，不同的单位之间的战斗也需要考虑到数据怎么交互和计算
+# 慢慢来了
 
 
 
@@ -586,7 +662,7 @@ if __name__ == "__main__":
     # 指定blocks之后会按照列行数量对图片切分，然后以每块大小默认为（30，30）进行缩放显示，支持动态缩放
     v2 = theater(bg2,'sea',blocks=(16,12))
     actor2 = actor(cur)
-    actor3 = actor(cur,(3,3))
+    actor3 = actor(cur,(3,3),action='cursor')
     v2.regist(actor2)
     v2.regist(actor3)
 
