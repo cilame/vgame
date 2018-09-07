@@ -93,6 +93,10 @@ from itertools import cycle, product
 '''
 
 
+
+
+
+
 class artist:
     '''
     #====================================================================
@@ -156,6 +160,12 @@ class artist:
 
 
 
+
+
+
+
+
+
 class theater:
     '''
     #====================================================================
@@ -172,12 +182,13 @@ class theater:
                  blocks=None,       # 后期扩展，用于配置该场景是否需要切分细块，可指定两个数字参数的tuple或list，作为横纵切分数量
                  singles=[(30,30),(40,40),(60,60),(80,80)],   # 单元大小，blocks被设定时，该参数会被使用，默认使用第一个，扩展地图缩放，以后考虑扩展更顺滑的缩放
                  single_line=[(255,255,255,150),1],           # 单元格分割线的颜色和粗细，这个默认值暂且是为了开发方便
-                 music=None         # 后期扩展，音乐
+                 music=None         # 后期扩展，音乐          # 细粒度测试使用的尺寸 [(i,i) for i in range(30,80)]，细粒度会照成背景变形
                  ):
         self.theater_name   = theater_name
         self.screen_pos     = (0,0)
         self.group          = pygame.sprite.Group()
         self.background     = None
+        self.bg_actor       = None
         self.artist         = None
 
         # *暂未使用的参数，后续要考虑入场和出场的动画表演，否则切换场景会非常僵硬（至少要提供配置接口）
@@ -197,8 +208,13 @@ class theater:
         self._add_background(bg_filename)
 
         # 用于坐标定位的参数
-        self.point2coord      = None
-        self.coord2point      = None
+        self.point2coord    = None
+        self.coord2point    = None
+
+        # 用于对地图尺寸操作时的强制延迟硬编码，以及修改尺寸前一刻的地图尺寸（用于尺寸转换时的定位）
+        self.cur_tick       = 0
+        self.map_uprate     = 100
+        self.image_size     = None
 
         if blocks:
             self._mk_blocks_map() # 对背景切块,blocks切块参数传递的地方
@@ -245,42 +261,47 @@ class theater:
                 pygame.draw.line(self.background.image,color,(i*singlew,0),(i*singlew,new_h),thick)
             for i in range(1,nraws):
                 pygame.draw.line(self.background.image,color,(0,i*singleh),(new_w,i*singleh),thick)
-            self.single_color = None # 解决由于地图缩放，导致的线条重绘制使得显示线条变粗的问题
+            self.single_color = None # *这里没能解决由于地图缩放，导致的线条重绘制使得显示线条变粗的问题
 
 
     # 每个场景的创建必须要一张图片作为背景。
     def _add_background(self, bg_filename):
         
         # 背景也是通过 actor类实例化实现
-        act = actor(bg_filename)
+        self.bg_actor = actor(bg_filename)
         def _default_theater(screen, ticks):
             
             # 键盘 + - 控制缩放
-            if self._change_size():
+            if self._change_size(ticks):
                 self.toggle = True
 
             # 控制缩放时的坐标。用toggle的好处为：在初始化时能够执行一次，之后需要缩放成功修改配置
             if self.toggle:
                 sw,sh = screen.get_size()
-                bw,bh = self.background.image.get_size()
-                kw,kh = sw/2 - self.screen_pos[0], sh/2 - self.screen_pos[1]
-                tw,th = int(kw - bw/2), int(kh - bh/2)
-                px = (sw-bw)/2 if bw<=sw else tw
-                py = (sh-bh)/2 if bh<=sh else th
-                act.rect[0] = px # 通过修改rect来修改放置的中心点
-                act.rect[1] = py
+                bw,bh = self.image_size if self.image_size else self.background.image.get_size()
+                aw,ah = self.background.image.get_size() # 这是变后尺寸，之前没有指明变前尺寸，所以造成BUG
+
+                wk,hk = aw/bw, ah/bh
+                tw,th = int(sw/2-(sw/2-self.screen_pos[0])*wk),int(sh/2-(sh/2-self.screen_pos[1])*hk)
+
+                self.image_size = aw,ah # 更新变前尺寸
+                px = (sw-aw)/2 if aw<=sw else tw
+                py = (sh-ah)/2 if ah<=sh else th
+                
+                self.bg_actor.rect[0] = px # 通过修改rect来修改放置的中心点
+                self.bg_actor.rect[1] = py
                 self.screen_pos = (px, py) # 存储在类里面，后续应用于与其他函数交互
                 self.toggle = False
 
-        act.update = _default_theater
+        self.bg_actor.update = _default_theater
 
-        if act.image:
-            self.group.add(act)
-            self.background = act
+        if self.bg_actor.image:
+            self.group.add(self.bg_actor)
+            self.background = self.bg_actor
 
 
     # 目前用简单的 + 和 - 键来控制地图缩放
-    def _change_size(self):
+    def _change_size(self,ticks):
 
         def _change_blocks(toggle):
             v = list(range(len(self.singles)))
@@ -288,22 +309,43 @@ class theater:
             if toggle == '+': ret = self.singles[x+1] if x+1 in v else self.single
             if toggle == '-': ret = self.singles[x-1] if x-1 in v else self.single
             if self.single != ret:
-                self.single = ret
-                self._mk_blocks_map()
-                return True
+                if self._delay(ticks): # 延时设计，避免按键功能飘逸
+                    self.single = ret
+                    self._mk_blocks_map()
+                    return True
 
         # 这里进行了一次统一，之后都统一使用blocks式的缩放。因为这样实现可以更方便。
         # 也就是说，如果你需要缩放功能，请设置blocks参数，另外，将方块黏着的需求交给开发者会更能扩展实现功能。
-        # 这里暂时想不到更巧妙的按键设计，pygame.event.get() 属于消耗型事件，所以不能随便堆加使用。
         if pygame.key.get_pressed()[K_KP_PLUS]:
             if self.blocks:
-                v = _change_blocks('+'); time.sleep(.1)
+                v = _change_blocks('+')
                 return v
         if pygame.key.get_pressed()[K_KP_MINUS]:
             if self.blocks:
-                v = _change_blocks('-'); time.sleep(.1)
+                v = _change_blocks('-')
                 return v
+
+    def _delay(self,ticks):
+        if ticks - self.cur_tick > self.map_uprate:
+            self.cur_tick = ticks
+            return True
         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class actor(pygame.sprite.Sprite):
@@ -441,16 +483,9 @@ class actor(pygame.sprite.Sprite):
             # 如果 point为 None就获取的是鼠标地址下的方块左上角的坐标
             else:
                 posx,posy = pygame.mouse.get_pos()
-                # 判断 diff* 参数是为了兼容地图小于界面时的情况
-                if diffw>0:
-                    if posx>sizex-diffw: posx = sizex-diffw-singw*.5
-                    elif posx<diffw: posx = diffw
-                if diffh>0:
-                    if posy>sizey-diffh: posy = sizey-diffh-singh*.5
-                    elif posy<diffh: posy = diffh
                 mapx,mapy = posx - diffw,posy - diffh
                 cols,raws = self.theater.blocks
-                point = min(int(mapx/singw),cols-1),min(int(mapy/singh),raws-1)
+                point = max(min(int(mapx/singw),cols-1),0),max(min(int(mapy/singh),raws-1),0) # fix bug. -_-|||
                 if point in point2coord:
                     _mapx,_mapy = point2coord[point]
                     _mapx,_mapy = _mapx + diffw,_mapy + diffh
@@ -477,7 +512,22 @@ class events:
         self.action     = action
         self.actor      = None
         self.rate       = event_rate
+
+        # 帧率延时临时变量
         self.cur_tick   = 0
+
+        # 用于鼠标操作的参数（一般只有在鼠标按下时候会更新，所以不用担心资源浪费问题）
+        self.mouse_id     = None # in (0,1,2) 0代表左键，2代表右键，1代表中键
+        self.mouse_pos    = None
+        self.mouse_status = 0    # 按键状态（0无按，1按下，2松开瞬间）
+        self.mouse_toggle = True
+        self.mouse_tick   = 0
+        self.mouse_delay  = 100
+        self.cross_time   = False
+        self.cross_status = 0    # 判断状态（0判断，1单击，2框选，3地图拖拽）
+        self.limit_len    = 3.   # 一个阈值，与鼠标按下松开时，两点坐标点距离有关
+        self.drag_map_pos = None # 地图拖拽时最先按下的那个点与地图相关的坐标（注意是和地图相关而不是和界面相关）
+        self.drag_old_pos = None # 上一帧拖拽时，鼠标于界面的坐标点
 
         # 对象创建默认为未被控制，按照一般slg思路而已，控制的触发需要通过光标对象来修改实现
         self.be_controlled = False
@@ -486,11 +536,16 @@ class events:
         # 放弃使用 _flash 因为这个参数只有True或False，可控性为零，所以还是需要theater里传过来ticks来控制
         # 也比较方便配置按键的延迟速度。# 不配置时候，默认什么都不做
         # 这里的ticks也可以通过self想上级类获取，但是直接传的话比较直观而已
-        if self.action == 'cursor' and self._key_delay(ticks):
-            self.general_direction_key()
 
+        # 计划在配置时候用monkey patch的方式，用update_* 这些配置函数来替换该函数
+        # 这里的函数仅用于测试，后期该函数将什么都不做。仅用于被替换
+        if self.action == 'cursor':
+            if self._delay(ticks,self.rate):
+                self.general_direction_key()# 处理通常方向键
+                self.general_mouse(ticks)   # 处理通常鼠标键（鼠标需要处理一个延时所以传入ticks）
 
         # 这里对action的判断可能有优化空间，后续再看。
+
 
     def update_select_box(self,ticks):
         # 光标的核心功能应该是改变当前坐标下的单位的被选择状态 # 这里需要着重处理鼠标事件的多样性
@@ -519,9 +574,68 @@ class events:
 
 
 
+    #==============#
+    # 一般鼠标操作 #
+    #==============#
+    def general_mouse(self, ticks):
+        # 这里考虑的是怎么实现鼠标对大地图的拖动，这里主要实现的是组合功能的事情。
+        #
+        # 条件：
+        # if 起始点坐标与鼠标当前坐标的长度超过限制：
+        #     当作选框事件处理（在按键松开时执行）
+        # else:
+        #     1 如果按时未超过x秒，则一般处理（在按键松开时执行）
+        #     2 如果按时超过x秒，且起始点坐标当前坐标的长度未超过限制，地图拖拽处理
+        #       （在按键为松开时就以某个延迟循环执行）
+        #
+        # 设计时，因为有放下或松开问题，所以需要考虑到状态转换，
+        # 目前暂时只处理左键的功能，右键的功能暂时不知道是否应该放在这里处理。
+        # 
+        rem = self._mouse_pressed() # 获取当前鼠标操作数据
+        if rem and rem[0] == 0:
+            if self.cross_status == 0:
+                # rem：按键id，按键状态（0无按，1按下，2松开瞬间），起止两个坐标点，两坐标之间的长
+                if rem[1] == 1:
+                    # 随时检查长度和时间
+                    if self._mouse_delay(ticks,self.mouse_delay):
+                        if self.cross_time:
+                            if rem[4] < self.limit_len:
+                                self.cross_status = 3
+                                px,py = pygame.mouse.get_pos()
+                                mx,my = self.actor.theater.screen_pos
+                                self.drag_map_pos = px-mx,py-my
+                                self.drag_old_pos = px,py
+                        self.cross_time = True
+                        
+                if rem[1] == 2:
+                    if rem[4] >= self.limit_len:
+                        self.cross_status = 2
+                        self.cross_time = False
+                    else:
+                        self.cross_status = 1
+                        self.cross_time = False
 
+            if self.cross_status == 1:
+                print('单击状态')
+                self.cross_status = 0
 
+            if self.cross_status == 2:
+                print('框选状态')
+                self.cross_status = 0
 
+            if self.cross_status == 3:
+                print('地图状态',self.actor.theater.screen_pos)
+                self._map_mouse(rem[3])
+
+                if rem[1] == 2:
+                    self.drag_map_pos = None
+                    self.drag_old_pos = None
+                    self.cross_status = 0
+                    self.cross_time = False
+
+    #================#
+    # 一般方向键操作 #
+    #================#
     def general_direction_key(self):
         # 普通方向键处理（一般单个单位的方向移动处理）
         
@@ -535,46 +649,103 @@ class events:
             # 使用粘性方块的时候还需要考虑到是否point不为空 # 另外还需要考虑当前角色是否被控制（新参数）
             # 方向操作需要实现的各个参数，而且不良组合键需要考虑，比如同时按上和下不需要执行任何动作
             
-            ret = self._key_pressed() # 获取当前按键（或组合键）的方向，以小键盘八方向数字为准
-            print(ret)
+            rek = self._key_pressed() # 获取当前按键（或组合键）的方向，以小键盘八方向数字为准
 
-
-
+            # 测试输出
+            if rek:
+                print(rek)
 
             # 目前任务，暂时还在考虑怎么处理按键的反馈，直接修改point？光标的地图跟随功能需要考虑？
             #===========================================================================
             pass
-
-
-
-
 
         # 非粘性方块设计的操作通过这里实现，不规则光标移动在很多游戏里面非常常见，所以有必要更好的考虑这点
         # 等我slg这边能够实现之后再考虑吧，
         else:
             pass
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     def combined_direction_key(self):
         # 组合体的方向键处理问题（处理多个物体同时移动的状况）
-        
         # 暂时只能缓存一个开发的轮廓概念，因为这部分在写完一般方向键处理之后，
         # 再估计一下组合体用一般方向键函数处理实现的难度再考虑后续的是否需要单独出这个函数出来。
         pass
+
+    def _map_mouse(self,cur_pos):
+        # 地图拖动功能在这里实现
+        if cur_pos != self.drag_old_pos:
+            cx,cy = cur_pos
+            ox,oy = self.drag_old_pos
+            mx,my = self.actor.theater.screen_pos
+            w, h  = self.actor.theater.background.image.get_size() # 这里的参数将用于边界限制使用
+            nx,ny = mx+cx-ox, my+cy-oy
+            self.actor.theater.screen_pos = nx,ny
+            self.actor.theater.bg_actor.rect[0] = nx
+            self.actor.theater.bg_actor.rect[1] = ny
+            # 计算出于上一坐标关键帧的坐标差值，然后根据限制更新
+            # *（计划实现：地图过小时无操作，边界越界时不超过界面的25%）
+            self.drag_old_pos = cur_pos
+
 
 
 
 
     def _mouse_pressed(self):
         # 鼠标的话需要考虑几个状态
-
         # 1 左键单击（持续按，不超过一个很微小的时间，然后松开）
         # 2 左键持续（持续按，超过一个很微小的时间）
         # 3 右键同理
         # 4 右键同理
         # 5 复选模式（可能需要返回一个界面区域的rect交给后续处理，返回值也要考虑
+        # ...
+        # （暂时不需要支持双键同时按的情况）
+        # 由于以上功能需求，这里的返回的数据可以这样设计，以按下松开为一个周期进行返回
+        # 返回：按下的按键，按下的界面坐标，松开的界面坐标，前两个坐标的距离
+        # （时长就不封装在这个函数里面了，因为太集成不太好）
+        mouse = pygame.mouse.get_pressed()
 
-        
-        pass
+        # 鼠标未被按下
+        if self.mouse_status == 0:
+            if mouse.count(1) == 1:
+                # 这里需要扩展滚轮操作吗？
+                self.mouse_id     = mouse.index(1)
+                self.mouse_status = 1
+
+        # 鼠标按下的处理
+        if self.mouse_status == 1:
+            if self.mouse_toggle:
+                self.mouse_pos = pygame.mouse.get_pos() # 起始坐标
+                self.mouse_toggle = False
+            if mouse.count(1) != 1:
+                self.mouse_status = 2
+            cur_pos = pygame.mouse.get_pos() # 鼠标松开的坐标点
+            len_for_2point = ((self.mouse_pos[0]-cur_pos[0])**2 + (self.mouse_pos[1]-cur_pos[1])**2)**.5
+            return self.mouse_id, self.mouse_status ,self.mouse_pos, cur_pos, len_for_2point
+
+        # 鼠标松开的瞬间
+        if self.mouse_status == 2:
+            self.mouse_status = 0 # 松开后立马将状态转换成未按下的状态，让鼠标松开的操作仅返回一次
+            self.mouse_toggle = True # 同时将鼠标单次记录开关打开
+            cur_pos = pygame.mouse.get_pos() # 鼠标松开的坐标点
+            len_for_2point = ((self.mouse_pos[0]-cur_pos[0])**2 + (self.mouse_pos[1]-cur_pos[1])**2)**.5
+            # 按键id，按键状态，起止两个坐标点，两坐标之间的长度
+            return self.mouse_id, self.mouse_status, self.mouse_pos, cur_pos, len_for_2point
+
 
     def _key_pressed(self):
         # 一个简单获取八个方向的函数，如果是方向键则优先方向键
@@ -623,14 +794,21 @@ class events:
 
 
 
-    def _key_delay(self,ticks):
+    def _delay(self,ticks,rate):
         # 因为之后设计的所有按键操作都将会“放弃”通过 pygame.event.get() 获取事件的方式来获取控制
-        # 因为 pygame.event.get() 得到的事件属于消耗品，这里获取到的话，别的地方就不能得到这个事件。
+        # 因为 pygame.event.get() 得到的事件属于消耗品，这里获取到的话，别的地方就不一定能得到这个事件。
         # 这无疑是对单击事件是非常灾难性的。# 所以这里一律使用 pygame.key.get_pressed() 来实现功能，
-        # 这里通过延迟来实现按键执行的速率，避免方向事件五连发卡式的漂移。
-        if ticks - self.cur_tick > self.rate:
+        # 这里通过延迟来实现按键执行的速率，避免任意需要延迟的操作漂移。
+        # 这个地方为通用延时，和鼠标延时（鼠标延时类似于一种等待）还是有一些不太一样的。
+        if ticks - self.cur_tick > rate:
             self.cur_tick = ticks
             return True
+
+    def _mouse_delay(self,ticks,rate):
+        if ticks - self.mouse_tick > rate:
+            self.mouse_tick = ticks
+            return True
+
 
 
 
