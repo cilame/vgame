@@ -530,34 +530,39 @@ class events:
         self.drag_old_pos = None # 上一帧拖拽时，鼠标于界面的坐标点
 
         # 对象创建默认为未被控制，按照一般slg思路而已，控制的触发需要通过光标对象来修改实现
-        self.be_controlled = False
+        self.be_control   = False
+
+        # 一般图片画框
+        self.draw_rect    = None
+
+        if self.action == 'cursor':
+            self.update = self.update_select_cursor
 
     def update(self,ticks):
         # 放弃使用 _flash 因为这个参数只有True或False，可控性为零，所以还是需要theater里传过来ticks来控制
         # 也比较方便配置按键的延迟速度。# 不配置时候，默认什么都不做
-        # 这里的ticks也可以通过self想上级类获取，但是直接传的话比较直观而已
+        # 这里的ticks也可以通过self.actor...向上级类获取，但是直接传的话比较直观而已
 
         # 计划在配置时候用monkey patch的方式，用update_* 这些配置函数来替换该函数
-        # 这里的函数仅用于测试，后期该函数将什么都不做。仅用于被替换
-        if self.action == 'cursor':
-            if self._delay(ticks,self.rate):
-                self.general_direction_key()# 处理通常方向键
-                self.general_mouse(ticks)   # 处理通常鼠标键（鼠标需要处理一个延时所以传入ticks）
+        # 该函数将什么都不做，仅用于被替换。
+        pass
 
-        # 这里对action的判断可能有优化空间，后续再看。
-
-
-    def update_select_box(self,ticks):
+    def update_select_cursor(self,ticks):
         # 光标的核心功能应该是改变当前坐标下的单位的被选择状态 # 这里需要着重处理鼠标事件的多样性
         # 因为鼠标对于被选择而言有非常多的种类，单击选择，按住超过几秒进入拖拽模式，拖拽，或者是复选的实现需要打磨
         
-        # 这里实现一般的选择框的功能。
+        # 这里实现一般的光标选择框的功能。
         # 考虑是否有黏着框
         # 考虑方向键事件
         # 考虑移动时候地图跟随的问题
         # 考虑选择框按下事件以及属性查看的功能（这个还是能够轻松获取到该点下的坐标点以及坐标下角色坐标的属性）
         # 考虑展示框的问题
-        pass
+        # 考虑对话框功能
+        # 不过以上功能尽量以函数组件组件形式存在会更可控一些。
+        if self._delay(ticks,self.rate):
+            self.general_direction_key()# 处理通常方向键
+            self.general_mouse(ticks)   # 处理通常鼠标键（鼠标需要处理一个延时所以传入ticks）
+            self.general_draw_rect()
 
     def update_character_info(self,ticks):
         # 最开始我写这个游戏框架就有奔着slg去的，所以我会先在这里实现信息展示的功能
@@ -570,6 +575,45 @@ class events:
         # 这个接口就是任何需要显示大段文字时提供一个文字展示框。
         pass
 
+
+
+
+
+
+    # 自行体会的技巧，目前仅用于 一般文本显示 功能之中。
+    class draw_rect_cls(pygame.sprite.Sprite):
+        def __init__(self):
+            pygame.sprite.Sprite.__init__(self)
+
+    #==============#
+    # 一般文本显示 #
+    #==============#
+    def general_draw_rect(self):
+        # 目前是设计一个粗糙的显示文字的框，界面的25%以下部分都将用于显示对话框
+        # 该功能需要支持选择分支吗？或者，通过再设计一个选择文本框，与该功能交替使用？
+        # 两种实现方式：
+        # 1 文本显示通过添加入 theater.group 的最后一个实现，通过 kill 来结束显示（个人选择）
+        # 2 直接通过地图背景，绘制在地图上面，效果和实现的难度都不尽人意。
+
+        def _mk_draw_rect():
+            # 配置框的大小
+            w,h = self.actor.theater.artist.screen.get_size()
+            v = pygame.Surface((w,int(h/4))).convert_alpha()
+            v.fill((0,0,100,100))
+            self.draw_rect = self.draw_rect_cls()
+            self.draw_rect.image = v
+            self.draw_rect.rect  = (0,(h/4*3))
+            self.actor.theater.group.add(self.draw_rect)
+
+
+        # 测试是否能够显示外框
+        if self.draw_rect is None:
+            _mk_draw_rect()
+            
+            # self.draw_rect.kill() 消失方法
+
+
+        # *启动和关闭的方法目前还未设计，用怎样的方法实现才能有更好的兼具扩展和自实现的效果呢？
 
 
 
@@ -605,12 +649,15 @@ class events:
                                 mx,my = self.actor.theater.screen_pos
                                 self.drag_map_pos = px-mx,py-my
                                 self.drag_old_pos = px,py
+                            if rem[4] >= self.limit_len:
+                                # 框选状态需要考虑持续问题，因为需要考虑画选择框的矩形线
+                                # 所以后续这里再扩展矩形线的问题。
+                                self.cross_status = 2
                         self.cross_time = True
                         
                 if rem[1] == 2:
                     if rem[4] >= self.limit_len:
                         self.cross_status = 2
-                        self.cross_time = False
                     else:
                         self.cross_status = 1
                         self.cross_time = False
@@ -621,12 +668,13 @@ class events:
 
             if self.cross_status == 2:
                 print('框选状态')
-                self.cross_status = 0
+                if rem[1] == 2:
+                    self.cross_status = 0
+                    self.cross_time = False
 
             if self.cross_status == 3:
                 print('地图状态',self.actor.theater.screen_pos)
                 self._map_mouse(rem[3])
-
                 if rem[1] == 2:
                     self.drag_map_pos = None
                     self.drag_old_pos = None
@@ -687,7 +735,7 @@ class events:
         pass
 
     def _map_mouse(self,cur_pos):
-        # 地图拖动功能在这里实现
+        # 地图拖动功能在这里实现，后续实现边界拖拽时的限制
         if cur_pos != self.drag_old_pos:
             cx,cy = cur_pos
             ox,oy = self.drag_old_pos
@@ -698,9 +746,8 @@ class events:
             self.actor.theater.bg_actor.rect[0] = nx
             self.actor.theater.bg_actor.rect[1] = ny
             # 计算出于上一坐标关键帧的坐标差值，然后根据限制更新
-            # *（计划实现：地图过小时无操作，边界越界时不超过界面的25%）
+            # *（计划实现：地图过小时无操作，地图过大时边界越界时不超过界面的25%）
             self.drag_old_pos = cur_pos
-
 
 
 
@@ -722,7 +769,7 @@ class events:
         # 鼠标未被按下
         if self.mouse_status == 0:
             if mouse.count(1) == 1:
-                # 这里需要扩展滚轮操作吗？
+                # 这里需要扩展滚轮操作吗？（暂时没有硬需求，不考虑）
                 self.mouse_id     = mouse.index(1)
                 self.mouse_status = 1
 
@@ -805,6 +852,7 @@ class events:
             return True
 
     def _mouse_delay(self,ticks,rate):
+        # 鼠标的延迟在这里更类似于一种等待，实现鼠标长按功能
         if ticks - self.mouse_tick > rate:
             self.mouse_tick = ticks
             return True
@@ -907,7 +955,7 @@ if __name__ == "__main__":
     v1.regist(actor1)
     
 
-    # 指定blocks之后会按照列行数量对图片切分，然后以每块大小默认为（30，30）进行缩放显示，支持动态缩放
+    # 指定blocks之后会按照列行数量对图片切分，然后以每块大小默认为（30，30）进行缩放显示，支持地图缩放
     v2 = theater(bg2,'sea',blocks=(16,12))
     actor2 = actor(cur)
     actor3 = actor(cur,(3,3),'cursor',32)
