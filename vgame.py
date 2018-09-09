@@ -599,7 +599,7 @@ class events:
             # 配置框的大小
             w,h = self.actor.theater.artist.screen.get_size()
             v = pygame.Surface((w,int(h/4))).convert_alpha()
-            v.fill((0,0,100,100))
+            v.fill((0,0,100,150))
             self.draw_rect = self.draw_rect_cls()
             self.draw_rect.image = v
             self.draw_rect.rect  = (0,(h/4*3))
@@ -609,6 +609,12 @@ class events:
         # 测试是否能够显示外框
         if self.draw_rect is None:
             _mk_draw_rect()
+
+            ft = pygame.font.Font("simsun.ttc", 12)
+            fs = ft.render("简单测试一下文字输出。",False,(255,255,255))
+
+            print(fs.get_size())
+            self.draw_rect.image.blit(fs,(30,30))
             
             # self.draw_rect.kill() 消失方法
 
@@ -900,6 +906,7 @@ class initer:
                  depth  = 32,
                  ):
 
+        pygame.init()
         self.ticks      = ticks
         self.screen     = pygame.display.set_mode(size, flag, depth)
         self.artist     = artist(self.screen,self.ticks)
