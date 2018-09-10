@@ -5,6 +5,7 @@ import re
 import random
 import time
 from itertools import cycle, product
+from string import printable
 
 
 # 主要处理框架问题，实现普通的各类默认配置
@@ -309,7 +310,7 @@ class theater:
             if toggle == '+': ret = self.singles[x+1] if x+1 in v else self.single
             if toggle == '-': ret = self.singles[x-1] if x-1 in v else self.single
             if self.single != ret:
-                if self._delay(ticks): # 延时设计，避免按键功能飘逸
+                if self._delay(ticks): # 延时设计，避免按键功能漂移
                     self.single = ret
                     self._mk_blocks_map()
                     return True
@@ -459,7 +460,7 @@ class actor(pygame.sprite.Sprite):
         self.rect[1] = y
         
         # 测试删除对象本身，后期删除
-        if pygame.key.get_pressed()[K_s]:# 键盘s键删除自身单位
+        if pygame.key.get_pressed()[K_q]:# 键盘q键删除自身单位
             self.kill()
 
     # 黏性方块，让该对象具备blocks黏性，传入参数可以是地图坐标，或者是一个鼠标坐标
@@ -522,7 +523,7 @@ class events:
         self.mouse_status = 0    # 按键状态（0无按，1按下，2松开瞬间）
         self.mouse_toggle = True
         self.mouse_tick   = 0
-        self.mouse_delay  = 100
+        self.mouse_delay  = 100  # 鼠标按下多久不动后转变成地图拖拽模式
         self.cross_time   = False
         self.cross_status = 0    # 判断状态（0判断，1单击，2框选，3地图拖拽）
         self.limit_len    = 3.   # 一个阈值，与鼠标按下松开时，两点坐标点距离有关
@@ -534,7 +535,9 @@ class events:
 
         # 一般图片画框
         self.draw_rect    = None
+        self.text_size    = 14
 
+        # 直接通过 action参数实现对update函数的内置函数的配置
         if self.action == 'cursor':
             self.update = self.update_select_cursor
 
@@ -562,7 +565,7 @@ class events:
         if self._delay(ticks,self.rate):
             self.general_direction_key()# 处理通常方向键
             self.general_mouse(ticks)   # 处理通常鼠标键（鼠标需要处理一个延时所以传入ticks）
-            self.general_draw_rect()
+            self.general_draw_rect("测试ascii和文字输出" * 25) # 测试字符框，第二个参数pos_w_h_pw_ph默认None# ((0,0),640,480,40,40)
 
     def update_character_info(self,ticks):
         # 最开始我写这个游戏框架就有奔着slg去的，所以我会先在这里实现信息展示的功能
@@ -580,54 +583,72 @@ class events:
 
 
 
-    # 自行体会的技巧，目前仅用于 一般文本显示 功能之中。
-    class draw_rect_cls(pygame.sprite.Sprite):
-        def __init__(self):
-            pygame.sprite.Sprite.__init__(self)
 
-    #==============#
-    # 一般文本显示 #
-    #==============#
-    def general_draw_rect(self):
-        # 目前是设计一个粗糙的显示文字的框，界面的25%以下部分都将用于显示对话框
-        # 该功能需要支持选择分支吗？或者，通过再设计一个选择文本框，与该功能交替使用？
-        # 两种实现方式：
+    #==================#
+    # 一般浮窗文本显示 #
+    #==================#
+    def general_draw_rect(self,text,pos_w_h_pw_ph=None):
+        # 一般的通过设定（坐标定位，画框长宽，内边框padding实现文字浮窗）
         # 1 文本显示通过添加入 theater.group 的最后一个实现，通过 kill 来结束显示（个人选择）
         # 2 直接通过地图背景，绘制在地图上面，效果和实现的难度都不尽人意。
+        
+        def _limit_text_px_width(text,limit):
+            # 文字宽度的限制，中文算两个长度
+            ret,strs,q = [],'',0
+            for i in text:
+                val = 1 if i in printable[:95] else 2
+                if q < limit: q += val; strs += i
+                else: ret.append(strs); q = 0; strs = ''
+            if strs: ret.append(strs)
+            return ret
 
-        def _mk_draw_rect():
-            # 配置框的大小
-            w,h = self.actor.theater.artist.screen.get_size()
-            v = pygame.Surface((w,int(h/4))).convert_alpha()
+        def _limit_text_px_height(textsplit,limit):
+            # 文字高度的限制，任何字符都算一个长度
+            ret,ls,q = [],[],0
+            for i in textsplit:
+                if q < limit: q += 1; ls.append(i)
+                else: ret.append(ls); q = 0; ls = []
+            if ls: ret.append(ls)
+            return ret
+
+        def _mk_draw_rect(text,pos,w,h,pw,ph):
+            # 配置框的大小，默认使用界面以下的25%实现，字体大小使用12大小的字体，内边框分别为（h/8,h/16）
+            # 这种边框类的很不好写成一种扩展，要考虑的很多，所以这里都用比较硬的处理方式
+            v = pygame.Surface((w, h)).convert_alpha()
             v.fill((0,0,100,150))
-            self.draw_rect = self.draw_rect_cls()
+            self.draw_rect = pygame.sprite.Sprite()
             self.draw_rect.image = v
-            self.draw_rect.rect  = (0,(h/4*3))
+            self.draw_rect.rect  = pos
             self.actor.theater.group.add(self.draw_rect)
-
-
-        # 测试是否能够显示外框
-        if self.draw_rect is None:
-            _mk_draw_rect()
-
-            ft = pygame.font.Font("simsun.ttc", 12)
-            fs = ft.render("简单测试一下文字输出。",False,(255,255,255))
-
-            print(fs.get_size())
-            self.draw_rect.image.blit(fs,(30,30))
+            limitw,limith = w - pw*2,h - ph*2
             
-            # self.draw_rect.kill() 消失方法
+            textsplit = _limit_text_px_width(text,limitw/self.text_size*2)
+            text_list = _limit_text_px_height(textsplit,limith/(self.text_size + 1))
+            ft = pygame.font.Font("simsun.ttc", self.text_size)
+            for texts in text_list:
+                for idx,text in enumerate(texts):
+                    fs = ft.render(text,False,(255,255,255))
+                    self.draw_rect.image.blit(fs,(pw,ph+idx*self.text_size))
 
+        if pos_w_h_pw_ph:
+            pos,w,h,pw,ph = pos_w_h_pw_ph
+        else:
+            # 一般对话文本显示 
+            # 配置框的大小，默认使用界面以下的25%实现，字体大小使用12大小的字体，内边框分别为（h/8,h/16）
+            # 这种边框类的很不好写成一种扩展，要考虑的很多，所以这里都用比较硬的处理方式
+            w, h  = self.actor.theater.artist.screen.get_size()
+            h = int(h/4)
+            pw,ph = int(h/2), int(h/4)
+            pos = (0,(h*3))
 
-        # *启动和关闭的方法目前还未设计，用怎样的方法实现才能有更好的兼具扩展和自实现的效果呢？
-
-
-
+        if self.draw_rect is None:
+            _mk_draw_rect(text,pos,w,h,pw,ph)
+            # *启动和关闭的方法目前还未设计，用怎样的方法实现才能有更好的兼具扩展和自实现的效果呢？
 
     #==============#
     # 一般鼠标操作 #
     #==============#
-    def general_mouse(self, ticks):
+    def general_mouse(self,ticks):
         # 这里考虑的是怎么实现鼠标对大地图的拖动，这里主要实现的是组合功能的事情。
         #
         # 条件：
