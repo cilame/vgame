@@ -534,7 +534,7 @@ class events:
         self.be_control   = False
 
         # 一般图片画框
-        self.draw_rect    = None
+        self.draw_rect    = []   # 关闭时需要
         self.text_size    = 14
 
         # 直接通过 action参数实现对update函数的内置函数的配置
@@ -565,7 +565,8 @@ class events:
         if self._delay(ticks,self.rate):
             self.general_direction_key()# 处理通常方向键
             self.general_mouse(ticks)   # 处理通常鼠标键（鼠标需要处理一个延时所以传入ticks）
-            self.general_draw_rect("测试ascii和文字输出" * 25) # 测试字符框，第二个参数pos_w_h_pw_ph默认None# ((0,0),640,480,40,40)
+            self.general_create_rect("测试ascii和文字输出" * 25) # 测试字符框，第二个参数pos_w_h_pw_ph默认None# ((0,0),640,480,40,40)
+            self.general_draw_rect() # 测试对话框的输出
 
     def update_character_info(self,ticks):
         # 最开始我写这个游戏框架就有奔着slg去的，所以我会先在这里实现信息展示的功能
@@ -582,15 +583,44 @@ class events:
 
 
 
+    #============#
+    #            #
+    #  组合功能  #
+    #            #
+    #============#
+    # 这些直接对应了各类的游戏的功能，不过一些接口不能通用于任何游戏
+    # 所以这里以后也会考虑设计一些相似但是更为针对某些类型游戏的接口
 
+    #================#
+    # 一般浮窗选择框 #
+    #================#
+    def general_draw_choice(self,pos_w_h_pw_ph):
+        # 一个游戏怎么能少了选项框，这个函数的主要目的就是用于在界面的任意位置上放置自己的选项框
+        pass
 
     #==================#
     # 一般浮窗文本显示 #
     #==================#
-    def general_draw_rect(self,text,pos_w_h_pw_ph=None):
+    def general_draw_rect(self):
+        # 因为浮窗文本可能会出现量非常多的情况，这时候需要在这里处理多个文本显示的问题，
+        # 因为多个文本若是在相同位置的地方显示的话，不可以叠加，所以需要设计触发式的“下一段话”
+
+        for text_rect in self.draw_rect:
+            self.actor.theater.group.add(text_rect)
+
+        # 用完后让各个显示图片自行删除，并且清空文字缓存内容
+        #for text_rect in self.draw_rect:
+        #    text_rect.kill()
+        #self.draw_rect = []
+
+    #==================#
+    # 一般浮窗文本生成 #
+    #==================#
+    def general_create_rect(self,text,pos_w_h_pw_ph=None):
         # 一般的通过设定（坐标定位，画框长宽，内边框padding实现文字浮窗）
         # 1 文本显示通过添加入 theater.group 的最后一个实现，通过 kill 来结束显示（个人选择）
         # 2 直接通过地图背景，绘制在地图上面，效果和实现的难度都不尽人意。
+        # 这里的返回值设定不再考虑用接收。通过字体长宽和边框长宽渲染，直接返回按照单文字框的最大量分割后的list->[sprite...]
         
         def _limit_text_px_width(text,limit):
             # 文字宽度的限制，中文算两个长度
@@ -614,36 +644,48 @@ class events:
         def _mk_draw_rect(text,pos,w,h,pw,ph):
             # 配置框的大小，默认使用界面以下的25%实现，字体大小使用12大小的字体，内边框分别为（h/8,h/16）
             # 这种边框类的很不好写成一种扩展，要考虑的很多，所以这里都用比较硬的处理方式
-            v = pygame.Surface((w, h)).convert_alpha()
-            v.fill((0,0,100,150))
-            self.draw_rect = pygame.sprite.Sprite()
-            self.draw_rect.image = v
-            self.draw_rect.rect  = pos
-            self.actor.theater.group.add(self.draw_rect)
             limitw,limith = w - pw*2,h - ph*2
-            
             textsplit = _limit_text_px_width(text,limitw/self.text_size*2)
             text_list = _limit_text_px_height(textsplit,limith/(self.text_size + 1))
             ft = pygame.font.Font("simsun.ttc", self.text_size)
             for texts in text_list:
+                v = pygame.Surface((w, h)).convert_alpha()
+                v.fill((0,0,100,150))
+                temp_draw_rect = pygame.sprite.Sprite()
+                temp_draw_rect.image = v
+                temp_draw_rect.rect  = pos
                 for idx,text in enumerate(texts):
                     fs = ft.render(text,False,(255,255,255))
-                    self.draw_rect.image.blit(fs,(pw,ph+idx*self.text_size))
+                    temp_draw_rect.image.blit(fs,(pw,ph+idx*self.text_size))
+                self.draw_rect.append(temp_draw_rect)
 
         if pos_w_h_pw_ph:
             pos,w,h,pw,ph = pos_w_h_pw_ph
         else:
             # 一般对话文本显示 
             # 配置框的大小，默认使用界面以下的25%实现，字体大小使用12大小的字体，内边框分别为（h/8,h/16）
-            # 这种边框类的很不好写成一种扩展，要考虑的很多，所以这里都用比较硬的处理方式
+            # 其实这种对话框类的很不好写成一种扩展，要考虑的很多，所以这里都用比较硬的处理方式
             w, h  = self.actor.theater.artist.screen.get_size()
             h = int(h/4)
             pw,ph = int(h/2), int(h/4)
             pos = (0,(h*3))
 
-        if self.draw_rect is None:
+        if not self.draw_rect:
             _mk_draw_rect(text,pos,w,h,pw,ph)
-            # *启动和关闭的方法目前还未设计，用怎样的方法实现才能有更好的兼具扩展和自实现的效果呢？
+
+
+
+
+
+
+
+    #============#
+    #            #
+    #  操作功能  #
+    #            #
+    #============#
+    # 下级功能的向上封装，其中考虑了一些延时或一些地图处理一类
+    # 后续可能会开发一些和地图无关的接口，所以抽象这一层也是为了操作的多样性
 
     #==============#
     # 一般鼠标操作 #
@@ -689,16 +731,19 @@ class events:
                         self.cross_status = 1
                         self.cross_time = False
 
+            # 暂未设计完全，需要设计返回数据
             if self.cross_status == 1:
                 print('单击状态')
                 self.cross_status = 0
 
+            # 暂未设计完全，需要设计返回数据，这里需要考虑到持续性，后续要考虑框选线的实现。
             if self.cross_status == 2:
                 print('框选状态')
                 if rem[1] == 2:
                     self.cross_status = 0
                     self.cross_time = False
 
+            # 暂未设计完全，且地图移动集成在该函数内部，可能会比较重
             if self.cross_status == 3:
                 print('地图状态',self.actor.theater.screen_pos)
                 self._map_mouse(rem[3])
@@ -724,7 +769,7 @@ class events:
             # 使用粘性方块的时候还需要考虑到是否point不为空 # 另外还需要考虑当前角色是否被控制（新参数）
             # 方向操作需要实现的各个参数，而且不良组合键需要考虑，比如同时按上和下不需要执行任何动作
             
-            rek = self._key_pressed() # 获取当前按键（或组合键）的方向，以小键盘八方向数字为准
+            rek = self._direction_key_pressed() # 获取当前按键（或组合键）的方向，以小键盘八方向数字为准
 
             # 测试输出
             if rek:
@@ -739,45 +784,29 @@ class events:
         else:
             pass
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def combined_direction_key(self):
-        # 组合体的方向键处理问题（处理多个物体同时移动的状况）
-        # 暂时只能缓存一个开发的轮廓概念，因为这部分在写完一般方向键处理之后，
-        # 再估计一下组合体用一般方向键函数处理实现的难度再考虑后续的是否需要单独出这个函数出来。
+    #================#
+    # 一般控制键操作 #
+    #================#
+    def general_control_key(self):
+        # 类似于一般手柄上面的AB键位的功能，简单的提供一些接口
+        # 让某些键位注册后返回一些对于编写者来说更方便查调用的数据接口
+        # 类似注册了键盘zx键位为ab（手柄），按键时候返回为ab其中一个，之类的，ab可能会更好辨识一些
         pass
 
-    def _map_mouse(self,cur_pos):
-        # 地图拖动功能在这里实现，后续实现边界拖拽时的限制
-        if cur_pos != self.drag_old_pos:
-            cx,cy = cur_pos
-            ox,oy = self.drag_old_pos
-            mx,my = self.actor.theater.screen_pos
-            w, h  = self.actor.theater.background.image.get_size() # 这里的参数将用于边界限制使用
-            nx,ny = mx+cx-ox, my+cy-oy
-            self.actor.theater.screen_pos = nx,ny
-            self.actor.theater.bg_actor.rect[0] = nx
-            self.actor.theater.bg_actor.rect[1] = ny
-            # 计算出于上一坐标关键帧的坐标差值，然后根据限制更新
-            # *（计划实现：地图过小时无操作，地图过大时边界越界时不超过界面的25%）
-            self.drag_old_pos = cur_pos
 
 
 
+
+    
+
+
+    #============#
+    #            #
+    #  操作底层  #
+    #            #
+    #============#
+    # 直接与鼠标和按键接触的接口
+    # 比较难看懂，因为这里混合了我个人设计的返回数据结构
 
     def _mouse_pressed(self):
         # 鼠标的话需要考虑几个状态
@@ -820,8 +849,7 @@ class events:
             # 按键id，按键状态，起止两个坐标点，两坐标之间的长度
             return self.mouse_id, self.mouse_status, self.mouse_pos, cur_pos, len_for_2point
 
-
-    def _key_pressed(self):
+    def _direction_key_pressed(self):
         # 一个简单获取八个方向的函数，如果是方向键则优先方向键
         # 方向键最大同时按两个方向组合键，且要合法（不能同时上下之类）
         # 如果没有用方向键用小键盘则只能同时按一个按键
@@ -866,7 +894,34 @@ class events:
                 if l: ret = 3
         return ret
 
+    def _control_key_pressed(self):
+        # 一些普通的键盘非方向键的按键返回
+        pass
 
+
+
+
+    #============#
+    #            #
+    #  其他功能  #
+    #            #
+    #============#
+    # 杂项
+    
+    def _map_mouse(self,cur_pos):
+        # 地图拖动功能在这里实现，后续实现边界拖拽时的限制
+        if cur_pos != self.drag_old_pos:
+            cx,cy = cur_pos
+            ox,oy = self.drag_old_pos
+            mx,my = self.actor.theater.screen_pos
+            w, h  = self.actor.theater.background.image.get_size() # 这里的参数将用于边界限制使用
+            nx,ny = mx+cx-ox, my+cy-oy
+            self.actor.theater.screen_pos = nx,ny
+            self.actor.theater.bg_actor.rect[0] = nx
+            self.actor.theater.bg_actor.rect[1] = ny
+            # 计算出于上一坐标关键帧的坐标差值，然后根据限制更新
+            # *（计划实现：地图过小时无操作，地图过大时边界越界时不超过界面的25%）
+            self.drag_old_pos = cur_pos
 
     def _delay(self,ticks,rate):
         # 因为之后设计的所有按键操作都将会“放弃”通过 pygame.event.get() 获取事件的方式来获取控制
@@ -884,7 +939,12 @@ class events:
             self.mouse_tick = ticks
             return True
 
-
+    # *该函数会废弃，留下注释是为以后提供灵感
+    def combined_direction_key(self):
+        # 组合体的方向键处理问题（处理多个物体同时移动的状况）
+        # 暂时只能缓存一个开发的轮廓概念，因为这部分在写完一般方向键处理之后，
+        # 再估计一下组合体用一般方向键函数处理实现的难度再考虑后续的是否需要单独出这个函数出来。
+        pass
 
 
 
