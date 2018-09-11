@@ -620,7 +620,8 @@ class events:
         # 一般的通过设定（坐标定位，画框长宽，内边框padding实现文字浮窗）
         # 1 文本显示通过添加入 theater.group 的最后一个实现，通过 kill 来结束显示（个人选择）
         # 2 直接通过地图背景，绘制在地图上面，效果和实现的难度都不尽人意。
-        # 这里的返回值设定不再考虑用接收。通过字体长宽和边框长宽渲染，直接返回按照单文字框的最大量分割后的list->[sprite...]
+        # 用self.draw_rect接收结果，方便sprite执行group的自删除函数。
+        # 结果：通过字体长宽和边框长宽渲染，向self.draw_rect传入按照单文字框的最大量分割后的list->[sprite...]
         
         def _limit_text_px_width(text,limit):
             # 文字宽度的限制，中文算两个长度
