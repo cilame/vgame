@@ -535,6 +535,7 @@ class events:
 
         # 一般图片画框
         self.draw_rect    = []   # 关闭时需要
+        self.draw_rect_id = 0
         self.text_size    = 14
 
         # 直接通过 action参数实现对update函数的内置函数的配置
