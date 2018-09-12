@@ -604,9 +604,22 @@ class events:
     def general_draw_rect(self):
         # 因为浮窗文本可能会出现量非常多的情况，这时候需要在这里处理多个文本显示的问题，
         # 因为多个文本若是在相同位置的地方显示的话，不可以叠加，所以需要设计触发式的“下一段话”
+        # 这里的触发的设计需要再完善一下。
 
-        for text_rect in self.draw_rect:
-            self.actor.theater.group.add(text_rect)
+        if self.draw_rect:
+            if self.draw_rect_id == 0:
+                self.actor.theater.group.add(self.draw_rect[self.draw_rect_id])
+                self.draw_rect_id += 1
+            if any(pygame.key.get_pressed()): # 触发问题就在这里考虑 # 这里可以考虑速度配置问题
+                if self.draw_rect_id == len(self.draw_rect):
+                    self.draw_rect[self.draw_rect_id - 1].kill()
+                    self.draw_rect = []
+                    self.draw_rect_id = 0
+                else:
+                    self.draw_rect[self.draw_rect_id - 1].kill()
+                    self.actor.theater.group.add(self.draw_rect[self.draw_rect_id])
+                    self.draw_rect_id += 1
+            print(self.draw_rect_id,len(self.draw_rect))
 
         # 用完后让各个显示图片自行删除，并且清空文字缓存内容
         #for text_rect in self.draw_rect:
