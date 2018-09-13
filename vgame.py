@@ -523,7 +523,7 @@ class events:
         self.mouse_status = 0    # 按键状态（0无按，1按下，2松开瞬间）
         self.mouse_toggle = True
         self.mouse_tick   = 0
-        self.mouse_delay  = 100  # 鼠标按下多久不动后转变成地图拖拽模式
+        self.mouse_delay  = 160  # 鼠标按下多久不动后转变成地图拖拽模式
         self.cross_time   = False
         self.cross_status = 0    # 判断状态（0判断，1单击，2框选，3地图拖拽）
         self.limit_len    = 3.   # 一个阈值，与鼠标按下松开时，两点坐标点距离有关
@@ -535,12 +535,15 @@ class events:
 
         # 一般图片画框
         self.draw_rect    = []   # 关闭时需要
-        self.draw_rect_id = 0
+        self.draw_rect_id = 0    # 关闭时需要
         self.text_size    = 14
+
+
+        self.update_stack = []
 
         # 直接通过 action参数实现对update函数的内置函数的配置
         if self.action == 'cursor':
-            self.update = self.update_select_cursor
+            self.update_stack.append(self.update_select_cursor)
 
     def update(self,ticks):
         # 放弃使用 _flash 因为这个参数只有True或False，可控性为零，所以还是需要theater里传过来ticks来控制
@@ -549,7 +552,13 @@ class events:
 
         # 计划在配置时候用monkey patch的方式，用update_* 这些配置函数来替换该函数
         # 该函数将什么都不做，仅用于被替换。
-        pass
+
+        # 放弃使用monkey patch的方式来执行update函数，因为这样来开发很有局限性，游戏大部分功能是一种开关式的处理
+        # 就是开启之后必要会考虑的关闭，所以实际上，这里的处理如果是使用栈来实现的话，那些功能叠加的时候也能通过简单的pop-
+        # 来回到上层的功能，这样的设计一般在这里都是找栈最上层的函数进行更新，不过栈在这里独立出来之后
+        # 就可以更容易扩展出多场景捕捉功能的叠加。
+        if self.update_stack:
+            self.update_stack[-1](ticks)
 
     def update_select_cursor(self,ticks):
         # 光标的核心功能应该是改变当前坐标下的单位的被选择状态 # 这里需要着重处理鼠标事件的多样性
@@ -563,11 +572,17 @@ class events:
         # 考虑展示框的问题
         # 考虑对话框功能
         # 不过以上功能尽量以函数组件组件形式存在会更可控一些。
+
+        # 以下这些函数都用于测试，后面会大修，因为触及到某些函数时候会进行update转移的情况
+        # 之所以要update转移是因为在某些场景情况下，有些控制功能是有必要进行无效限制的（比如slg在进入对话时，人物就不应该能被控制了。）
+        # 但是只在一个update里面进行针对性的无效限制并不是一个好的开发方法，并且还可能出现其他未知的开发情况，所以非常硬的开发方案是不行的
+        # 所以后续决定使用 update类的函数进行对一个场景进行行为处理，这样的话，各种场景的行为控制就能有效的进行开发分离
+        # 当然如果将“转移过程”（eg. self.update = update_*）直接硬编在任意一个update函数中时，会有严重的开发麻烦，后续会再考虑
         if self._delay(ticks,self.rate):
-            self.general_direction_key()# 处理通常方向键
-            self.general_mouse(ticks)   # 处理通常鼠标键（鼠标需要处理一个延时所以传入ticks）
-            self.general_create_rect("测试ascii和文字输出" * 25) # 测试字符框，第二个参数pos_w_h_pw_ph默认None# ((0,0),640,480,40,40)
-            self.general_draw_rect() # 测试对话框的输出
+            self.general_direction_key(wasd=True)   # 处理通常方向键
+            self.general_mouse(ticks)               # 处理通常鼠标键（鼠标需要处理一个延时所以传入ticks）
+            self.general_create_rect("测试ascii和文字输出!" * 250) # 测试字符框，第二个参数pos_w_h_pw_ph默认None# ((0,0),640,480,40,40)
+            self.general_draw_rect()                # 测试对话框的输出
 
     def update_character_info(self,ticks):
         # 最开始我写这个游戏框架就有奔着slg去的，所以我会先在这里实现信息展示的功能
@@ -620,12 +635,14 @@ class events:
                     self.draw_rect[self.draw_rect_id - 1].kill()
                     self.actor.theater.group.add(self.draw_rect[self.draw_rect_id])
                     self.draw_rect_id += 1
-            print(self.draw_rect_id,len(self.draw_rect))
+            #print(self.draw_rect_id,len(self.draw_rect))
+
 
         # 用完后让各个显示图片自行删除，并且清空文字缓存内容
         #for text_rect in self.draw_rect:
         #    text_rect.kill()
         #self.draw_rect = []
+        #self.draw_rect_id = 0
 
     #==================#
     # 一般浮窗文本生成 #
@@ -746,32 +763,36 @@ class events:
                         self.cross_status = 1
                         self.cross_time = False
 
-            # 暂未设计完全，需要设计返回数据
+            # 目前接口将返回当前状态码和一次半完整点击的松开起止两个坐标点
+            # 单击状态1，框选状态2，地图拖拽状态3
             if self.cross_status == 1:
-                print('单击状态')
+                # 单击状态
                 self.cross_status = 0
+                return 1,rem[2:4]
 
-            # 暂未设计完全，需要设计返回数据，这里需要考虑到持续性，后续要考虑框选线的实现。
             if self.cross_status == 2:
-                print('框选状态')
+                # 框选状态 # 框选状态和地图状态的返回值就只有状态值不一样，这样方便选择性需要地图状态
                 if rem[1] == 2:
                     self.cross_status = 0
                     self.cross_time = False
+                else:
+                    return 2,rem[2:4]
 
-            # 暂未设计完全，且地图移动集成在该函数内部，可能会比较重
             if self.cross_status == 3:
-                print('地图状态',self.actor.theater.screen_pos)
-                self._map_mouse(rem[3])
+                # 地图状态 # 框选状态和地图状态的返回值就只有状态值不一样，这样方便选择性需要地图状态
                 if rem[1] == 2:
-                    self.drag_map_pos = None
-                    self.drag_old_pos = None
+                    self.drag_map_pos = None # 联动 _map_mouse 函数的参数，注意使用
+                    self.drag_old_pos = None # 联动 _map_mouse 函数的参数，注意使用
                     self.cross_status = 0
                     self.cross_time = False
+                else:
+                    self._map_mouse(rem[3])
+                    return 3,rem[2:4]
 
     #================#
     # 一般方向键操作 #
     #================#
-    def general_direction_key(self):
+    def general_direction_key(self,wasd=False):
         # 普通方向键处理（一般单个单位的方向移动处理）
         
         # 处理一般的方向键的按键事件处理，一般用于角色移动或光标移动，（角色和光标都可以通过actor实现）
@@ -784,7 +805,7 @@ class events:
             # 使用粘性方块的时候还需要考虑到是否point不为空 # 另外还需要考虑当前角色是否被控制（新参数）
             # 方向操作需要实现的各个参数，而且不良组合键需要考虑，比如同时按上和下不需要执行任何动作
             
-            rek = self._direction_key_pressed() # 获取当前按键（或组合键）的方向，以小键盘八方向数字为准
+            rek = self._direction_key_pressed(wasd) # 获取当前按键（或组合键）的方向，以小键盘八方向数字为准
 
             # 测试输出
             if rek:
@@ -864,17 +885,23 @@ class events:
             # 按键id，按键状态，起止两个坐标点，两坐标之间的长度
             return self.mouse_id, self.mouse_status, self.mouse_pos, cur_pos, len_for_2point
 
-    def _direction_key_pressed(self):
+    def _direction_key_pressed(self,wasd=False):
         # 一个简单获取八个方向的函数，如果是方向键则优先方向键
         # 方向键最大同时按两个方向组合键，且要合法（不能同时上下之类）
         # 如果没有用方向键用小键盘则只能同时按一个按键
         # 返回参数为小键盘上八个方向的数字，没有则为0，其他函数根据数字进行后续操作即可
         key = pygame.key.get_pressed()
         ret = 0
-        a = key[pygame.K_UP]
-        b = key[pygame.K_DOWN]
-        c = key[pygame.K_LEFT]
-        d = key[pygame.K_RIGHT]
+        if wasd:
+            a = key[pygame.K_UP]    or key[pygame.K_w]
+            b = key[pygame.K_DOWN]  or key[pygame.K_s]
+            c = key[pygame.K_LEFT]  or key[pygame.K_a]
+            d = key[pygame.K_RIGHT] or key[pygame.K_d]
+        else:
+            a = key[pygame.K_UP]
+            b = key[pygame.K_DOWN]
+            c = key[pygame.K_LEFT]
+            d = key[pygame.K_RIGHT]
         v = [a,b,c,d]
         if any(v):
             if v.count(1) == 1:
@@ -974,8 +1001,7 @@ class events:
 # 装载的地方可以是放在全局的artist里面，但是也有一些数据仅仅只在theater舞台初始化时候才会出现
 # 例如一些角色的等级经验肯定是需要全局存储的
 # 例如一些角色进入新的战场后血量需要初始化为满值一类的，不同的单位之间的战斗也需要考虑到数据怎么交互和计算
-
-
+# 先就考虑slg的框架来实现功能吧，后期看看能不能把一些其他类型的游戏也兼容进去的，比如avg、比如动作类，这些也都是slg之后的事情了。
 
 
 
@@ -1048,7 +1074,7 @@ if __name__ == "__main__":
 
     s = initer(120) # 第一个参数为全局帧率，默认60
     v1 = theater(bg1,'123') # theater必须要指定两个元素，背景图片地址，舞台名字（舞台切换用，键盘C键测试切换）
-    actor1 = actor(cur)
+    actor1 = actor(cur,action='cursor')
     # 现在每个actor内部都会产生一个events对象来实现自身的功能，不过仍然可以通过外部注册的方式将外部events对象注入actor内部
 
     e = events(cur)
