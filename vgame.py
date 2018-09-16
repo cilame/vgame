@@ -181,10 +181,16 @@ class theater:
                  bg_filename,       # 背景图片（不确定开发：动态背景？例如白天黑夜效果？其实，白天黑夜可以通过加一层半透明的actor实现。）
                  theater_name,      # 场景名字，用于定位、调整、切换场景使用
                  blocks=None,       # 后期扩展，用于配置该场景是否需要切分细块，可指定两个数字参数的tuple或list，作为横纵切分数量
-                 singles=[(30,30),(40,40),(60,60),(80,80)],   # 单元大小，blocks被设定时，该参数会被使用，默认使用第一个，扩展地图缩放，以后考虑扩展更顺滑的缩放
-                 single_line=[(255,255,255,150),1],           # 单元格分割线的颜色和粗细，这个默认值暂且是为了开发方便
-                 music=None         # 后期扩展，音乐          # 细粒度测试使用的尺寸 [(i,i) for i in range(30,80)]，细粒度会照成背景变形
+                 singles=[(30,30),(40,40),(60,60),(80,80)], # 单元大小，blocks被设定时，该参数会被使用，默认使用第一个，扩展地图缩放，以后考虑扩展更顺滑的缩放
+                 single_line=[(255,255,255,150),1],         # |单元格分割线的颜色和粗细，这个默认值暂且是为了开发方便
+                 music=None         # 后期扩展，音乐        # |细粒度测试使用的尺寸 [(i,i) for i in range(30,80)]，细粒度会照成背景变形
                  ):
+
+
+        org_screen          = pygame.display.get_surface()
+        if org_screen is None:
+            raise 'None screen, pls use initer function to init.'
+
         self.theater_name   = theater_name
         self.screen_pos     = (0,0)
         self.group          = pygame.sprite.Group()
@@ -193,16 +199,21 @@ class theater:
         self.artist         = None
 
         # *暂未使用的参数，后续要考虑入场和出场的动画表演，否则切换场景会非常僵硬（至少要提供配置接口）
+        # *后面可以考虑实现一些可配置的淡入淡出的效果
         self.enter          = None
         self.leave          = None
 
         # 用于缩放功能的参数，后续考虑默认最大屏的接口
-        self.blocks         = blocks
+        # 从现在开始，每张图传入的时候必然会进行切割，不同的是，
+        # 如果没有设置blocks，则默认以screen进行全屏最大化，并且不会画线条
         self.single         = singles[0]
+        siw,sih             = self.single 
+        scw,sch             = org_screen.get_size()
+        self.blocks         = blocks if blocks else (int(scw/siw),int(sch/sih))
         self.singles        = singles
         self.singles_image  = {}
-        self.single_color   = single_line[0] if single_line else None
-        self.single_thick   = single_line[1] if single_line else None
+        self.single_color   = single_line[0] if single_line and blocks else None
+        self.single_thick   = single_line[1] if single_line and blocks else None
         self.toggle         = True
 
         # 创建每个场景都需要一个默认的背景，图片加载失败就会用默认的某种颜色填充
@@ -217,7 +228,7 @@ class theater:
         self.map_uprate     = 100
         self.image_size     = None
 
-        if blocks:
+        if self.blocks:
             self._mk_blocks_map() # 对背景切块,blocks切块参数传递的地方
 
     def regist(self,actor):
@@ -262,7 +273,6 @@ class theater:
                 pygame.draw.line(self.background.image,color,(i*singlew,0),(i*singlew,new_h),thick)
             for i in range(1,nraws):
                 pygame.draw.line(self.background.image,color,(0,i*singleh),(new_w,i*singleh),thick)
-            self.single_color = None # *这里没能解决由于地图缩放，导致的线条重绘制使得显示线条变粗的问题
 
 
     # 每个场景的创建必须要一张图片作为背景。
@@ -278,27 +288,28 @@ class theater:
 
             # 控制缩放时的坐标。用toggle的好处为：在初始化时能够执行一次，之后需要缩放成功修改配置
             if self.toggle:
-                sw,sh = screen.get_size()
-                bw,bh = self.image_size if self.image_size else self.background.image.get_size()
-                aw,ah = self.background.image.get_size() # 这是变后尺寸，之前没有指明变前尺寸，所以造成BUG
-
-                wk,hk = aw/bw, ah/bh
-                tw,th = int(sw/2-(sw/2-self.screen_pos[0])*wk),int(sh/2-(sh/2-self.screen_pos[1])*hk)
-
-                self.image_size = aw,ah # 更新变前尺寸
-                px = (sw-aw)/2 if aw<=sw else tw
-                py = (sh-ah)/2 if ah<=sh else th
-                
-                self.bg_actor.rect[0] = px # 通过修改rect来修改放置的中心点
-                self.bg_actor.rect[1] = py
-                self.screen_pos = (px, py) # 存储在类里面，后续应用于与其他函数交互
-                self.toggle = False
+                self._change_size_local(screen,self.screen_pos)
 
         self.bg_actor.update = _default_theater
-
         if self.bg_actor.image:
             self.group.add(self.bg_actor)
             self.background = self.bg_actor
+
+
+    # 改变地图尺寸时，修改当前的 screen_pos
+    def _change_size_local(self,screen,screen_pos):
+        sw,sh = screen.get_size()
+        bw,bh = self.image_size if self.image_size else self.background.image.get_size()
+        aw,ah = self.background.image.get_size() # 这是变后尺寸，之前没有指明变前尺寸，所以造成BUG
+        wk,hk = aw/bw, ah/bh
+        tw,th = int(sw/2-(sw/2-screen_pos[0])*wk),int(sh/2-(sh/2-screen_pos[1])*hk)
+        self.image_size = aw,ah # 更新变前尺寸
+        px = (sw-aw)/2 if aw<=sw else tw
+        py = (sh-ah)/2 if ah<=sh else th
+        self.bg_actor.rect[0] = px # 通过修改rect来修改放置的中心点
+        self.bg_actor.rect[1] = py
+        self.screen_pos = (px, py) # 存储在类里面，后续应用于与其他函数交互
+        self.toggle = False
 
 
     # 目前用简单的 + 和 - 键来控制地图缩放
@@ -486,7 +497,7 @@ class actor(pygame.sprite.Sprite):
                 posx,posy = pygame.mouse.get_pos()
                 mapx,mapy = posx - diffw,posy - diffh
                 cols,raws = self.theater.blocks
-                point = max(min(int(mapx/singw),cols-1),0),max(min(int(mapy/singh),raws-1),0) # fix bug. -_-|||
+                point = max(min(int(mapx/singw),cols-1),0),max(min(int(mapy/singh),raws-1),0)
                 if point in point2coord:
                     _mapx,_mapy = point2coord[point]
                     _mapx,_mapy = _mapx + diffw,_mapy + diffh
@@ -536,9 +547,9 @@ class events:
         # 一般图片画框
         self.draw_rect    = []   # 关闭时需要
         self.draw_rect_id = 0    # 关闭时需要
-        self.text_size    = 14
+        self.text_size    = 14   # 字体大小
 
-
+        # 用于实现栈效果式的更新函数
         self.update_stack = []
 
         # 直接通过 action参数实现对update函数的内置函数的配置
@@ -546,15 +557,8 @@ class events:
             self.update_stack.append(self.update_select_cursor)
 
     def update(self,ticks):
-        # 放弃使用 _flash 因为这个参数只有True或False，可控性为零，所以还是需要theater里传过来ticks来控制
-        # 也比较方便配置按键的延迟速度。# 不配置时候，默认什么都不做
-        # 这里的ticks也可以通过self.actor...向上级类获取，但是直接传的话比较直观而已
-
-        # 计划在配置时候用monkey patch的方式，用update_* 这些配置函数来替换该函数
-        # 该函数将什么都不做，仅用于被替换。
-
-        # 放弃使用monkey patch的方式来执行update函数，因为这样来开发很有局限性，游戏大部分功能是一种开关式的处理
-        # 就是开启之后必要会考虑的关闭，所以实际上，这里的处理如果是使用栈来实现的话，那些功能叠加的时候也能通过简单的pop-
+        # 戏大部分功能是一种开关式的处理，就是开启之后必要会考虑的关闭，
+        # 所以实际上，这里的处理如果是使用栈来实现的话，那些功能叠加的时候也能通过简单的pop-
         # 来回到上层的功能，这样的设计一般在这里都是找栈最上层的函数进行更新，不过栈在这里独立出来之后
         # 就可以更容易扩展出多场景捕捉功能的叠加。
         if self.update_stack:
@@ -951,18 +955,18 @@ class events:
     # 杂项
     
     def _map_mouse(self,cur_pos):
-        # 地图拖动功能在这里实现，后续实现边界拖拽时的限制
+        # 地图拖动功能在这里实现 # 计算出于上一坐标关键帧的坐标差值，然后根据限制更新
         if cur_pos != self.drag_old_pos:
             cx,cy = cur_pos
             ox,oy = self.drag_old_pos
             mx,my = self.actor.theater.screen_pos
             w, h  = self.actor.theater.background.image.get_size() # 这里的参数将用于边界限制使用
-            nx,ny = mx+cx-ox, my+cy-oy
+            sw,sh = pygame.display.get_surface().get_size()
+            nx = max(min(mx+cx-ox,0),sw-w) if sw<w else mx
+            ny = max(min(my+cy-oy,0),sh-h) if sh<h else my
             self.actor.theater.screen_pos = nx,ny
             self.actor.theater.bg_actor.rect[0] = nx
             self.actor.theater.bg_actor.rect[1] = ny
-            # 计算出于上一坐标关键帧的坐标差值，然后根据限制更新
-            # *（计划实现：地图过小时无操作，地图过大时边界越界时不超过界面的25%）
             self.drag_old_pos = cur_pos
 
     def _delay(self,ticks,rate):
