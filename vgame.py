@@ -54,7 +54,6 @@ from string import printable
         ...
     }
 }
-
 #
 # 考虑一下表演的顺序
 #
@@ -92,6 +91,7 @@ from string import printable
 # 也可以通过 actor_1.theater.artist 找到全局数据存储地方
 #
 '''
+
 
 
 
@@ -189,7 +189,7 @@ class theater:
 
         org_screen          = pygame.display.get_surface()
         if org_screen is None:
-            raise 'None screen, pls use initer function to init.'
+            raise 'None screen, pls use initer class to init.'
 
         self.theater_name   = theater_name
         self.screen_pos     = (0,0)
@@ -326,16 +326,10 @@ class theater:
                     self._mk_blocks_map()
                     return True
 
-        # 这里进行了一次统一，之后都统一使用blocks式的缩放。因为这样实现可以更方便。
-        # 也就是说，如果你需要缩放功能，请设置blocks参数，另外，将方块黏着的需求交给开发者会更能扩展实现功能。
-        if pygame.key.get_pressed()[K_KP_PLUS]:
-            if self.blocks:
-                v = _change_blocks('+')
-                return v
-        if pygame.key.get_pressed()[K_KP_MINUS]:
-            if self.blocks:
-                v = _change_blocks('-')
-                return v
+        # 这里进行了一次统一，之后都统一使用 blocks式的缩放。blocks 不设置的话会通过背景图片进行自动设置。
+        if pygame.key.get_pressed()[K_KP_PLUS]: return _change_blocks('+')
+        if pygame.key.get_pressed()[K_KP_MINUS]:return _change_blocks('-')
+
 
     def _delay(self,ticks):
         if ticks - self.cur_tick > self.map_uprate:
@@ -385,6 +379,9 @@ class actor(pygame.sprite.Sprite):
 
         self.events     = self.regist(events(action, event_rate))
 
+
+        self.init_toggle= True # 测试使用的参数，后期可能删除，重新设计
+
     def load_img(self,img):
         if img is None: return None
         try:
@@ -430,9 +427,6 @@ class actor(pygame.sprite.Sprite):
 
 
     def regist(self,events):
-        
-        # 目前大改，所有actor对象内部默认生成一个 events对象，直接通过action关键字来配置默认功能即可
-        #==============================================================================
         events.actor = self # 让事件对象能找到宿主本身
         self.events = events # 这里是为了兼容外部events的注册
         return events
@@ -440,39 +434,26 @@ class actor(pygame.sprite.Sprite):
 
     def update(self,screen,ticks):
 
-        _flash = self._time_update(ticks) # 由于 actor天生需要非常多的速度控制，所以 _flash这个数值复用性很高
-
-        if self.active and _flash:
+        if self.active and self._time_update(ticks):
             self.image = self.src_image.subsurface(next(self.rects))
             # 通过以下方法可以实现修改图片大小，不过由于修改大小这部应该会消耗资源，
             # 每次加载都要修改一次大小，所以之后考虑优化的方式，让速度变得更快一些
             # 或者可以考虑放在 self.load_img函数当中，地图切块时需要考虑单元块的适配？
             # 将 actor注册进 theater可以获取 theater里面设定的单位大小，后续可能需要扩展多格单位
-            # 另外，这里的配置也不太科学。如果有blocks必然会修改尺寸，写太死了，后续再改。目前用于测试比较方便。
-            if self.theater.blocks:
-                self.image = pygame.transform.scale(self.image,self.theater.single)
+            # 另外，这里的配置也不太科学，写太死了，后续再改。目前用于测试比较方便。
+            self.image = pygame.transform.scale(self.image,self.theater.single)
 
-
-        # events将放弃继承 Sprite类，因为events用于调度角色的功能，
-        # 不应该让其变成sprite增加配置其函数帧率变化配置的麻烦。可以考虑在events内部配置别的actor类作为子弹一类功能的实现
-        #==============================================================================
         self.events.update(ticks)
 
-
-
-        # 测试鼠标跟随，后期删除
-        x, y = pygame.mouse.get_pos()
-        x-= self.image.get_width() // 2
-        y-= self.image.get_height() // 2
-        v = self.rect_viscous(self.point) # 方块黏性测试
-        if v:
-            x,y = v[0]
-        self.rect[0] = x
-        self.rect[1] = y
+        # 测试时候使用的部分
+        if self.init_toggle:
+            self.init_property()
+            self.init_toggle = False
         
         # 测试删除对象本身，后期删除
         if pygame.key.get_pressed()[K_q]:# 键盘q键删除自身单位
             self.kill()
+
 
     # 黏性方块，让该对象具备blocks黏性，传入参数可以是地图坐标，或者是一个鼠标坐标
     # 如果该 actor所在的 theater没有进行 blocks切分，那么就返回空，不整齐的地址也会返回空
@@ -484,27 +465,41 @@ class actor(pygame.sprite.Sprite):
         singw,singh = self.theater.single
         point2coord = self.theater.point2coord
 
-        if self.theater.blocks:
-            # 如果 point为一个地图坐标，就获取坐标的界面坐标地址
-            if point:
-                if point in point2coord:
-                    _mapx,_mapy = point2coord[point]
-                    _mapx,_mapy = _mapx + diffw,_mapy + diffh
-                    return (int(_mapx),int(_mapy)),point
+        # 如果 point为一个地图坐标，就获取坐标的界面坐标地址
+        if point:
+            if point in point2coord:
+                _mapx,_mapy = point2coord[point]
+                _mapx,_mapy = _mapx + diffw,_mapy + diffh
+                return (int(_mapx),int(_mapy)),point
 
-            # 如果 point为 None就获取的是鼠标地址下的方块左上角的坐标
-            else:
-                posx,posy = pygame.mouse.get_pos()
-                mapx,mapy = posx - diffw,posy - diffh
-                cols,raws = self.theater.blocks
-                point = max(min(int(mapx/singw),cols-1),0),max(min(int(mapy/singh),raws-1),0)
-                if point in point2coord:
-                    _mapx,_mapy = point2coord[point]
-                    _mapx,_mapy = _mapx + diffw,_mapy + diffh
-                    return (int(_mapx),int(_mapy)),point # 该函数同样返回坐标点数据，便于鼠标与数据交互
+        # 如果 point为 None就获取的是鼠标地址下的方块左上角的坐标
+        else:
+            posx,posy = pygame.mouse.get_pos()
+            mapx,mapy = posx - diffw,posy - diffh
+            cols,raws = self.theater.blocks
+            point = max(min(int(mapx/singw),cols-1),0),max(min(int(mapy/singh),raws-1),0)
+            if point in point2coord:
+                _mapx,_mapy = point2coord[point]
+                _mapx,_mapy = _mapx + diffw,_mapy + diffh
+                return (int(_mapx),int(_mapy)),point # 该函数同样返回坐标点数据，便于鼠标与数据交互
 
+    # 通过方块坐标修改角色当前坐标
+    def change_point(self,point):
+        rect,point   = self.rect_viscous(point)
+        self.rect    = rect
+        self.point   = point
 
-
+    # 后期很可能删除的函数
+    def init_property(self):
+        x, y = pygame.mouse.get_pos()
+        x-= self.image.get_width() // 2
+        y-= self.image.get_height() // 2
+        v = self.rect_viscous(self.point) # 方块黏性测试
+        if v:
+            self.change_point(v[1])
+        else:
+            self.rect[0] = x
+            self.rect[1] = y
 
 
 class events:
@@ -534,17 +529,27 @@ class events:
         self.mouse_status = 0    # 按键状态（0无按，1按下，2松开瞬间）
         self.mouse_toggle = True
         self.mouse_tick   = 0
-        self.mouse_delay  = 160  # 鼠标按下多久不动后转变成地图拖拽模式
+        self.mouse_delay  = 160  # 鼠标按下多久不动后转变成地图拖拽模式     # 关于延迟的动态配置后期再做，这里先硬编码
         self.cross_time   = False
         self.cross_status = 0    # 判断状态（0判断，1单击，2框选，3地图拖拽）
         self.limit_len    = 3.   # 一个阈值，与鼠标按下松开时，两点坐标点距离有关
         self.drag_map_pos = None # 地图拖拽时最先按下的那个点与地图相关的坐标（注意是和地图相关而不是和界面相关）
         self.drag_old_pos = None # 上一帧拖拽时，鼠标于界面的坐标点
 
-        # 对象创建默认为未被控制，按照一般slg思路而已，控制的触发需要通过光标对象来修改实现
-        self.be_control   = False
+        # 用于键盘操作的参数
+        self.direction_key_tick     = 0    # 后期发现只用 self._delay 函数，如果混合其他操作可能会出现灵敏丢失的情况
+        self.direction_key_delay    = 100  # 所以最后还是把键盘的操作延时也单独出来了 # 关于延迟的动态配置后期再做，这里先硬编码
+        self.un_oblique             = 0    # 如果没有斜角操作的话，处理斜角的操作滞粘操作参数
 
-        # 一般图片画框
+        # 对象创建默认为未被控制，按照一般slg思路而已，控制的触发需要通过光标对象来修改实现
+        # 实际上，需要配置的参数有非常的多，不必将参数放置在这里，之后可以考虑将配置都放入actor里面
+        # 后期通过 events向上调用来查看问题发生在什么地方。
+        self.be_control   = False # 后期可能抛弃的参数
+
+
+
+        # 一般图片画框 # 这里需要重新设计，因为画框可能会有叠加的情况。
+        # 或许还需要添加更多的配置。（栈式的画框事件[我说完你说之类的]，并行画框事件[一些渐渐消失的对话框之类]）
         self.draw_rect    = []   # 关闭时需要
         self.draw_rect_id = 0    # 关闭时需要
         self.text_size    = 14   # 字体大小
@@ -555,6 +560,10 @@ class events:
         # 直接通过 action参数实现对update函数的内置函数的配置
         if self.action == 'cursor':
             self.update_stack.append(self.update_select_cursor)
+
+        # 这里需要配置一个可移动对象作为一种调试性触发功能的对象
+        if self.action == 'actor':
+            self.update_stack.append(self.update_actor)
 
     def update(self,ticks):
         # 戏大部分功能是一种开关式的处理，就是开启之后必要会考虑的关闭，
@@ -583,10 +592,12 @@ class events:
         # 所以后续决定使用 update类的函数进行对一个场景进行行为处理，这样的话，各种场景的行为控制就能有效的进行开发分离
         # 当然如果将“转移过程”（eg. self.update = update_*）直接硬编在任意一个update函数中时，会有严重的开发麻烦，后续会再考虑
         if self._delay(ticks,self.rate):
-            self.general_direction_key(wasd=True)   # 处理通常方向键
+            self.general_direction_key(ticks,wasd=True)   # 处理通常方向键
             self.general_mouse(ticks)               # 处理通常鼠标键（鼠标需要处理一个延时所以传入ticks）
-            self.general_create_rect("测试ascii和文字输出!" * 250) # 测试字符框，第二个参数pos_w_h_pw_ph默认None# ((0,0),640,480,40,40)
+            test_rects = self.general_create_rect("测试ascii和文字输出!" * 250) # 测试字符框，第二个参数pos_w_h_pw_ph默认None# ((0,0),640,480,40,40)
             self.general_draw_rect()                # 测试对话框的输出
+
+
 
     def update_character_info(self,ticks):
         # 最开始我写这个游戏框架就有奔着slg去的，所以我会先在这里实现信息展示的功能
@@ -599,6 +610,8 @@ class events:
         # 这个接口就是任何需要显示大段文字时提供一个文字展示框。
         pass
 
+    def update_actor(self,ticks):
+        self.general_direction_key(ticks,wasd=True)
 
 
 
@@ -640,6 +653,8 @@ class events:
                     self.actor.theater.group.add(self.draw_rect[self.draw_rect_id])
                     self.draw_rect_id += 1
             #print(self.draw_rect_id,len(self.draw_rect))
+        else:
+            pass#print(111)
 
 
         # 用完后让各个显示图片自行删除，并且清空文字缓存内容
@@ -651,13 +666,16 @@ class events:
     #==================#
     # 一般浮窗文本生成 #
     #==================#
+    # (翻页式文字浮窗，**后续考虑背景图片的配置，没有则用目前使用的画框)
+    # 这里的浮窗类型属于以文字量进行分割后的多个sprite对象的框。
+    # 实现框的下一页的方法主要是通过theater里面的group队列的添加和自删除来实现的效果。
     def general_create_rect(self,text,pos_w_h_pw_ph=None):
         # 一般的通过设定（坐标定位，画框长宽，内边框padding实现文字浮窗）
         # 1 文本显示通过添加入 theater.group 的最后一个实现，通过 kill 来结束显示（个人选择）
         # 2 直接通过地图背景，绘制在地图上面，效果和实现的难度都不尽人意。
-        # 用self.draw_rect接收结果，方便sprite执行group的自删除函数。
-        # 结果：通过字体长宽和边框长宽渲染，向self.draw_rect传入按照单文字框的最大量分割后的list->[sprite...]
-        
+
+        # *新修改：放弃通过 self.draw_rect来实现对话框的传递，因为这样不能拓展成多个对话框。
+        # 返回传入按照单文字框的最大量分割后的list->[sprite...]
         def _limit_text_px_width(text,limit):
             # 文字宽度的限制，中文算两个长度
             ret,strs,q = [],'',0
@@ -684,6 +702,7 @@ class events:
             textsplit = _limit_text_px_width(text,limitw/self.text_size*2)
             text_list = _limit_text_px_height(textsplit,limith/(self.text_size + 1))
             ft = pygame.font.Font("simsun.ttc", self.text_size)
+            p = []
             for texts in text_list:
                 v = pygame.Surface((w, h)).convert_alpha()
                 v.fill((0,0,100,150))
@@ -693,7 +712,10 @@ class events:
                 for idx,text in enumerate(texts):
                     fs = ft.render(text,False,(255,255,255))
                     temp_draw_rect.image.blit(fs,(pw,ph+idx*self.text_size))
-                self.draw_rect.append(temp_draw_rect)
+                    pygame.draw.rect(temp_draw_rect.image,(0,0,0),      (0,0,w,h),6)
+                    pygame.draw.rect(temp_draw_rect.image,(255,255,255),(2,2,w-4,h-4),2)
+                p.append(temp_draw_rect)
+            return p
 
         if pos_w_h_pw_ph:
             pos,w,h,pw,ph = pos_w_h_pw_ph
@@ -706,8 +728,7 @@ class events:
             pw,ph = int(h/2), int(h/4)
             pos = (0,(h*3))
 
-        if not self.draw_rect:
-            _mk_draw_rect(text,pos,w,h,pw,ph)
+        return _mk_draw_rect(text,pos,w,h,pw,ph)
 
 
 
@@ -720,6 +741,7 @@ class events:
     #  操作功能  #
     #            #
     #============#
+    # 包装的延迟操作
     # 下级功能的向上封装，其中考虑了一些延时或一些地图处理一类
     # 后续可能会开发一些和地图无关的接口，所以抽象这一层也是为了操作的多样性
 
@@ -734,7 +756,7 @@ class events:
         #     当作选框事件处理（在按键松开时执行）
         # else:
         #     1 如果按时未超过x秒，则一般处理（在按键松开时执行）
-        #     2 如果按时超过x秒，且起始点坐标当前坐标的长度未超过限制，地图拖拽处理
+        #     2 如果按时超过x秒，且起始点坐标当前坐标的长度未超过限制，地图拖拽处理（可以不止用于地图拖拽）
         #       （在按键为松开时就以某个延迟循环执行）
         #
         # 设计时，因为有放下或松开问题，所以需要考虑到状态转换，
@@ -756,7 +778,8 @@ class events:
                                 self.drag_old_pos = px,py
                             if rem[4] >= self.limit_len:
                                 # 框选状态需要考虑持续问题，因为需要考虑画选择框的矩形线
-                                # 所以后续这里再扩展矩形线的问题。
+                                # 所以后续这里再扩展矩形线的问题。（大概属于 rts 类的问题）
+                                # 这里的实现如果放在 rts 上存在着一定的缺陷，暂时不考虑而已。
                                 self.cross_status = 2
                         self.cross_time = True
                         
@@ -796,33 +819,58 @@ class events:
     #================#
     # 一般方向键操作 #
     #================#
-    def general_direction_key(self,wasd=False):
+    # 带有粘性的方块操作
+    # 非粘性方块设计的操作通过这里实现，不规则光标移动在很多游戏里面非常常见，所以有必要更好的考虑这点
+    def general_direction_key(self,ticks,wasd=False,oblique=True):
         # 普通方向键处理（一般单个单位的方向移动处理）
-        
         # 处理一般的方向键的按键事件处理，一般用于角色移动或光标移动，（角色和光标都可以通过actor实现）
         # 判断剧场是否使用粘性方块设计，然后再选择响应的方式，总之这个函数返回的是一个坐标或是像素坐标
-        if self.actor.theater.blocks:
+        # 控制粘性方块的上下左右需要的参数
 
-            # 控制粘性方块的上下左右需要的参数
-            point = self.actor.point
+        rek = self._direction_key_pressed(wasd) # 获取当前按键（或组合键）的方向，以小键盘八方向数字为准
+
+        # 需要先判断rek再判断延迟才能防止出现灵敏丢失的情况
+        if rek and self._direction_key_delay(ticks,self.direction_key_delay):
+            px,py = self.actor.point
             pw,ph = self.actor.theater.blocks
             # 使用粘性方块的时候还需要考虑到是否point不为空 # 另外还需要考虑当前角色是否被控制（新参数）
             # 方向操作需要实现的各个参数，而且不良组合键需要考虑，比如同时按上和下不需要执行任何动作
-            
-            rek = self._direction_key_pressed(wasd) # 获取当前按键（或组合键）的方向，以小键盘八方向数字为准
 
-            # 测试输出
-            if rek:
-                print(rek)
+            def up():   nonlocal py;py = max(py - 1, 0)
+            def down(): nonlocal py;py = min(py + 1, ph-1)
+            def left(): nonlocal px;px = max(px - 1, 0)
+            def right():nonlocal px;px = min(px + 1, pw-1)
 
-            # 目前任务，暂时还在考虑怎么处理按键的反馈，直接修改point？光标的地图跟随功能需要考虑？
-            #===========================================================================
-            pass
+            if rek == 4: left()
+            if rek == 6: right()
+            if rek == 8: up()
+            if rek == 2: down()
+            if oblique:
+                # 允许有斜角的处理方法（默认允许斜角处理）
+                if rek == 7: left(); up()
+                if rek == 1: left(); down()
+                if rek == 9: right(); up()
+                if rek == 3: down(); right()
+            else:
+                # 只允许正方向键[只有上下左右]的处理方法（最优解是根据后一个按下的正方向键[只有上下左右]来实现）
+                if rek in [2,4,6,8]:
+                    self.un_oblique = rek
+                if rek == 7:
+                    if self.un_oblique == 8: left()
+                    if self.un_oblique == 4: up()
+                if rek == 1:
+                    if self.un_oblique == 2: left()
+                    if self.un_oblique == 4: down()
+                if rek == 9:
+                    if self.un_oblique == 8: right()
+                    if self.un_oblique == 6: up()
+                if rek == 3:
+                    if self.un_oblique == 2: right()
+                    if self.un_oblique == 6: down()
 
-        # 非粘性方块设计的操作通过这里实现，不规则光标移动在很多游戏里面非常常见，所以有必要更好的考虑这点
-        # 等我slg这边能够实现之后再考虑吧，
-        else:
-            pass
+            self.actor.change_point((px,py)) # 测试
+            # 废弃对blocks的判断，因为现在无论什么类型都将对图片进行切分，不过初始化不设定blocks会自动根据全屏最大化来初始化blocks
+            # 等我slg这边能够实现之后再考虑吧，rts的扩展考虑得稍微有点远了点。
 
     #================#
     # 一般控制键操作 #
@@ -830,7 +878,7 @@ class events:
     def general_control_key(self):
         # 类似于一般手柄上面的AB键位的功能，简单的提供一些接口
         # 让某些键位注册后返回一些对于编写者来说更方便查调用的数据接口
-        # 类似注册了键盘zx键位为ab（手柄），按键时候返回为ab其中一个，之类的，ab可能会更好辨识一些
+        # 类似注册了键盘zx键位为ab（手柄），按z、x键时候返回为a、b，之类的。ab会更好进行功能辨识
         pass
 
 
@@ -846,7 +894,7 @@ class events:
     #            #
     #============#
     # 直接与鼠标和按键接触的接口
-    # 比较难看懂，因为这里混合了我个人设计的返回数据结构
+    # 比较难看懂，因为这里混合了我个人设计的返回数据结构，这里没有设计延迟
 
     def _mouse_pressed(self):
         # 鼠标的话需要考虑几个状态
@@ -941,7 +989,10 @@ class events:
         return ret
 
     def _control_key_pressed(self):
-        # 一些普通的键盘非方向键的按键返回
+        # 一些普通的键盘非方向键的按键返回，这里需要考虑的是一般游戏ab键的单按和连发的区分和识别
+        # 所以可能需要和鼠标那样的方式去实现功能。方向键和ab键和鼠标都是需要各自的延迟参数(必须)
+        # 动作类游戏不可能按住方向键ab键就不能使用，分开延迟就可以实现互不影响
+        # 这里先实现分类，向上封装后再由上一层进行延迟封装，这里需要实现注册功能，因为wasd本身就是键盘上的按键，所以需要考虑
         pass
 
 
@@ -953,6 +1004,18 @@ class events:
     #            #
     #============#
     # 杂项
+
+
+    # 后续将会把地图缩放放在这里面来实现，因为这样的话才会让功能分割得更为整洁一些，
+    # 背景actor：地图缩放类功能，全局配置功能，像是速度音量之类的配置框选择
+    # 角色actor：属性一类的功能以及自身的一些技能功能（这类不需要events配置操作捕捉的功能）
+    # 光标actor：实现操作捕捉的关键功能
+    #
+    # 把地图迁移到这里来实现的一个好处就是，地图移动之类的和操作本身就紧密联系着
+    # 这样theater内部就能更好的去关注于其他东西，为了整洁，也是为了资源调配函数作准备。
+    #==================================================================================
+
+    
     
     def _map_mouse(self,cur_pos):
         # 地图拖动功能在这里实现 # 计算出于上一坐标关键帧的坐标差值，然后根据限制更新
@@ -970,9 +1033,12 @@ class events:
             self.drag_old_pos = cur_pos
 
     def _delay(self,ticks,rate):
+        # 目前该函数没有被使用，因为目前暂时还不需要考虑帧率的问题，
+        # 键盘鼠标的操作延时也独立出去防止延迟混乱，后期这里很可能会被使用，这里保留
+        
         # 因为之后设计的所有按键操作都将会“放弃”通过 pygame.event.get() 获取事件的方式来获取控制
-        # 因为 pygame.event.get() 得到的事件属于消耗品，这里获取到的话，别的地方就不一定能得到这个事件。
-        # 这无疑是对单击事件是非常灾难性的。# 所以这里一律使用 pygame.key.get_pressed() 来实现功能，
+        # 因为 pygame.event.get() 多次在不同地方使用的时候，会出现各种问题（测试结论）。
+        # 这无疑是对单击事件是非常灾难性的。灵敏度丢失不可接受， 所以这里一律使用 pygame.key.get_pressed() 来实现功能，
         # 这里通过延迟来实现按键执行的速率，避免任意需要延迟的操作漂移。
         # 这个地方为通用延时，和鼠标延时（鼠标延时类似于一种等待）还是有一些不太一样的。
         if ticks - self.cur_tick > rate:
@@ -983,6 +1049,12 @@ class events:
         # 鼠标的延迟在这里更类似于一种等待，实现鼠标长按功能
         if ticks - self.mouse_tick > rate:
             self.mouse_tick = ticks
+            return True
+
+    def _direction_key_delay(self,ticks,rate):
+        # 键盘的延迟单独出来（如果直接用 self._delay控制所有的操作事件会出现灵敏丢失的情况。）
+        if ticks - self.direction_key_tick > rate:
+            self.direction_key_tick = ticks
             return True
 
     # *该函数会废弃，留下注释是为以后提供灵感
@@ -1005,8 +1077,28 @@ class events:
 # 装载的地方可以是放在全局的artist里面，但是也有一些数据仅仅只在theater舞台初始化时候才会出现
 # 例如一些角色的等级经验肯定是需要全局存储的
 # 例如一些角色进入新的战场后血量需要初始化为满值一类的，不同的单位之间的战斗也需要考虑到数据怎么交互和计算
-# 先就考虑slg的框架来实现功能吧，后期看看能不能把一些其他类型的游戏也兼容进去的，比如avg、比如动作类，这些也都是slg之后的事情了。
+# 先就考虑slg的框架来实现功能吧，后期看看能不能把一些其他类型的游戏也兼容进去的，比如avg、rts、比如动作类，这些也都是slg之后的事情了。
 
+
+#
+# 如果说目前先就按照火纹那样的方式来实现的话，那么怎么去装载这些单位对象的属性参数？
+# 考虑：
+# 1 +-全部都放在全局内部，包括当前hp与最大hp这样两种参数
+#   | 那么类似转场回复满血的动作，可以考虑在场景切换的时候对切换函数进行挂钩实现？
+#   | 哪些需要在场景切换时候实现初始化的参数就通过场景切换的时候进行统一“再初始化”
+#   | 这种实现看起来不错（不过，挂钩接口的考虑以及实现可能会稍微有点难度）
+#   | 另外就是全局的数据结构要设计要有很强得把控，不然配置一些计算函数会比较麻烦
+#   | 要知道，artist类需要配置的数据很可能有非常多的舞台参数，舞台资源，和全局角色参数混在一起来设计
+#   | 数据结构的设计……
+#
+# 2 +-当专场的时候，将当前hp类似的临时参数（这里仅考虑火纹）放在舞台里面，通过舞台进行调配，
+#   | 这样的好处就在于，你可以预先定义一些装载这些属性的结构，提前配置一些对这些参数的调配函数，
+#   | 通过转场传入舞台的数据可以通过一些规范化的方式进行调用，这样开发起来可能会更有结构感
+#   | 不过有问题就是，这样实现起来就感觉稍微臃肿了一点，后期扩展起来找各种函数会比较麻烦
+#
+# 这里暂时比较青睐的是1号方案，因为由于所有配置都放在全局的话，配置起来感觉就很一次性（个人感觉而已），真好~
+# 前提是要承载所有数据的数据结构要设计好。
+#
 
 
 
@@ -1091,14 +1183,13 @@ if __name__ == "__main__":
     # 指定blocks之后会按照列行数量对图片切分，然后以每块大小默认为（30，30）进行缩放显示，支持地图缩放
     v2 = theater(bg2,'sea',blocks=(16,12))
     actor2 = actor(cur)
-    actor3 = actor(cur,(3,3),'cursor',32)
+    actor3 = actor(cur,(3,3),'actor',100)
     v2.regist(actor2)
     v2.regist(actor3)
 
     s.regist(v1)
     s.regist(v2)
     s.run()
-
 
 
 
