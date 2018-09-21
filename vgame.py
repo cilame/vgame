@@ -119,7 +119,7 @@ class artist:
         self.screen.fill((0,0,100))
 
         # 这里就需要对指定的剧场进行更新，就是场景切换的扩展就在这里
-        self.theaters[self.currrent].group.update(self.screen, ticks)
+        self.theaters[self.currrent].group.update(ticks)
         self.theaters[self.currrent].group.draw(self.screen)
 
         # 测试按键，后期删除，一般关于舞台的控制操作尽量封装在舞台类里面会更好一些
@@ -130,13 +130,11 @@ class artist:
                 if event.key == K_c :self._random_change()# 键盘C测试切换触发随机场景的变化
         #============================================
 
-
         pygame.display.flip()
 
     # 通过名字切换场景
     def change_theater(self, name):
         self.currrent = name
-
 
     # 注册舞台组件的方法
     def regist(self,theater):
@@ -195,7 +193,6 @@ class theater:
         self.screen_pos     = (0,0)
         self.group          = pygame.sprite.Group()
         self.background     = None
-        self.bg_actor       = None
         self.artist         = None
 
         # *暂未使用的参数，后续要考虑入场和出场的动画表演，否则切换场景会非常僵硬（至少要提供配置接口）
@@ -216,20 +213,14 @@ class theater:
         self.single_thick   = single_line[1] if single_line and blocks else None
         self.toggle         = True
 
-        # 创建每个场景都需要一个默认的背景，图片加载失败就会用默认的某种颜色填充
-        self._add_background(bg_filename)
-
         # 用于坐标定位的参数
         self.point2coord    = None
         self.coord2point    = None
 
-        # 用于对地图尺寸操作时的强制延迟硬编码，以及修改尺寸前一刻的地图尺寸（用于尺寸转换时的定位）
-        self.cur_tick       = 0
-        self.map_uprate     = 100
-        self.image_size     = None
 
-        if self.blocks:
-            self._mk_blocks_map() # 对背景切块,blocks切块参数传递的地方
+        # 创建每个场景都需要一个默认的背景，图片加载失败就会用默认的某种颜色填充
+        self._add_background(bg_filename)
+        self.background.events._mk_blocks_map(self) # 对背景切块,blocks切块参数传递的地方
 
     def regist(self,actor):
         if actor.image:
@@ -239,103 +230,22 @@ class theater:
             self.group.add(actor)
             actor.theater = self
 
-    # 创建切块的地图信息，slg，2drpg...绝大多数非动作类游戏都有这样的需求。
-    def _mk_blocks_map(self):
-
-        # 背景大小，一般用这个作为地图切割。扩展地图的缩放功能，否则该类型游戏表现力将会很差
-        ncols,   nraws   = self.blocks
-        singlew, singleh = self.single
-        width,   height  = self.background.image.get_size()
-        new_w,   new_h   = singlew*ncols, singleh*nraws
-        cur_single       = int(width/ncols),int(height/nraws)
-
-        # 角色坐标与地图坐标的双向dict寻址，方便 actor的计算
-        px,py = list(range(ncols)),         list(range(nraws))
-        qx,qy = map(lambda i:i*singlew,px), map(lambda i:i*singleh,py)
-        point = list(product(px,py))
-        coord = list(product(qx,qy))
-        self.point2coord = dict(zip(point,coord))
-        self.coord2point = dict(zip(coord,point))
-
-        # 节约资源的做法，同时也能保证不会因为尺寸变化丢失背景图片精度
-        if self.single in self.singles_image:
-            self.background.image = self.singles_image[self.single]
-        else:
-            self.singles_image[self.single] = pygame.transform.scale(self.background.image,(new_w,new_h))
-
-        if self.single != cur_single:
-            self.background.image = self.singles_image[self.single]
-
-        # 画切割线，当然也有其他扩展的方法能更节省资源。目前没有动态开关线条的功能，后续再考虑开发。
-        if self.single_color:
-            color,thick = self.single_color,self.single_thick
-            for i in range(1,ncols):
-                pygame.draw.line(self.background.image,color,(i*singlew,0),(i*singlew,new_h),thick)
-            for i in range(1,nraws):
-                pygame.draw.line(self.background.image,color,(0,i*singleh),(new_w,i*singleh),thick)
-
 
     # 每个场景的创建必须要一张图片作为背景。
     def _add_background(self, bg_filename):
-        
         # 背景也是通过 actor类实例化实现
-        self.bg_actor = actor(bg_filename)
-        def _default_theater(screen, ticks):
-            
-            # 键盘 + - 控制缩放
-            if self._change_size(ticks):
-                self.toggle = True
+        self.background = actor(bg_filename)
+        self.background.theater = self
+        def _default_theater(ticks):
+            self.background.events.change_map_size(ticks)
 
-            # 控制缩放时的坐标。用toggle的好处为：在初始化时能够执行一次，之后需要缩放成功修改配置
-            if self.toggle:
-                self._change_size_local(screen,self.screen_pos)
-
-        self.bg_actor.update = _default_theater
-        if self.bg_actor.image:
-            self.group.add(self.bg_actor)
-            self.background = self.bg_actor
+        self.background.update = _default_theater
+        if self.background.image:
+            self.group.add(self.background)
 
 
-    # 改变地图尺寸时，修改当前的 screen_pos
-    def _change_size_local(self,screen,screen_pos):
-        sw,sh = screen.get_size()
-        bw,bh = self.image_size if self.image_size else self.background.image.get_size()
-        aw,ah = self.background.image.get_size() # 这是变后尺寸，之前没有指明变前尺寸，所以造成BUG
-        wk,hk = aw/bw, ah/bh
-        tw,th = int(sw/2-(sw/2-screen_pos[0])*wk),int(sh/2-(sh/2-screen_pos[1])*hk)
-        self.image_size = aw,ah # 更新变前尺寸
-        px = (sw-aw)/2 if aw<=sw else tw
-        py = (sh-ah)/2 if ah<=sh else th
-        self.bg_actor.rect[0] = px # 通过修改rect来修改放置的中心点
-        self.bg_actor.rect[1] = py
-        self.screen_pos = (px, py) # 存储在类里面，后续应用于与其他函数交互
-        self.toggle = False
 
 
-    # 目前用简单的 + 和 - 键来控制地图缩放
-    def _change_size(self,ticks):
-
-        def _change_blocks(toggle):
-            v = list(range(len(self.singles)))
-            x = self.singles.index(self.single)
-            if toggle == '+': ret = self.singles[x+1] if x+1 in v else self.single
-            if toggle == '-': ret = self.singles[x-1] if x-1 in v else self.single
-            if self.single != ret:
-                if self._delay(ticks): # 延时设计，避免按键功能漂移
-                    self.single = ret
-                    self._mk_blocks_map()
-                    return True
-
-        # 这里进行了一次统一，之后都统一使用 blocks式的缩放。blocks 不设置的话会通过背景图片进行自动设置。
-        if pygame.key.get_pressed()[K_KP_PLUS]: return _change_blocks('+')
-        if pygame.key.get_pressed()[K_KP_MINUS]:return _change_blocks('-')
-
-
-    def _delay(self,ticks):
-        if ticks - self.cur_tick > self.map_uprate:
-            self.cur_tick = ticks
-            return True
-        
 
 
 
@@ -379,7 +289,6 @@ class actor(pygame.sprite.Sprite):
 
         self.events     = self.regist(events(action, event_rate))
 
-
         self.init_toggle= True # 测试使用的参数，后期可能删除，重新设计
 
     def load_img(self,img):
@@ -419,12 +328,6 @@ class actor(pygame.sprite.Sprite):
 
         return image
 
-    # 控制速率的函数，使任意帧率情况下都保持相同速度的函数
-    def _time_update(self,ticks):
-        if ticks - self.cur_tick > self.rate:
-            self.cur_tick = ticks
-            return True
-
 
     def regist(self,events):
         events.actor = self # 让事件对象能找到宿主本身
@@ -432,7 +335,7 @@ class actor(pygame.sprite.Sprite):
         return events
 
 
-    def update(self,screen,ticks):
+    def update(self,ticks):
 
         if self.active and self._time_update(ticks):
             self.image = self.src_image.subsurface(next(self.rects))
@@ -501,6 +404,14 @@ class actor(pygame.sprite.Sprite):
             self.rect[0] = x
             self.rect[1] = y
 
+    # 控制速率的函数，使任意帧率情况下都保持相同速度的函数
+    def _time_update(self,ticks):
+        if ticks - self.cur_tick > self.rate:
+            self.cur_tick = ticks
+            return True
+
+
+
 
 class events:
     '''
@@ -545,6 +456,14 @@ class events:
         # 实际上，需要配置的参数有非常的多，不必将参数放置在这里，之后可以考虑将配置都放入actor里面
         # 后期通过 events向上调用来查看问题发生在什么地方。
         self.be_control   = False # 后期可能抛弃的参数
+
+
+
+
+        # 用于对地图尺寸操作时的强制延迟硬编码，以及修改尺寸前一刻的地图尺寸（用于尺寸转换时的定位）
+        self.map_tick       = 0
+        self.map_uprate     = 100
+        self.image_size     = None
 
 
 
@@ -1005,7 +924,6 @@ class events:
     #============#
     # 杂项
 
-
     # 后续将会把地图缩放放在这里面来实现，因为这样的话才会让功能分割得更为整洁一些，
     # 背景actor：地图缩放类功能，全局配置功能，像是速度音量之类的配置框选择
     # 角色actor：属性一类的功能以及自身的一些技能功能（这类不需要events配置操作捕捉的功能）
@@ -1015,8 +933,6 @@ class events:
     # 这样theater内部就能更好的去关注于其他东西，为了整洁，也是为了资源调配函数作准备。
     #==================================================================================
 
-    
-    
     def _map_mouse(self,cur_pos):
         # 地图拖动功能在这里实现 # 计算出于上一坐标关键帧的坐标差值，然后根据限制更新
         if cur_pos != self.drag_old_pos:
@@ -1028,8 +944,8 @@ class events:
             nx = max(min(mx+cx-ox,0),sw-w) if sw<w else mx
             ny = max(min(my+cy-oy,0),sh-h) if sh<h else my
             self.actor.theater.screen_pos = nx,ny
-            self.actor.theater.bg_actor.rect[0] = nx
-            self.actor.theater.bg_actor.rect[1] = ny
+            self.actor.theater.background.rect[0] = nx
+            self.actor.theater.background.rect[1] = ny
             self.drag_old_pos = cur_pos
 
     def _delay(self,ticks,rate):
@@ -1073,6 +989,106 @@ class events:
 
 
 
+    #================#
+    #                #
+    #  地图缩放内容  #
+    #                #
+    #================#
+    # 后期考虑将那些需要存储的数据都通过某些结构进行存放，否则，后期会越来越乱
+    # 像是现在，theater里面就已经有一些压力了。或许可以考虑属性数据、舞台变量、资源内容全部统一管理？
+    # 现在还是通过修改 background 的update来实现的地图缩放，非常难受，而且 events的捕捉后期也要考虑怎么去处理
+    # 非常粗糙地终于将地图拖动也放到了events对象里面，后期修改控制捕捉，让关于地图的事件都考虑放在这部分。
+    # 这样方便分类并且，方便调控捕捉的权限或是队列啥的。
+    def change_map_size(self,ticks):
+        # 键盘 + - 控制缩放
+        if self._change_size(ticks):
+            self.actor.theater.toggle = True
+
+        # 控制缩放时的坐标。用toggle的好处为：在初始化时能够执行一次，之后需要缩放成功修改配置
+        if self.actor.theater.toggle:
+            self._change_size_local()
+
+    # 目前用简单的 + 和 - 键来控制地图缩放
+    def _change_size(self,ticks):
+        _self = self.actor.theater
+        def _change_blocks(toggle):
+            v = list(range(len(_self.singles)))
+            x = _self.singles.index(_self.single)
+            if toggle == '+': ret = _self.singles[x+1] if x+1 in v else _self.single
+            if toggle == '-': ret = _self.singles[x-1] if x-1 in v else _self.single
+            if _self.single != ret:
+                if self._map_delay(ticks): # 延时设计，避免按键功能漂移
+                    _self.single = ret
+                    self._mk_blocks_map(_self)
+                    return True
+
+        # 这里进行了一次统一，之后都统一使用 blocks式的缩放。blocks 不设置的话会通过背景图片进行自动设置。
+        if pygame.key.get_pressed()[K_KP_PLUS]: return _change_blocks('+')
+        if pygame.key.get_pressed()[K_KP_MINUS]:return _change_blocks('-')
+
+    # 创建切块的地图信息，slg，2drpg...绝大多数非动作类游戏都有这样的需求。
+    def _mk_blocks_map(self,theater):
+        self = theater
+        # 背景大小，一般用这个作为地图切割。扩展地图的缩放功能，否则该类型游戏表现力将会很差
+        ncols,   nraws   = self.blocks
+        singlew, singleh = self.single
+        width,   height  = self.background.image.get_size()
+        new_w,   new_h   = singlew*ncols, singleh*nraws
+        cur_single       = int(width/ncols),int(height/nraws)
+
+        # 角色坐标与地图坐标的双向dict寻址，方便 actor的计算
+        px,py = list(range(ncols)),         list(range(nraws))
+        qx,qy = map(lambda i:i*singlew,px), map(lambda i:i*singleh,py)
+        point = list(product(px,py))
+        coord = list(product(qx,qy))
+        self.point2coord = dict(zip(point,coord))
+        self.coord2point = dict(zip(coord,point))
+
+        # 节约资源的做法，同时也能保证不会因为尺寸变化丢失背景图片精度
+        if self.single in self.singles_image:
+            self.background.image = self.singles_image[self.single]
+        else:
+            self.singles_image[self.single] = pygame.transform.scale(self.background.image,(new_w,new_h))
+
+        if self.single != cur_single:
+            self.background.image = self.singles_image[self.single]
+
+        # 画切割线，当然也有其他扩展的方法能更节省资源。目前没有动态开关线条的功能，后续再考虑开发。
+        if self.single_color:
+            color,thick = self.single_color,self.single_thick
+            for i in range(1,ncols):
+                pygame.draw.line(self.background.image,color,(i*singlew,0),(i*singlew,new_h),thick)
+            for i in range(1,nraws):
+                pygame.draw.line(self.background.image,color,(0,i*singleh),(new_w,i*singleh),thick)
+
+    # 改变地图尺寸时，修改当前的 screen_pos
+    def _change_size_local(self):
+        _self = self.actor.theater
+        screen = pygame.display.get_surface()
+        screen_pos = _self.screen_pos
+        sw,sh = screen.get_size()
+        bw,bh = self.image_size if self.image_size else _self.background.image.get_size()
+        aw,ah = _self.background.image.get_size() # 这是变后尺寸，之前没有指明变前尺寸，所以造成BUG
+        wk,hk = aw/bw, ah/bh
+        tw,th = int(sw/2-(sw/2-screen_pos[0])*wk),int(sh/2-(sh/2-screen_pos[1])*hk)
+        self.image_size = aw,ah # 更新变前尺寸
+        px = (sw-aw)/2 if aw<=sw else tw
+        py = (sh-ah)/2 if ah<=sh else th
+        _self.background.rect[0] = px # 通过修改rect来修改放置的中心点
+        _self.background.rect[1] = py
+        _self.screen_pos = (px, py) # 存储在类里面，后续应用于与其他函数交互
+        _self.toggle = False
+
+    def _map_delay(self,ticks):
+        if ticks - self.map_tick > self.map_uprate:
+            self.map_tick = ticks
+            return True
+
+
+
+
+
+
 # 对了，单位的属性和计算需要封装在什么地方好呢？
 # 装载的地方可以是放在全局的artist里面，但是也有一些数据仅仅只在theater舞台初始化时候才会出现
 # 例如一些角色的等级经验肯定是需要全局存储的
@@ -1100,9 +1116,15 @@ class events:
 # 前提是要承载所有数据的数据结构要设计好。
 #
 
+# 还是非常只想用一个actor来实现各种功能，仅仅是通过配置就行。
+# 并且动画效果可能会有一些复杂，如果不需要带有操作的动画效果，或许需要单独出一个 anime类来实现这些功能？
+# 或者可以设计成一种插件的形式？不过还是需要考虑一下各种行为捕捉还有一些动画效果的实现。
 
 
 
+# 现在的任务就是设计好数据存储的结构，以及更加插口形式的传入参数（含默认参）的接口设计
+# 因为这些问题很可能在未来将会造成非常多的混乱，或者后期尽量将各种各样的需要配置的参数都独立出去
+# 细节调整的参数尽量以配置文件的形式存在？这个考虑还可以，后期可以考虑放进去。
 
 
 
@@ -1173,8 +1195,8 @@ if __name__ == "__main__":
     actor1 = actor(cur,action='cursor')
     # 现在每个actor内部都会产生一个events对象来实现自身的功能，不过仍然可以通过外部注册的方式将外部events对象注入actor内部
 
-    e = events(cur)
-    actor1.regist(e)
+    #e = events(cur)
+    #actor1.regist(e)
 
     
     v1.regist(actor1)
@@ -1184,11 +1206,20 @@ if __name__ == "__main__":
     v2 = theater(bg2,'sea',blocks=(16,12))
     actor2 = actor(cur)
     actor3 = actor(cur,(3,3),'actor',100)
+
     v2.regist(actor2)
     v2.regist(actor3)
 
     s.regist(v1)
     s.regist(v2)
+    print(actor1.theater)
+    print(actor2.theater)
+    print(actor3.theater)
+
+    print(id(actor1))
+    print(id(actor2))
+    print(id(actor3))
+
     s.run()
 
 
