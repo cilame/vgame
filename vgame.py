@@ -431,8 +431,11 @@ class events:
         self.actor      = None
         self.rate       = event_rate
 
-        # 帧率延时临时变量
+
+        # 帧率延时临时变量，暂时没有用到
         self.cur_tick   = 0
+
+
 
         # 用于鼠标操作的参数（一般只有在鼠标按下时候会更新，所以不用担心资源浪费问题）
         self.mouse_id     = None # in (0,1,2) 0代表左键，2代表右键，1代表中键
@@ -447,10 +450,16 @@ class events:
         self.drag_map_pos = None # 地图拖拽时最先按下的那个点与地图相关的坐标（注意是和地图相关而不是和界面相关）
         self.drag_old_pos = None # 上一帧拖拽时，鼠标于界面的坐标点
 
-        # 用于键盘操作的参数
-        self.direction_key_tick     = 0    # 后期发现只用 self._delay 函数，如果混合其他操作可能会出现灵敏丢失的情况
-        self.direction_key_delay    = 100  # 所以最后还是把键盘的操作延时也单独出来了 # 关于延迟的动态配置后期再做，这里先硬编码
-        self.un_oblique             = 0    # 如果没有斜角操作的话，处理斜角的操作滞粘操作参数
+        # 用于键盘方向操作的参数
+        self.direction_key_tick   = 0    # 后期发现只用 self._delay 函数，如果混合其他操作可能会出现灵敏丢失的情况
+        self.direction_key_delay  = 100  # 所以最后还是把键盘的操作延时也单独出来了 # 关于延迟的动态配置后期再做，这里先硬编码
+        self.un_oblique           = 0    # 如果没有斜角操作的话，处理斜角的操作滞粘操作参数
+
+        # 用于键盘控制操作的参数
+        self.control_key_tick     = 0
+        self.control_key_delay    = 100
+        self.control_keys = [pygame.K_z,pygame.K_x]
+        
 
         # 对象创建默认为未被控制，按照一般slg思路而已，控制的触发需要通过光标对象来修改实现
         # 实际上，需要配置的参数有非常的多，不必将参数放置在这里，之后可以考虑将配置都放入actor里面
@@ -765,7 +774,7 @@ class events:
             if rek == 8: up()
             if rek == 2: down()
             if oblique:
-                # 允许有斜角的处理方法（默认允许斜角处理）
+                # 允许有斜角的处理方法（默认允许斜角处理）# 这样处理不会出现对顶的可能性，注意
                 if rek == 7: left(); up()
                 if rek == 1: left(); down()
                 if rek == 9: right(); up()
@@ -912,7 +921,34 @@ class events:
         # 所以可能需要和鼠标那样的方式去实现功能。方向键和ab键和鼠标都是需要各自的延迟参数(必须)
         # 动作类游戏不可能按住方向键ab键就不能使用，分开延迟就可以实现互不影响
         # 这里先实现分类，向上封装后再由上一层进行延迟封装，这里需要实现注册功能，因为wasd本身就是键盘上的按键，所以需要考虑
-        pass
+        # 这里默认只给予三种游戏选择键的处理（ab）（abxy）（abcxyz），就是说，self.control_keys 只接受长度为2、4、6的list参数。
+        # 并且xyz分别为abc三个功能按键的连发，仅此而已。
+        # 考虑一下多个按键同时按下的话怎么处理，
+        key = pygame.key.get_pressed()
+        if len(self.control_keys) == 2:
+            a,b = self.control_keys
+            a = key[a]
+            b = key[b]
+            v = [a,b]
+            if any(v): return (2,v)
+        if len(self.control_keys) == 4:
+            a,b,x,y = self.control_keys
+            a = key[a]
+            b = key[b]
+            x = key[x]
+            y = key[y]
+            v = [a,b,x,y]
+            if any(v): return (4,v)
+        if len(self.control_keys) == 6:
+            a,b,c,x,y,z = self.control_keys
+            a = key[a]
+            b = key[b]
+            c = key[c]
+            x = key[x]
+            y = key[y]
+            z = key[z]
+            v = [a,b,c,x,y,z]
+            if any(v): return (6,v)
 
 
 
