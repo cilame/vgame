@@ -1,0 +1,4 @@
+__pycache__/
+vgame.egg-info/
+dist/
+build/
