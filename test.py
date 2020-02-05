@@ -1,44 +1,30 @@
 #from vgame import artist
-import vgame.artist as artist
-import vgame.theater as theater
-import vgame.actor as actor
-import vgame.initer as initer
-
+from vgame import Initer, Theater, Actor
 
 if __name__ == "__main__":
     bg1 = 'test_data/sushiplate.jpg'
     bg2 = 'test_data/sea.jpg'
     cur = 'test_data/sprite_100x100_32.png'
 
-    s = initer(120) # 第一个参数为全局帧率，默认60
-    v1 = theater(bg1,'123') # theater必须要指定两个元素，背景图片地址，舞台名字（舞台切换用，键盘C键测试切换）
-    actor1 = actor(cur,action='cursor')
-    # 现在每个actor内部都会产生一个events对象来实现自身的功能，不过仍然可以通过外部注册的方式将外部events对象注入actor内部
+    # 测试时使用 c 键切换场景
+    # 测试时使用 q 键删除对象
 
-    #e = events(cur)
-    #actor1.regist(e)
+    main = Initer(60) # 第一个参数为全局秒帧率，默认60
 
-    
-    v1.regist(actor1)
-    
+    # 场景一
+    main_theater = Theater(bg1, '123') # theater 必须要指定两个元素，1背景图片资源地址，2舞台名字
+    actor1 = Actor(cur, showsize=(40,40), in_control=True) # in_control 负责接收控制指令，目前控制指令只会打印相关的操作内容
+    main_theater.regist(actor1) # 动作者注册进场景才能使用
+    main.regist(main_theater) # 场景需要注册进初始对象才能使用
 
-    # 指定blocks之后会按照列行数量对图片切分，然后以每块大小默认为（30，30）进行缩放显示，支持地图缩放
-    v2 = theater(bg2,'sea',blocks=(16,12))
-    actor2 = actor(cur)
-    actor3 = actor(cur,(3,3),'actor',100)
+    # 场景二
+    theater_0 = Theater(bg2, 'sea') # theater 必须要指定两个元素，1背景图片资源地址，2舞台名字
+    actor2 = Actor(cur, showsize=(80,80), in_control=True)
+    theater_0.regist(actor2)
+    main.regist(theater_0)
 
-    v2.regist(actor2)
-    v2.regist(actor3)
 
-    s.regist(v1)
-    s.regist(v2)
-    print(actor1.theater)
-    print(actor2.theater)
-    print(actor3.theater)
+    main.change_theater('sea') # 可以通过舞台名字进行场景的切换
 
-    print(id(actor1))
-    print(id(actor2))
-    print(id(actor3))
-
-    s.run()
+    main.run() # 启动一切
 
