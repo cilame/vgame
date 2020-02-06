@@ -115,6 +115,7 @@ class Events:
                         self.cross_status = 0
                     else:
                         return rem[0], self.cross_status, rem[2:4]
+        # 这里的点击模式包含单击、框选和长按拖动三种模式
         def model_b(rem):
             if rem and rem[0] in (0, 2):
                 if self.cross_status == 0:
