@@ -66,7 +66,7 @@ class Events:
     def update_select_cursor(self,ticks):
         # 光标类主要是用于可以被控制所操作的对象，该类对象可以通过下面的函数来对操作进行挂钩
         # 后续可以开发部分功能用于该处与外部通信，让外部自定义的函数能够使用下面挂钩到的接口
-        morse_info = self.general_mouse_key(ticks,model='a')             # 处理通常鼠标键，有两种模式，请看函数内的注释描述
+        morse_info = self.general_mouse_key(ticks,model='a')         # 处理通常鼠标键，有两种模式，请看函数内的注释描述
         direc_info = self.general_direction_key(ticks,direct='wasd') # 处理通常方向键
         cntro_info = self.general_control_key(ticks)                 # 处理通常ab键的接收
         
