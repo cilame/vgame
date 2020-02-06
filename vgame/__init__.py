@@ -2,7 +2,7 @@ import pygame
 from pygame.locals import *
 
 from .theater import Theater
-from .actor import Actor
+from .actor import Actor, Image
 
 class Artist:
     '''

@@ -40,12 +40,12 @@ class Events:
 
         # 用于键盘方向操作的参数
         self.direction_key_tick   = 0  # 后期发现只用 self._delay 函数，如果混合其他操作可能会出现灵敏丢失的情况
-        self.direction_key_delay  = 10 # 所以最后还是把键盘的操作延时也单独出来了
+        self.direction_key_delay  = 15 # 所以最后还是把键盘的操作延时也单独出来了
         self.un_oblique           = 0  # 如果没有斜角操作的话，处理斜角的操作滞粘操作参数
 
         # 用于键盘控制操作的参数
         self.control_key_tick     = 0
-        self.control_key_delay    = 10
+        self.control_key_delay    = 15
         self.control_keys = [pygame.K_j, pygame.K_k]
 
         # 用于实现栈效果式的更新函数
@@ -56,27 +56,25 @@ class Events:
             self.update_stack.append(self.update_select_cursor)
 
     def update(self,ticks):
-        # 戏大部分功能是一种开关式的处理，就是开启之后必要会考虑的关闭，
-        # 所以实际上，这里的处理如果是使用栈来实现的话，那些功能叠加的时候也能通过简单的pop-
-        # 来回到上层的功能，这样的设计一般在这里都是找栈最上层的函数进行更新，不过栈在这里独立出来之后
-        # 就可以更容易扩展出多场景捕捉功能的叠加。
+        # 这里的处理暂时没有特别的必要，但是一个操作捕捉的栈空间或许后续可以扩充功能
+        # 用于覆盖某些之前的功能，或者说，
         if self.update_stack:
-            self.update_stack[-1](ticks)
+            return self.update_stack[-1](ticks)
+        else:
+            return None, None, None
 
     def update_select_cursor(self,ticks):
         # 光标类主要是用于可以被控制所操作的对象，该类对象可以通过下面的函数来对操作进行挂钩
         # 后续可以开发部分功能用于该处与外部通信，让外部自定义的函数能够使用下面挂钩到的接口
-        morse_info = self.general_mouse(ticks,model='a')             # 处理通常鼠标键，有两种模式，请看函数内的注释描述
+        morse_info = self.general_mouse_key(ticks,model='a')             # 处理通常鼠标键，有两种模式，请看函数内的注释描述
         direc_info = self.general_direction_key(ticks,direct='wasd') # 处理通常方向键
         cntro_info = self.general_control_key(ticks)                 # 处理通常ab键的接收
         
-        # 简单打印操作接口返回的内容，后续会进行开发处理
-        if morse_info:
-            print(self.actor, morse_info)
-        if direc_info:
-            print(self.actor, direc_info)
-        if cntro_info:
-            print(self.actor, cntro_info)
+        # # 简单打印操作接口返回的内容，后续会进行开发处理
+        # if morse_info: print(self.actor, self.actor.rect, 'morse_info:', morse_info)
+        # if direc_info: print(self.actor, self.actor.rect, 'direc_info:', direc_info)
+        # if cntro_info: print(self.actor, self.actor.rect, 'cntro_info:', cntro_info)
+        return morse_info, direc_info, cntro_info
 
     #===============#
     #               #
@@ -93,7 +91,7 @@ class Events:
     # 该两个函数的返回参数均如下所示，仅在功能上是否返回3这点区别
     # 返回的参数为 按键id（0左键，1中键[不包含滚轮]，2右键），功能（1单击，2直接框选，3按住后再拖动），起点坐标，终点坐标
     # 非常建议使用 a 类，这种处理非常顺滑，
-    def general_mouse(self,ticks,model='a'):
+    def general_mouse_key(self,ticks,model='a'):
         # 这里的点击模式仅仅包含单击和框选两种处理方式
         rem = self._mouse_pressed() # rem 究竟是什么，详细请看 _mouse_pressed 函数注释。
         def model_a(rem):
