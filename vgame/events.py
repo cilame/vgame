@@ -39,14 +39,14 @@ class Events:
         self.limit_len    = 3.   # 一个阈值，与鼠标按下松开时，两点坐标点距离有关
 
         # 用于键盘方向操作的参数
-        self.direction_key_tick   = 0  # 后期发现只用 self._delay 函数，如果混合其他操作可能会出现灵敏丢失的情况
-        self.direction_key_delay  = 15 # 所以最后还是把键盘的操作延时也单独出来了
-        self.un_oblique           = 0  # 如果没有斜角操作的话，处理斜角的操作滞粘操作参数
+        self.direction_key_tick  = 0  # 后期发现只用 self._delay 函数，如果混合其他操作可能会出现灵敏丢失的情况
+        self.direction_key_delay = 15 # 所以最后还是把键盘的操作延时也单独出来了
+        self.un_oblique          = 0  # 如果没有斜角操作的话，处理斜角的操作滞粘操作参数
 
         # 用于键盘控制操作的参数
-        self.control_key_tick     = 0
-        self.control_key_delay    = 15
-        self.control_keys = [pygame.K_j, pygame.K_k]
+        self.control_key_tick  = 0
+        self.control_key_delay = 15
+        self.control_keys      = [pygame.K_j, pygame.K_k]
 
         # 用于实现栈效果式的更新函数
         self.update_stack = []
@@ -295,27 +295,5 @@ class Events:
         # 并且xyz分别为abc三个功能按键的连发，仅此而已。
         # 考虑一下多个按键同时按下的话怎么处理，
         key = pygame.key.get_pressed()
-        if len(self.control_keys) == 2:
-            a,b = self.control_keys
-            a = key[a]
-            b = key[b]
-            v = [a,b]
-            if any(v): return (2,v)
-        if len(self.control_keys) == 4:
-            a,b,x,y = self.control_keys
-            a = key[a]
-            b = key[b]
-            x = key[x]
-            y = key[y]
-            v = [a,b,x,y]
-            if any(v): return (4,v)
-        if len(self.control_keys) == 6:
-            a,b,c,x,y,z = self.control_keys
-            a = key[a]
-            b = key[b]
-            c = key[c]
-            x = key[x]
-            y = key[y]
-            z = key[z]
-            v = [a,b,c,x,y,z]
-            if any(v): return (6,v)
+        v = [key[i] for i in self.control_keys]
+        if any(v): return (len(self.control_keys),v)
