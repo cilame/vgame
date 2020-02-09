@@ -32,7 +32,7 @@ class Artist:
             self.theaters[self.currrent].group.update(ticks)
             self.theaters[self.currrent].group.draw(self.screen)
         else:
-            raise 'empty theaters!'
+            pass
 
         # 测试按键，后期删除，一般关于舞台的控制操作尽量封装在舞台类里面会更好一些
         #============================================
@@ -100,6 +100,6 @@ class Initer:
 
 
 __author__ = 'cilame'
-__version__ = 'alpha'
+__version__ = '0.0.0'
 __email__ = 'opaquism@hotmail.com'
 #__github__ = 'https://github.com/cilame/vgame'
