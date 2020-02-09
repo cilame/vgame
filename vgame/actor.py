@@ -1,4 +1,4 @@
-import re
+import os, re
 import traceback
 from itertools import cycle, product
 
@@ -24,26 +24,37 @@ class Image:
 
     def load_img(self,img):
         try:
-            image = pygame.image.load(img).convert_alpha()
-            move = re.findall(r'_(\d+)x(\d+)\.', img.lower()) # 根据图片的命名自动切割图片，生成动图
-            if move:
-                move        = list(map(int,move[0]))
-                src_h,src_w = image.get_height(),image.get_width()
-                pro_h,pro_w = move[:2]
-                nraws,ncols = int(src_h/pro_h),int(src_w/pro_w)
-                mfunc       = lambda i:(i[0]*pro_w, i[1]*pro_h, pro_w, pro_h)
-                all_rects   = list(map(mfunc,product(range(ncols),range(nraws))))
-
+            if os.path.isdir(img):
+                imgfs, imgfv = {}, []
+                for idx, imgf in enumerate(sorted(os.listdir(img))):
+                    v = tuple(map(int, re.findall(r'\d+', imgf)))
+                    v = v if v else idx
+                    imgfs[v] = imgf
+                    imgfv.append(v)
+                func = lambda i:pygame.image.load(os.path.join(img,i)).convert_alpha()
+                all_rects = [func(imgfs[i]) for i in sorted(imgfv)]
                 self.active    = True
-                self.src_image = image
+                self.src_image = None
                 self.cur_tick  = 0
                 self.rects     = cycle(all_rects)
-                image = self.src_image.subsurface(next(self.rects))
-                if self.showsize:
-                    image = pygame.transform.scale(image, self.showsize)
-            else:
-                if self.showsize:
-                    image = pygame.transform.scale(image, self.showsize)
+                image = next(self.rects)
+            if os.path.isfile(img):
+                image = pygame.image.load(img).convert_alpha()
+                move = re.findall(r'_(\d+)x(\d+)\.', img.lower()) # 根据图片的命名自动切割图片，生成动图
+                if move:
+                    move        = list(map(int,move[0]))
+                    src_h,src_w = image.get_height(),image.get_width()
+                    pro_h,pro_w = move[:2]
+                    nraws,ncols = int(src_h/pro_h),int(src_w/pro_w)
+                    mfunc       = lambda i:(i[0]*pro_w, i[1]*pro_h, pro_w, pro_h)
+                    all_rects   = list(map(mfunc,product(range(ncols),range(nraws))))
+                    self.active    = True
+                    self.src_image = image
+                    self.cur_tick  = 0
+                    self.rects     = cycle(all_rects)
+                    image = self.src_image.subsurface(next(self.rects))
+            if self.showsize:
+                image = pygame.transform.scale(image, self.showsize)
         except:
             print("无法加载图片.",img)
             print(traceback.format_exc())
@@ -52,7 +63,7 @@ class Image:
 
     def update_image(self, ticks):
         if self.active and self._time_update(ticks):
-            self.image = self.src_image.subsurface(next(self.rects))
+            self.image = self.src_image.subsurface(next(self.rects)) if self.src_image else next(self.rects)
             if self.showsize:
                 self.image = pygame.transform.scale(self.image, self.showsize)
                 self.mask  = pygame.mask.from_surface(self.image)

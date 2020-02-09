@@ -7,6 +7,12 @@ if __name__ == "__main__":
     cur = 'test_data/sprite_100x100.png'
     som = 'test_data/niu_56x85.png'
 
+    ims = 'test_data/e1' # 文件夹也可以通过 Image 对象进行加载
+    fsd = 'test_data/fish/down'
+    fsu = 'test_data/fish/up'
+    fsr = 'test_data/fish/right'
+    fra = 'test_data/fish/right_attck1'
+
     # 测试时使用 c 键切换场景 # 该功能仅为测试用
 
     main = Initer(60) # 核心类负责游戏的启动，必须在最前面，否则连资源加载都做不到，
@@ -16,7 +22,12 @@ if __name__ == "__main__":
     i_bg1 = Image(bg1)
     i_bg2 = Image(bg2)
     i_cur = Image(cur, showsize=(50,50), rate=60) # 动图需要填写速率，否则会很鬼畜
-    i_som = Image(som, showsize=(80,80), rate=60) # 动图需要填写速率，否则会很鬼畜
+    i_som = Image(som, showsize=(80,80), rate=60)
+    i_ims = Image(ims, rate=60)
+    i_fsd = Image(fsd, rate=60)
+    i_fsu = Image(fsu, rate=60)
+    i_fsr = Image(fsr, rate=60)
+    i_fra = Image(fra, rate=60)
 
     # 场景一
     theater_0 = Theater(i_bg1, 'sky') # theater(舞台) 必须要指定两个元素，1背景图片资源，2舞台名字
@@ -29,7 +40,7 @@ if __name__ == "__main__":
 
     # 场景二
     theater_1 = Theater(i_bg2, 'sea') # theater(舞台) 必须要指定两个元素，1背景图片资源，2舞台名字
-    actor2 = Actor(i_som, in_control=True)
+    actor2 = Actor(i_fra, in_control=True)
     actor3 = Actor(i_som)
     actor4 = Actor(i_som)
     actor3.rect[0], actor3.rect[1] = 300, 300
@@ -46,7 +57,7 @@ if __name__ == "__main__":
     # 下面就是鼠标、方向键、功能键的操作消息的处理，不修改则默认打印消息内容
     # 1修改 actor2 的方向键的挂钩操作处理 # 用小键盘的方向数字描述上下左右
     def my_direction(m):
-        d = 5
+        d = 1
         # 可以通过这样实现碰撞检测，collide 函数的参数可以传递无限的 actor 对象
         # 返回的结果是与 actor2 碰撞的 actor 列表，可以同时有多个碰撞
         r = actor2.collide(actor3, actor4)
