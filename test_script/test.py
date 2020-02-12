@@ -1,17 +1,26 @@
+# 增加环境变量，仅测试使用
+import os
+import sys
+p = os.path.split(os.getcwd())[0]
+sys.path = [p] + sys.path
+import sys;print(sys.stdout.encoding)
+
+
+
 import vgame
 from vgame import Initer, Theater, Actor, Image
 
 if __name__ == "__main__":
-    bg1 = 'test_data/sushiplate.jpg'
-    bg2 = 'test_data/sea.jpg'
-    cur = 'test_data/sprite_100x100.png'
-    som = 'test_data/niu_56x85.png'
+    bg1 = '../test_data/sushiplate.jpg'
+    bg2 = '../test_data/sea.jpg'
+    cur = '../test_data/sprite_100x100.png'
+    som = '../test_data/niu_56x85.png'
 
-    ims = 'test_data/e1' # 文件夹也可以通过 Image 对象进行加载
-    fsd = 'test_data/fish/down'
-    fsu = 'test_data/fish/up'
-    fsr = 'test_data/fish/right'
-    fra = 'test_data/fish/right_attck1'
+    ims = '../test_data/e1' # 文件夹也可以通过 Image 对象进行加载
+    fsd = '../test_data/fish/down'
+    fsu = '../test_data/fish/up'
+    fsr = '../test_data/fish/right'
+    fra = '../test_data/fish/right_attck1'
 
     # 测试时使用 TAB 键切按一定的顺序换场景 # 该功能仅为测试用
 

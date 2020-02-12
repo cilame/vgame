@@ -1,3 +1,13 @@
+# 增加环境变量，仅测试使用
+import os
+import sys
+p = os.path.split(os.getcwd())[0]
+sys.path = [p] + sys.path
+import sys;print(sys.stdout.encoding)
+
+
+
+
 import vgame
 s = vgame.Initer() # 参数 ticks帧数(默认60), title标题名(默认vgame), 分辨率 size(默认640x480)
 
@@ -10,7 +20,7 @@ s = vgame.Initer() # 参数 ticks帧数(默认60), title标题名(默认vgame), 
 # 创建场景，第二个参数可以是背景图，也可以不写，不写展示默认的蓝色背景
 t = vgame.Theater('main') # 按键 ESC 关闭
 
-# 增加三个角色，其中a设置 in_control为True 后就能够通过修改 a.direction 函数来接收方向功能sssssssssss
+# 增加三个角色，其中a设置 in_control为True 后就能够通过修改 a.direction 函数来接收方向功能
 a = vgame.Actor(in_control=True,showsize=(50,100))
 b = vgame.Actor() # 一个参数都不添加默认为一个白色色块大小为60x60，(255,255,255,255), (60,60)
 c = vgame.Actor((255,0,0),showsize=(150,100))
