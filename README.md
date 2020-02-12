@@ -176,7 +176,7 @@ v_bg = vgame.Image(bg, showsize=(640,480)) # 加载背景图片资源
 v_ac = vgame.Image(ac, showsize=(60,60)) # 这里请尽量主动设置 showsize
 
 t = vgame.Theater('main', v_bg)
-a = vgame.Actor(v_ac)
+a = vgame.Actor(v_ac, in_control=True)
 def direct_a(m):
     for i in m:
         if i == 8: a.rect[1] = max(a.rect[1] - 7, 0)
