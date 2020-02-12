@@ -9,17 +9,16 @@ DOWN  = 2 # 固定值
 LEFT  = 4 # 固定值
 RIGHT = 6 # 固定值
 
-class Events:
+class Controller:
     '''
-    控制事件的对象，每个 Actor 都会生成一个属于他们自身的 Events 对象在类内部，
+    控制事件的对象，每个 Actor 都会生成一个属于他们自身的 Controller 对象在类内部，
     可以通过 in_control 参数进行配置是否需要使用控制处理
     状态转化 # 战斗计算 # 血条显示之类 # 属性配置之类 # 子弹发射 # 我个人想到什么就扩展什么，各种功能...
     '''
-    def __init__(self, event_rate=60, in_control=False):
+    def __init__(self, in_control=False):
         # 
         self.actor    = None
-        self.rate     = event_rate  # 
-        self.cur_tick = 0           # 总延时帧率部分的参数
+        self.cur_tick = 0    # 总延时帧率部分的参数
 
         # 因为之后设计的所有按键操作都将会“放弃”通过 pygame.event.get() 获取事件的方式来获取控制
         # 因为 pygame.event.get() 多次在不同地方使用的时候，会出现各种问题（测试结论）。

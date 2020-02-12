@@ -11,17 +11,16 @@ class Theater:
     调用资源仅仅需要通过自身的实例的绑定就能获取到
     '''
     def __init__(self,
-                 bg_filename,       # 背景图片（不确定开发：动态背景？例如白天黑夜效果？其实，白天黑夜可以通过加一层半透明的actor实现。）
-                 theater_name,      # 场景名字，用于定位、调整、切换场景使用
-                 music = None       # 后期扩展，音乐
+                 theater_name,       # 场景名字，用于定位、调整、切换场景使用
+                 bg_filename = None, # 背景图片（不确定开发：动态背景？例如白天黑夜效果？其实，白天黑夜可以通过加一层半透明的actor实现。）
+                 music = None        # 后期扩展，音乐
                  ):
 
         org_screen = pygame.display.get_surface()
         if org_screen is None:
-            raise 'None screen, pls use initer class to init.'
+            raise 'pls use Initer class to init game.'
 
         self.theater_name   = theater_name
-        self.screen_pos     = (0,0)
         self.group          = pygame.sprite.Group()
         self.background     = None
         self.artist         = None
@@ -32,7 +31,8 @@ class Theater:
         self.leave          = None
 
         # 创建每个场景都需要一个默认的背景，图片加载失败就会用默认的某种颜色填充
-        self._add_background(bg_filename)
+        if bg_filename:
+            self._add_background(bg_filename)
 
     def regist(self,actor):
         if actor.image:

@@ -5,13 +5,13 @@ from itertools import cycle, product
 import pygame
 from pygame.locals import *
 
-from .events import Events
+from .controller import Controller
 
 class Image:
     '''
     用于单个图片资源的加载，可以是动图但是
     '''
-    def __init__(self, img, showsize=None, rate=0):
+    def __init__(self, img=None, showsize=None, rate=0):
         # 一些默认配置，用于图片动画的刷新率，可以通过图片名字进行配置
         self.showsize  = showsize # 该参数仅用于对象
         self.rate      = rate # 不同的单位可以使用不同的速率
@@ -24,7 +24,13 @@ class Image:
 
     def load_img(self,img):
         try:
-            if os.path.isdir(img):
+            if img is None:
+                image = pygame.Surface((60, 60)).convert_alpha()
+                image.fill((255,255,255,255))
+            elif isinstance(img, tuple):
+                image = pygame.Surface((60, 60)).convert_alpha()
+                image.fill(img)
+            elif isinstance(img, str) and os.path.isdir(img):
                 imgfs, imgfv = {}, []
                 for idx, imgf in enumerate(sorted(os.listdir(img))):
                     v = tuple(map(int, re.findall(r'\d+', imgf)))
@@ -38,7 +44,7 @@ class Image:
                 self.cur_tick  = 0
                 self.rects     = cycle(all_rects)
                 image = next(self.rects)
-            if os.path.isfile(img):
+            elif isinstance(img, str) and os.path.isfile(img):
                 image = pygame.image.load(img).convert_alpha()
                 move = re.findall(r'_(\d+)x(\d+)\.', img.lower()) # 根据图片的命名自动切割图片，生成动图
                 if move:
@@ -74,39 +80,78 @@ class Image:
             self.cur_tick = ticks
             return True
 
+class Computer:
+    '''
+    主要负责 actor 的一些电脑操作的行为，想要实现一些敌反馈机制
+    目前开发的方向主要是想要能够通过 Actor 对象内直接调用到
+    例如：
+        act = Actor()
+        act.computer.idle
+    '''
+    def __init__(self):
+        self.actor = None
+        self.delay = 15 # 防止资源消耗过高
+        self._tick = 0
+
+    def update(self, ticks):
+        if self._update_delay( ticks):
+            # 根据参数数量来决定是否要传入 Actor 对象自身，虽然传入自身的好处很多。
+            # 但是我又不想一定要传入自身，有时候传入会对新手造成一定困惑，所以我选择两者兼容
+            self.idle() if self.idle.__code__.co_argcount == 0 else self.idle(self.actor)
+
+    def _update_delay(self,ticks):
+        if ticks - self._tick > self.delay:
+            self._tick = ticks
+            return True
+
+    @staticmethod
+    def idle(): pass
+
 class Actor(pygame.sprite.Sprite):
     '''
     单位对象，主要负责一个单位的包装，如果设置了 in_control 为 True 可以让该单位接收控制信号
     控制信号可以通过重写对象的 mouse direction control 函数来从外部处理 actor 实例对控制的交互
+    showsize 参数只有在 img 为 None或一个“3/4个数字表示颜色的tuple” 的时候才会有效
+    用于修改当你没有填充任何图片的时候默认展示的色块的矩形的大小，方便于一些仅需色块的游戏演示
+    如果主动传入了 img(Image类的对象)，那么传入 Image 的 showsize 即可。
     '''
-    def __init__(self, img=None, event_rate=60, in_control=False):
+    def __init__(self, img=None, in_control=False, showsize=None):
         pygame.sprite.Sprite.__init__(self)
-        self._image  = img
-        self.image   = self._image.image
-        self.mask    = self._image.mask
-        self.rect    = self.image.get_rect() if self.image else None
-        self.theater = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
-        self.events  = self.regist(Events(event_rate, in_control))
+        self._image      = img if not (img is None or isinstance(img, tuple)) else Image(img, showsize)
+        self.image       = self._image.image
+        self.mask        = self._image.mask
+        self.rect        = self.image.get_rect() if self.image else None
+        self.theater     = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
+        self.controller  = self.regist_controller(Controller(in_control))
+        self.computer    = self.regist_computer(Computer())
 
-    def regist(self,events):
-        events.actor = self # 让事件对象能找到宿主本身
-        self.events = events # 这里是为了兼容外部events的注册
-        return events
+    def regist_computer(self,computer):
+        computer.actor = self # 让事件对象能找到宿主本身
+        self.computer  = computer # 这里是为了兼容外部 computer 的注册
+        return computer
+
+    def regist_controller(self,controller):
+        controller.actor = self # 让事件对象能找到宿主本身
+        self.controller  = controller # 这里是为了兼容外部 controller 的注册
+        return controller
 
     def update(self,ticks):
         self._image.update_image(ticks)
         self.image = self._image.image
         self.mask  = self._image.mask
-        m, d, c = self.events.update(ticks)
-        if m: self.mouse(m)
-        if d: self.direction(d)
-        if c: self.control(c)
+        self.computer.update(ticks)
+        m, d, c = self.controller.update(ticks)
+        # 根据函数的参数数量，来决定是否传入 Actor 对象自身。
+        # 但是有时候传入自身可能会对新手造成一定困惑，我也不想一定要传入自身，下面的代码可以兼容两者
+        if m: self.mouse(m)     if self.mouse.__code__.co_argcount == 1     else self.mouse(self, m)
+        if d: self.direction(d) if self.direction.__code__.co_argcount == 1 else self.direction(self, d)
+        if c: self.control(c)   if self.control.__code__.co_argcount == 1   else self.control(self, c)
 
     def collide(self, *list_sprite):
         scollide = pygame.sprite.spritecollide(self, self.theater.group, False, pygame.sprite.collide_mask)
         rcollide = []
         for sprite in list_sprite:
-            if (sprite in scollide):
+            if sprite in scollide:
                 rcollide.append(sprite)
         return rcollide
 
