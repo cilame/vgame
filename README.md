@@ -93,7 +93,7 @@ def my_control(c):
     if j: print('j')
     if k: print('k')
     if l: print('l'); a.kill() # 测试按下l键删除自身(需要先在控制键列表里面增加键位)
-actor2.control = my_control
+a.control = my_control
 
 t.regist(a) # 将角色注入舞台t
 s.regist(t) # 将舞台注入游戏s
@@ -127,7 +127,7 @@ def collide_b():
     b.rect[1] -= 1
     if b.rect[0] <= 0 or b.rect[1] <= 0: # 对象靠近左/上的游戏边框自动消失
         b.kill()
-b.computer.idle = collide_b
+b.computer.idle = collide_b # 让要一直执行的函数覆盖这里，帧率不会影响这里执行频率
 
 a.rect[0:2] = 100, 100 # 不写则默认 0,0
 b.rect[0:2] = 400, 200 # 修改角色起始坐标
