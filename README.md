@@ -80,7 +80,7 @@ def my_mouse(m):
         ex,ey = m[2][1]
         minfo1,minfo2 = ((sx,sy),(x, y, w, h)) if minfo1 != (sx,sy) else (minfo1,minfo2)
         if ( (sx >= minfo2[0] and sx <= minfo2[0] + minfo2[2]) and 
-             (sy >= minfo2[1] and sy <= minfo2[0] + minfo2[3]) ):
+             (sy >= minfo2[1] and sy <= minfo2[1] + minfo2[3]) ):
             dx,dy = minfo1[0] - minfo2[0], minfo1[1] - minfo2[1]
             a.rect[0] = ex - dx
             a.rect[1] = ey - dy
