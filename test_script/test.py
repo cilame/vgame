@@ -71,7 +71,7 @@ if __name__ == "__main__":
         # 返回的结果是与 actor2 碰撞的 actor 列表，可以同时有多个碰撞
         r = actor2.collide(actor3, actor4)
         for i in r: i.kill() 
-        for i in m:
+        for i in m.get('p1') or []:
             if i == 8: actor2.rect[1] = actor2.rect[1] - d
             if i == 2: actor2.rect[1] = actor2.rect[1] + d
             if i == 4: actor2.rect[0] = actor2.rect[0] - d

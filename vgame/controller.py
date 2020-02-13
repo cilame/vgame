@@ -37,10 +37,13 @@ class Controller:
         self.cross_status = 0    # 判断状态（0判断，1单击，2框选，3地图拖拽）
         self.limit_len    = 3.   # 一个阈值，与鼠标按下松开时，两点坐标点距离有关
 
-        # 用于键盘方向操作的参数
-        self.direction_key_tick  = 0  # 后期发现只用 self._delay 函数，如果混合其他操作可能会出现灵敏丢失的情况
-        self.direction_key_delay = 15 # 所以最后还是把键盘的操作延时也单独出来了
-        self.un_oblique          = 0  # 如果没有斜角操作的话，处理斜角的操作滞粘操作参数
+        # 用于键盘方向操作的参数，目前可支持2p（由于处理方向键的延迟处理有点特殊，所以需要这样处理）
+        self.direction_key_tick_p1  = 0  # 后期发现只用 self._delay 函数，如果混合其他操作可能会出现灵敏丢失的情况
+        self.direction_key_delay_p1 = 15 # 所以最后还是把键盘的操作延时也单独出来了
+        self.un_oblique_p1          = 0  # 如果没有斜角操作的话，处理斜角的操作滞粘操作参数
+        self.direction_key_tick_p2  = 0
+        self.direction_key_delay_p2 = 15
+        self.un_oblique_p2          = 0
 
         # 用于键盘控制操作的参数
         self.control_key_tick  = 0
@@ -65,9 +68,9 @@ class Controller:
     def update_select_cursor(self,ticks):
         # 光标类主要是用于可以被控制所操作的对象，该类对象可以通过下面的函数来对操作进行挂钩
         # 后续可以开发部分功能用于该处与外部通信，让外部自定义的函数能够使用下面挂钩到的接口
-        morse_info = self.general_mouse_key(ticks,model='a')         # 处理通常鼠标键，有两种模式，请看函数内的注释描述
-        direc_info = self.general_direction_key(ticks,direct='wasd') # 处理通常方向键
-        cntro_info = self.general_control_key(ticks)                 # 处理通常ab键的接收
+        morse_info = self.general_mouse_key(ticks,model='a') # 处理通常鼠标键，有两种模式，请看函数内的注释描述
+        direc_info = self.general_direction_key(ticks)       # 处理通常方向键
+        cntro_info = self.general_control_key(ticks)         # 处理通常ab键的接收
         
         # # 简单打印操作接口返回的内容，后续会进行开发处理
         # if morse_info: print(self.actor, self.actor.rect, 'morse_info:', morse_info)
@@ -190,55 +193,64 @@ class Controller:
     #================#
     # 一般方向键操作 #
     #================#
-    def general_direction_key(self,ticks,direct='wasd',oblique=True):
-        rek = self._direction_key_pressed(direct) # 获取当前按键（或组合键）的方向，以小键盘八方向数字为准
-        # 需要先判断rek再判断延迟才能防止出现灵敏丢失的情况
-        if rek and self._direction_key_delay(ticks):
-            target = []
-            if rek == 4: target.append(LEFT)
-            if rek == 6: target.append(RIGHT)
-            if rek == 8: target.append(UP)
-            if rek == 2: target.append(DOWN)
-            if oblique:
-                # 允许有斜角的处理方法（默认允许斜角处理）# 这样处理不会出现对顶的可能性，注意
-                if rek == 7: target.append(LEFT),  target.append(UP)
-                if rek == 1: target.append(LEFT),  target.append(DOWN)
-                if rek == 9: target.append(RIGHT), target.append(UP)
-                if rek == 3: target.append(RIGHT), target.append(DOWN)
-            else:
-                # 只允许正方向键[只有上下左右]的处理方法（最优解是根据后一个按下的正方向键[只有上下左右]来实现）
-                if rek in [2,4,6,8]:
-                    self.un_oblique = rek
-                if rek == 7:
-                    if self.un_oblique == 8: target.append(LEFT)
-                    if self.un_oblique == 4: target.append(UP)
-                if rek == 1:
-                    if self.un_oblique == 2: target.append(LEFT)
-                    if self.un_oblique == 4: target.append(DOWN)
-                if rek == 9:
-                    if self.un_oblique == 8: target.append(RIGHT)
-                    if self.un_oblique == 6: target.append(UP)
-                if rek == 3:
-                    if self.un_oblique == 2: target.append(RIGHT)
-                    if self.un_oblique == 6: target.append(DOWN)
-            return target
-    def _direction_key_delay(self,ticks):
-        if ticks - self.direction_key_tick > self.direction_key_delay:
-            self.direction_key_tick = ticks
+    def general_direction_key(self,ticks,oblique=True):
+        cp1, cp2 = self._direction_key_pressed() # 获取当前按键（或组合键）的方向，以小键盘八方向数字为准
+        d = {}
+        p, rek = cp1
+        if rek and self._direction_key_delay_p1(ticks): # 需要先判断rek再判断延迟才能防止出现灵敏丢失的情况
+            target = self._direction_ret_p1(rek, oblique); d[p] = target
+        p, rek = cp2
+        if rek and self._direction_key_delay_p2(ticks):
+            target = self._direction_ret_p2(rek, oblique); d[p] = target
+        return d
+    def _direction_key_delay_p1(self,ticks):
+        if ticks - self.direction_key_tick_p1 > self.direction_key_delay_p1:
+            self.direction_key_tick_p1 = ticks
             return True
-    def _direction_key_pressed(self,direct='wasd'):
-        key = pygame.key.get_pressed()
+    def _direction_key_delay_p2(self,ticks):
+        if ticks - self.direction_key_tick_p2 > self.direction_key_delay_p2:
+            self.direction_key_tick_p2 = ticks
+            return True
+    def _direction_ret_p1(self, rek, oblique):
+        return self._direction_ret(self.un_oblique_p1, rek, oblique)
+    def _direction_ret_p2(self, rek, oblique):
+        return self._direction_ret(self.un_oblique_p2, rek, oblique)
+    def _direction_ret(self, p, rek, oblique):
+        target = []
+        if rek == 4: target.append(LEFT)
+        if rek == 6: target.append(RIGHT)
+        if rek == 8: target.append(UP)
+        if rek == 2: target.append(DOWN)
+        if oblique:
+            # 允许有斜角的处理方法（默认允许斜角处理）# 这样处理不会出现对顶的可能性，注意
+            if rek == 7: target.append(LEFT),  target.append(UP)
+            if rek == 1: target.append(LEFT),  target.append(DOWN)
+            if rek == 9: target.append(RIGHT), target.append(UP)
+            if rek == 3: target.append(RIGHT), target.append(DOWN)
+        else:
+            # 只允许正方向键[只有上下左右]的处理方法（最优解是根据后一个按下的正方向键[只有上下左右]来实现）
+            if rek in [2,4,6,8]:
+                p = rek
+            if rek == 7:
+                if p == 8: target.append(LEFT)
+                if p == 4: target.append(UP)
+            if rek == 1:
+                if p == 2: target.append(LEFT)
+                if p == 4: target.append(DOWN)
+            if rek == 9:
+                if p == 8: target.append(RIGHT)
+                if p == 6: target.append(UP)
+            if rek == 3:
+                if p == 2: target.append(RIGHT)
+                if p == 6: target.append(DOWN)
+        return target
+    def _direction_key_pressed_p1(self, key):
         ret = 0
-        if direct == 'wasd':
-            a = key[pygame.K_w]
-            b = key[pygame.K_s]
-            c = key[pygame.K_a]
-            d = key[pygame.K_d]
-        if direct == 'uldr':
-            a = key[pygame.K_UP]
-            b = key[pygame.K_DOWN]
-            c = key[pygame.K_LEFT]
-            d = key[pygame.K_RIGHT]
+        p = 'p1'
+        a = key[pygame.K_w]
+        b = key[pygame.K_s]
+        c = key[pygame.K_a]
+        d = key[pygame.K_d]
         v = [a,b,c,d]
         if any(v):
             if v.count(1) == 1:
@@ -251,26 +263,58 @@ class Controller:
                 if a and d: ret = 9
                 if b and c: ret = 1
                 if b and d: ret = 3
-        if ret == 0:
-            e = key[pygame.K_KP8]
-            f = key[pygame.K_KP2]
-            g = key[pygame.K_KP4]
-            h = key[pygame.K_KP6]
-            i = key[pygame.K_KP7]
-            j = key[pygame.K_KP1]
-            k = key[pygame.K_KP9]
-            l = key[pygame.K_KP3]
-            v = [e,f,g,h,i,j,k,l]
+        return p, ret
+    def _direction_key_pressed_p2(self, key):
+        ret = 0
+        p = 'p2'
+        a = key[pygame.K_UP]
+        b = key[pygame.K_DOWN]
+        c = key[pygame.K_LEFT]
+        d = key[pygame.K_RIGHT]
+        v = [a,b,c,d]
+        if any(v):
             if v.count(1) == 1:
-                if e: ret = 8
-                if f: ret = 2
-                if g: ret = 4
-                if h: ret = 6
-                if i: ret = 7
-                if j: ret = 1
-                if k: ret = 9
-                if l: ret = 3
-        return ret
+                if a: ret = 8
+                if b: ret = 2
+                if c: ret = 4
+                if d: ret = 6
+            if v.count(1) == 2:
+                if a and c: ret = 7
+                if a and d: ret = 9
+                if b and c: ret = 1
+                if b and d: ret = 3
+        return p, ret
+    def _direction_key_pressed_p0(self, key):
+        p = 'p0'
+        e = key[pygame.K_KP8]
+        f = key[pygame.K_KP2]
+        g = key[pygame.K_KP4]
+        h = key[pygame.K_KP6]
+        i = key[pygame.K_KP7]
+        j = key[pygame.K_KP1]
+        k = key[pygame.K_KP9]
+        l = key[pygame.K_KP3]
+        v = [e,f,g,h,i,j,k,l]
+        if v.count(1) == 1:
+            if e: ret = 8
+            if f: ret = 2
+            if g: ret = 4
+            if h: ret = 6
+            if i: ret = 7
+            if j: ret = 1
+            if k: ret = 9
+            if l: ret = 3
+        return p, ret
+    def _direction_key_pressed(self):
+        key = pygame.key.get_pressed()
+        # 目前将放弃小键盘数字的方向处理，
+        # 因为有些两人共用一个键盘的2p游戏，小键盘可能用于功能键
+        # 所以现在默认将放弃对这个部分的处理。
+        # cp0 = self._direction_key_pressed_p0(key) # 小键盘数字
+        cp1 = self._direction_key_pressed_p1(key) # wasd
+        cp2 = self._direction_key_pressed_p2(key) # 小键盘箭头
+        return cp1, cp2
+        
 
     #================#
     # 一般控制键操作 #

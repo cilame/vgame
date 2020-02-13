@@ -22,7 +22,7 @@ s.run()
 import vgame
 s = vgame.Initer()
 
-t = vgame.Theater('main') # 先生成一个舞台，舞台需要指定一个名字
+t = vgame.Theater('main') # 先生成一个舞台，舞台需要指定一个名字(这里可以传入背景图，为演示方便这里先不传)
 a = vgame.Actor(in_control=True, showsize=(40,90)) # 生成一个角色，in_control 设置为True可以让角色接收控制信息
 
 # 游戏的背景核心就是 Theater(舞台)
@@ -34,12 +34,16 @@ a = vgame.Actor(in_control=True, showsize=(40,90)) # 生成一个角色，in_con
 #       当是 vgame.Image 对象时，showsize 可以在该 Image 对象实例化的时候传入，并且 Actor 中的 showsize 将无效
 
 def direction_a(m):
-    # m 为接收 wasd 执行信号的参数，是一个最大两个数字的列表，是按下的方向的列表
+    # m 为接收方向键的执行信号的参数，是一个最大有两个 key 的字典
+    # 如果存在 key 并且是字符串 p1，则代表收到了键盘 wasd 的方向键操作
+    # 如果存在 key 并且是字符串 p2，则代表收到了小键盘箭头的方向键操作
+    # p1 和 p2 可以同时存在
+    # 字典对应的 value ，是一个最大两个数字的列表，是按下的方向的列表
     # 最多同时按下两个相邻的方向，如果按下超过2个方向，则 m 为空
     # 如果同时按下“左右”或同时按下“上下”则 m 也为空
     # 之所以是 8,2,4,6 的数字代表了方向，请看小键盘的数字键位即可明白。
-    print(m) # 你可以打印看看
-    for i in m:
+    print(m) # 你可以打印看看，这个参数在执行到这些方向键的时候究竟是什么
+    for i in m.get('p1') or []:
         if i == 8: a.rect[1] = max(a.rect[1] - 7, 0)
         if i == 2: a.rect[1] = min(a.rect[1] + 7, s.size[1] - a.rect[3])
         if i == 4: a.rect[0] = max(a.rect[0] - 7, 0)
@@ -112,7 +116,7 @@ b = vgame.Actor((255,0,0),showsize=(150,200))
 
 # a 的操作
 def direct_a(m):
-    for i in m:
+    for i in m.get('p1') or []:
         if i == 8: a.rect[1] = max(a.rect[1] - 7, 0)
         if i == 2: a.rect[1] = min(a.rect[1] + 7, s.size[1] - a.rect[3])
         if i == 4: a.rect[0] = max(a.rect[0] - 7, 0)
@@ -154,6 +158,8 @@ s.run()
 
 - ##### 加载图片资源（下面的代码需要你添加一些图片资源才能执行成功）
 
+下面生成两个固定像素大小的方块，一个可以用wasd控制，一个可以用方向键控制，两者相撞则两者都会消失
+
 ```python
 import vgame
 s = vgame.Initer()
@@ -169,22 +175,57 @@ s = vgame.Initer()
 #     当是一个“图片文件夹”，则会将文件夹内的图片按顺序排序，自动加载成动态图
 #     以上处理均会自动自动进行 mask 处理，方便 actor 对象使用碰撞检测。
 
-bg = '' # 这里填你本地的图片的地址，随便网上保存一张即可
-ac = '' # 这里填你本地的图片的地址，随便网上保存一张即可
+bg = './bg.jpg' # 这里填你本地的图片的地址，随便网上保存一张即可
+a1 = './a1.jpg' # 这里填你本地的图片的地址，随便网上保存一张即可
+a2 = './a2.jpg' # 这里填你本地的图片的地址，随便网上保存一张即可
 
 v_bg = vgame.Image(bg, showsize=(640,480)) # 加载背景图片资源
-v_ac = vgame.Image(ac, showsize=(60,60)) # 这里请尽量主动设置 showsize
+v_a1 = vgame.Image(a1, showsize=(50,50)) # 这里请尽量主动设置 showsize
+v_a2 = vgame.Image(a2, showsize=(50,50)) # 这里请尽量主动设置 showsize
 
 t = vgame.Theater('main', v_bg)
-a = vgame.Actor(v_ac, in_control=True)
+a = vgame.Actor(v_a1, in_control=True)
+b = vgame.Actor(v_a2, in_control=True)
 def direct_a(m):
-    for i in m:
+    for i in m.get('p1') or []:
         if i == 8: a.rect[1] = max(a.rect[1] - 7, 0)
         if i == 2: a.rect[1] = min(a.rect[1] + 7, s.size[1] - a.rect[3])
         if i == 4: a.rect[0] = max(a.rect[0] - 7, 0)
         if i == 6: a.rect[0] = min(a.rect[0] + 7, s.size[0] - a.rect[2])
 a.direction = direct_a
+def direct_b(self, m):
+    # 如果用于覆盖的 direction 的函数有两个参数，则第一个参数就是接受控制的 Actor 对象
+    # 注意：
+    #     Actor 对象中，可以覆盖的函数可以用一个参数的函数覆盖，也可以用两个参数的函数来覆盖
+    #     Actor.mouse，Actor.control，Actor.direction 都是可以这样处理
+    #     当是一个参数的函数时，那个参数就是操作信息
+    #     当是两个参数的函数时，第一个参数就是被覆盖的 Actor 对象本身，第二个为操作信息
+    #     本来我是考虑必须为两个参数的函数，不过后来想想，如果必须传入 self 的话
+    #     那么对于某些新手来说，可能会稍微有点不太懂 self 是啥东西，且代码会稍微有点不简洁
+    #     不过对于熟练 python 的人来说，他们很容易就能发现在 pygame 开发中这个参数的重要性
+    #     所以为了兼顾简洁和功能性，这里就兼容了两种方式，一开始还以为实现会很难，结果却意外的简单
+    for i in m.get('p2') or []:
+        if i == 8: self.rect[1] = max(self.rect[1] - 7, 0)
+        if i == 2: self.rect[1] = min(self.rect[1] + 7, s.size[1] - self.rect[3])
+        if i == 4: self.rect[0] = max(self.rect[0] - 7, 0)
+        if i == 6: self.rect[0] = min(self.rect[0] + 7, s.size[0] - self.rect[2])
+b.direction = direct_b
+b.rect[:2] = 400,400
+
+def collide_ab(self):
+    # Actor.computer.idle 可以被无参数的函数覆盖，也可以被仅有一个参数的函数覆盖
+    # 如果是有一个参数的函数，那么这个参数就一定是被覆盖的 Actor 对象本身
+    r = self.collide(a)
+    if r:
+        self.kill()
+        for i in r:
+            i.kill()
+b.computer.idle = collide_ab
 t.regist(a) # 将角色 a 注入场景t
+t.regist(b) # 将角色 b 注入场景t
+
+# 这里生成两个可以操作的对象，一个用 wasd 来控制移动，另一个用箭头方向键来控制移动
+# 两个方块如果相互碰撞，则两者都消失
 
 s.regist(t) # 将场景 t 注入游戏
 s.run()
