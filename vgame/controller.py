@@ -71,11 +71,6 @@ class Controller:
         morse_info = self.general_mouse_key(ticks,model='a') # 处理通常鼠标键，有两种模式，请看函数内的注释描述
         direc_info = self.general_direction_key(ticks)       # 处理通常方向键
         cntro_info = self.general_control_key(ticks)         # 处理通常ab键的接收
-        
-        # # 简单打印操作接口返回的内容，后续会进行开发处理
-        # if morse_info: print(self.actor, self.actor.rect, 'morse_info:', morse_info)
-        # if direc_info: print(self.actor, self.actor.rect, 'direc_info:', direc_info)
-        # if cntro_info: print(self.actor, self.actor.rect, 'cntro_info:', cntro_info)
         return morse_info, direc_info, cntro_info
 
     #===============#
