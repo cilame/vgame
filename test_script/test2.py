@@ -59,8 +59,8 @@ def collide_c():
     c.rect[1] -= 1
     if c.rect[0] <= 0 or c.rect[1] <= 0:
         c.kill()
-b.computer.idle = collide_b
-c.computer.idle = collide_c
+b.idle = collide_b
+c.idle = collide_c
 
 
 a.rect[0:2] = 100, 100 # 不写则默认 0,0

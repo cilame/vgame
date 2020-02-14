@@ -83,13 +83,13 @@ class Image:
             self.cur_tick = ticks
             return True
 
-class Computer:
+class Idler:
     '''
-    主要负责 actor 的一些电脑操作的行为，想要实现一些敌反馈机制
+    主要负责 actor 的一些持续行为，想要实现一些敌反馈机制
     目前开发的方向主要是想要能够通过 Actor 对象内直接调用到
     例如：
         act = Actor()
-        act.computer.idle
+        act.idle
     '''
     def __init__(self):
         self.actor = None
@@ -98,17 +98,12 @@ class Computer:
 
     def update(self, ticks):
         if self._update_delay( ticks):
-            # 根据参数数量来决定是否要传入 Actor 对象自身，虽然传入自身的好处很多。
-            # 但是我又不想一定要传入自身，有时候传入会对新手造成一定困惑，所以我选择两者兼容
-            self.idle() if self.idle.__code__.co_argcount == 0 else self.idle(self.actor)
+            return True
 
     def _update_delay(self,ticks):
         if ticks - self._tick > self.delay:
             self._tick = ticks
             return True
-
-    @staticmethod
-    def idle(): pass
 
 class Actor(pygame.sprite.Sprite):
     '''
@@ -123,17 +118,21 @@ class Actor(pygame.sprite.Sprite):
 
     def __init__(self, img=None, in_control=False, showsize=None, debug=False):
         pygame.sprite.Sprite.__init__(self)
+
+        # 后续这两行需要修改，因为角色的状态资源应该可以有多个，并且由于每个 Image 都要逆向绑定 Actor
+        # 所以后续要考虑怎么更加合理的添加角色状态动画的处理
         self._image       = img if not (img is None or isinstance(img, tuple)) else Image(img, showsize)
         self._image.actor = self
-        self.debug        = debug # 如果 DEBUG 为 False，则仅仅让该 Actor 这个对象用 debug 模式
+
+        self.debug        = debug # 如果 DEBUG 为 False，这里为 True 则仅仅让该 Actor 这个对象用 debug 模式
         self.image        = self._image.image
         self.mask         = self._image.mask
         self.rect         = self.image.get_rect() if self.image else None
         self.theater      = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
         self.controller   = self.regist_controller(Controller(in_control))
-        self.computer     = self.regist_computer(Computer())
+        self.computer     = self.regist_idle(Idler())
 
-    def regist_computer(self,computer):
+    def regist_idle(self,computer):
         computer.actor = self # 让事件对象能找到宿主本身
         self.computer  = computer # 这里是为了兼容外部 computer 的注册
         return computer
@@ -147,13 +146,14 @@ class Actor(pygame.sprite.Sprite):
         self._image.update_image(ticks)
         self.image = self._image.image
         self.mask  = self._image.mask
-        self.computer.update(ticks)
+        i = self.computer.update(ticks)
         m, d, c = self.controller.update(ticks)
         # 根据函数的参数数量，来决定是否传入 Actor 对象自身。
         # 但是有时候传入自身可能会对新手造成一定困惑，我也不想一定要传入自身，下面的代码可以兼容两者
         if m: self.mouse(m)     if self.mouse.__code__.co_argcount     == 1 else self.mouse(self, m)
         if d: self.direction(d) if self.direction.__code__.co_argcount == 1 else self.direction(self, d)
         if c: self.control(c)   if self.control.__code__.co_argcount   == 1 else self.control(self, c)
+        if i: self.idle()       if self.idle.__code__.co_argcount      == 0 else self.idle(self)
 
     def collide(self, *list_sprite):
         scollide = pygame.sprite.spritecollide(self, self.theater.group, False, pygame.sprite.collide_mask)
@@ -171,3 +171,6 @@ class Actor(pygame.sprite.Sprite):
 
     @staticmethod
     def control(control_info): pass
+
+    @staticmethod
+    def idle(): pass

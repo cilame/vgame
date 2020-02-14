@@ -108,7 +108,7 @@ if __name__ == "__main__":
     actor2.direction = my_direction
     actor2.mouse = my_mouse
     actor2.control = my_control
-    actor2.computer.idle = idle
+    actor2.idle = idle
     # actor2.rect        # 可以用 rect    参数获取当前对象的坐标和大小
     # actor2.kill()      # 可以用 kill    函数来删除掉这个对象
     # actor2.collide(*a) # 可以用 collide 函数来获取与 actor2 碰撞的其他 actor 对象

@@ -29,7 +29,7 @@ def collide_b(self):
     r = self.collide(a)
     if r:
         print(r)
-b.computer.idle = collide_b
+b.idle = collide_b
 a.rect[0:2] = 100, 100
 b.rect[0:2] = 400, 200
 t.regist(a)
