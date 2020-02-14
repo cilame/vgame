@@ -74,7 +74,7 @@ class Image:
             if self.showsize: 
                 self.image = pygame.transform.scale(self.image, self.showsize)
             self.mask  = pygame.mask.from_surface(self.image)
-        # 显示 mask 边框的状态
+        # 显示 mask 边框线，让边框检测处理起来更加的直观
         if self.actor and (self.actor.debug or self.actor.DEBUG):
             pygame.draw.polygon(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, self.mask.outline(), 1)
 
