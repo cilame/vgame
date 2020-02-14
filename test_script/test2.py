@@ -22,7 +22,7 @@ t = vgame.Theater('main') # 按键 ESC 关闭
 
 # 增加三个角色，其中a设置 in_control为True 后就能够通过修改 a.direction 函数来接收方向功能
 a = vgame.Actor(in_control=True,showsize=(50,100))
-b = vgame.Actor(in_control=True,) # 一个参数都不添加默认为一个白色色块大小为60x60，(255,255,255,255), (60,60)
+b = vgame.Actor(in_control=True,) # 不添加颜色和大小的参数时，默认白色的大小为60x60色块
 c = vgame.Actor((255,0,0),showsize=(150,100))
 
 # a 的操作
@@ -38,7 +38,7 @@ def direct_a(m):
         if i == 4: a.rect[0] = max(a.rect[0] - 7, 0)
         if i == 6: a.rect[0] = min(a.rect[0] + 7, s.size[0] - a.rect[2])
 a.direction = direct_a
-# a 的操作
+# b 的操作
 def direct_b(self, m):
     # 如果用于覆盖的 direction 的函数有两个参数，则第一个参数就是接受控制的 Actor 对象
     # Actor.mouse 和 Actor.control 函数同理

@@ -175,9 +175,17 @@ s = vgame.Initer()
 #     当是一个“图片文件夹”，则会将文件夹内的图片按顺序排序，自动加载成动态图
 #     以上处理均会自动自动进行 mask 处理，方便 actor 对象使用碰撞检测。
 
+
+# vgame.Actor.DEBUG 可以让全部的 Actor 对象显示其 mask 的边框线
+# 如果你的控制对象的素材是一个带有透明度通道的 png 图片，
+# 那么这个边框线的显示对开发来说就很有用了，碰撞检测就是依照这个 Mask 边框线来的
+# 如果你只想某一个 Actor 对象显示 mask，那么就不能用 vgame.Actor.DEBUG
+# 那么你只需要在 Actor 实例化的时候传入一个 debug=True 的参数即可。
+vgame.Actor.DEBUG = True 
+
 bg = './bg.jpg' # 这里填你本地的图片的地址，随便网上保存一张即可
-a1 = './a1.jpg' # 这里填你本地的图片的地址，随便网上保存一张即可
-a2 = './a2.jpg' # 这里填你本地的图片的地址，随便网上保存一张即可
+a1 = './a1.png' # 尽量找一张带有透明度通道的角色图片，这样可以看到 debug 模式下的 mask 边框线的用处
+a2 = './a2.png' # 
 
 v_bg = vgame.Image(bg, showsize=(640,480)) # 加载背景图片资源
 v_a1 = vgame.Image(a1, showsize=(50,50)) # 这里请尽量主动设置 showsize

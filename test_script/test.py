@@ -27,6 +27,8 @@ if __name__ == "__main__":
     main = Initer(60) # 核心类负责游戏的启动，必须在最前面，否则连资源加载都做不到，
     # 第一个参数为全局秒帧率，默认60
 
+    vgame.Actor.DEBUG = True
+
     # 资源加载 # 动图和非动图均可，动图需要
     i_bg1 = Image(bg1)
     i_bg2 = Image(bg2)
@@ -67,10 +69,6 @@ if __name__ == "__main__":
     # 1修改 actor2 的方向键的挂钩操作处理 # 用小键盘的方向数字描述上下左右
     def my_direction(m):
         d = 5
-        # 可以通过这样实现碰撞检测，collide 函数的参数可以传递无限的 actor 对象
-        # 返回的结果是与 actor2 碰撞的 actor 列表，可以同时有多个碰撞
-        r = actor2.collide(actor3, actor4)
-        for i in r: i.kill() 
         for i in m.get('p1') or []:
             if i == 8: actor2.rect[1] = actor2.rect[1] - d
             if i == 2: actor2.rect[1] = actor2.rect[1] + d
@@ -100,9 +98,17 @@ if __name__ == "__main__":
             if j: print('j')
             if k: print('k')
             if l: print('l'); actor2.kill() # 测试按下l键删除自身(需要先在控制键列表里面增加键位)
+    def idle():
+        # 可以通过这样实现碰撞检测，collide 函数的参数可以传递无限的 actor 对象
+        # 返回的结果是与 actor2 碰撞的 actor 列表，可以同时有多个碰撞
+        # 碰撞检测一定要写在这里，因为这里的函数会一直执行，
+        # 而如果你把检测碰撞写在操作函数中，那么碰撞检测只会在接收到操作的时候才会执行
+        r = actor2.collide(actor3, actor4)
+        for i in r: i.kill() 
     actor2.direction = my_direction
     actor2.mouse = my_mouse
     actor2.control = my_control
+    actor2.computer.idle = idle
     # actor2.rect        # 可以用 rect    参数获取当前对象的坐标和大小
     # actor2.kill()      # 可以用 kill    函数来删除掉这个对象
     # actor2.collide(*a) # 可以用 collide 函数来获取与 actor2 碰撞的其他 actor 对象

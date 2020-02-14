@@ -101,6 +101,6 @@ class Initer:
 
 
 __author__ = 'cilame'
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 __email__ = 'opaquism@hotmail.com'
 #__github__ = 'https://github.com/cilame/vgame'

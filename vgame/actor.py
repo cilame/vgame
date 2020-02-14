@@ -15,6 +15,7 @@ class Image:
         # 一些默认配置，用于图片动画的刷新率，可以通过图片名字进行配置
         self.showsize  = showsize # 该参数仅用于对象
         self.rate      = rate # 不同的单位可以使用不同的速率
+        self.actor     = None
         self.active    = None # 会在加载图片的时候根据图片类型自动设置
         self.src_image = None
         self.cur_tick  = 0
@@ -70,11 +71,13 @@ class Image:
     def update_image(self, ticks):
         if self.active and self._time_update(ticks):
             self.image = self.src_image.subsurface(next(self.rects)) if self.src_image else next(self.rects)
-            if self.showsize:
+            if self.showsize: 
                 self.image = pygame.transform.scale(self.image, self.showsize)
-                self.mask  = pygame.mask.from_surface(self.image)
+            self.mask  = pygame.mask.from_surface(self.image)
+        # 显示 mask 边框的状态
+        if self.actor and (self.actor.debug or self.actor.DEBUG):
+            pygame.draw.polygon(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, self.mask.outline(), 1)
 
-    # 控制速率的函数，解耦单位的动图显示速率
     def _time_update(self, ticks):
         if ticks - self.cur_tick > self.rate:
             self.cur_tick = ticks
@@ -115,15 +118,20 @@ class Actor(pygame.sprite.Sprite):
     用于修改当你没有填充任何图片的时候默认展示的色块的矩形的大小，方便于一些仅需色块的游戏演示
     如果主动传入了 img(Image类的对象)，那么传入 Image 的 showsize 即可。
     '''
-    def __init__(self, img=None, in_control=False, showsize=None):
+    DEBUG = False # 方便让全部的 Actor 对象都使用 debug 模式，方便开发
+    DEBUG_MASK_LINE_CORLOR = (0,255,0) # debug 模式将显示 actor 的 mask 边框线
+
+    def __init__(self, img=None, in_control=False, showsize=None, debug=False):
         pygame.sprite.Sprite.__init__(self)
-        self._image      = img if not (img is None or isinstance(img, tuple)) else Image(img, showsize)
-        self.image       = self._image.image
-        self.mask        = self._image.mask
-        self.rect        = self.image.get_rect() if self.image else None
-        self.theater     = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
-        self.controller  = self.regist_controller(Controller(in_control))
-        self.computer    = self.regist_computer(Computer())
+        self._image       = img if not (img is None or isinstance(img, tuple)) else Image(img, showsize)
+        self._image.actor = self
+        self.debug        = debug # 如果 DEBUG 为 False，则仅仅让该 Actor 这个对象用 debug 模式
+        self.image        = self._image.image
+        self.mask         = self._image.mask
+        self.rect         = self.image.get_rect() if self.image else None
+        self.theater      = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
+        self.controller   = self.regist_controller(Controller(in_control))
+        self.computer     = self.regist_computer(Computer())
 
     def regist_computer(self,computer):
         computer.actor = self # 让事件对象能找到宿主本身
@@ -143,9 +151,9 @@ class Actor(pygame.sprite.Sprite):
         m, d, c = self.controller.update(ticks)
         # 根据函数的参数数量，来决定是否传入 Actor 对象自身。
         # 但是有时候传入自身可能会对新手造成一定困惑，我也不想一定要传入自身，下面的代码可以兼容两者
-        if m: self.mouse(m)     if self.mouse.__code__.co_argcount == 1     else self.mouse(self, m)
+        if m: self.mouse(m)     if self.mouse.__code__.co_argcount     == 1 else self.mouse(self, m)
         if d: self.direction(d) if self.direction.__code__.co_argcount == 1 else self.direction(self, d)
-        if c: self.control(c)   if self.control.__code__.co_argcount == 1   else self.control(self, c)
+        if c: self.control(c)   if self.control.__code__.co_argcount   == 1 else self.control(self, c)
 
     def collide(self, *list_sprite):
         scollide = pygame.sprite.spritecollide(self, self.theater.group, False, pygame.sprite.collide_mask)
