@@ -44,9 +44,9 @@ if __name__ == "__main__":
     theater_0 = Theater('sky', i_bg1) # theater(舞台) 必须要指定两个元素，1背景图片资源，2舞台名字
     actor1 = Actor(i_cur, in_control=True) # in_control 负责接收控制指令，目前控制指令只会打印相关的操作内容
     theater_0.regist(actor1) # actor(演员) 需要注册进场景才能使用
-    actor1.direction = lambda info: print('morse_info', info) # 方向键操作的回调 hook
-    actor1.mouse     = lambda info: print('direc_info', info) # 鼠标键操作的回调 hook
-    actor1.control   = lambda info: print('cntro_info', info) # 功能键操作的回调 hook
+    actor1.direction = lambda info: print('morse_info', info) if info else None # 方向键操作的回调 hook
+    actor1.mouse     = lambda info: print('direc_info', info) if info else None # 鼠标键操作的回调 hook
+    actor1.control   = lambda info: print('cntro_info', info) if info else None # 功能键操作的回调 hook
     main.regist(theater_0) # threater(舞台) 需要注册进初始对象才能使用
 
     # 场景二
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     minfo2 = None
     def my_mouse(m):
         global minfo1, minfo2
-        if m[1] == 2:
+        if m and m[1] == 2:
             x,y,w,h = actor2.rect
             sx,sy = m[2][0]
             ex,ey = m[2][1]
@@ -92,12 +92,13 @@ if __name__ == "__main__":
     # 3修改需要的控制键，默认使用的key是 jk
     actor2.controller.control_keys = [vgame.K_j, vgame.K_k, vgame.K_l]
     def my_control(c):
-        j,k,l = c[1]
-        if any(c[1]):
-            print('------control------')
-            if j: print('j')
-            if k: print('k')
-            if l: print('l'); actor2.kill() # 测试按下l键删除自身(需要先在控制键列表里面增加键位)
+        if c:
+            j,k,l = c[1]
+            if any(c[1]):
+                print('------control------')
+                if j: print('j')
+                if k: print('k')
+                if l: print('l'); actor2.kill() # 测试按下l键删除自身(需要先在控制键列表里面增加键位)
     def idle():
         # 可以通过这样实现碰撞检测，collide 函数的参数可以传递无限的 actor 对象
         # 返回的结果是与 actor2 碰撞的 actor 列表，可以同时有多个碰撞

@@ -86,11 +86,14 @@ class Controller:
     # model=='a': 这种类型仅含单击和框选两种模式
     # model=='b': 这种类型包含单击、框选和长按三种模式
     # 该两个函数的返回参数均如下所示，仅在功能上是否返回3这点区别
-    # 返回的参数为 按键id（0左键，1中键[不包含滚轮]，2右键），功能（1单击，2直接框选，3按住后再拖动），起点坐标，终点坐标
+    # 返回的参数为 按键id（0左键，2右键），功能（1单击，2直接框选，3按住后再拖动），起点坐标，终点坐标
     # 非常建议使用 a 类，这种处理非常顺滑，
     def general_mouse_key(self,ticks,model='a'):
+        rem = self._mouse_pressed() 
+        # rem 究竟是什么，详细请看 _mouse_pressed 函数注释。
+        # 注意：general_mouse_key 函数返回的参数 和 _mouse_pressed 看上去有点像，但实际上不一样。
+        # 注意其中区别，并且 general_mouse_key 将放弃鼠标中间点击的消息返回。
         # 这里的点击模式仅仅包含单击和框选两种处理方式
-        rem = self._mouse_pressed() # rem 究竟是什么，详细请看 _mouse_pressed 函数注释。
         def model_a(rem):
             if rem and rem[0] in (0, 2):
                 if self.cross_status == 0:

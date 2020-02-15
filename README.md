@@ -61,7 +61,7 @@ def direction_a(m):
     # 最多同时按下两个相邻的方向，如果按下超过2个方向，则 m 为空
     # 如果同时按下“左右”或同时按下“上下”则 m 也为空
     # 之所以是 8,2,4,6 的数字代表了方向，请看小键盘的数字键位即可明白。
-    print(m) # 你可以打印看看，这个参数在执行到这些方向键的时候究竟是什么
+    print(m) # 你可以打印看看，这个参数在执行到wasd方向键/箭头方向键的时候究竟是什么
     for i in m.get('p1') or []:
         if i == 8: a.rect[1] = max(a.rect[1] - 7, 0)
         if i == 2: a.rect[1] = min(a.rect[1] + 7, s.size[1] - a.rect[3])
@@ -92,12 +92,18 @@ a = vgame.Actor(in_control=True, showsize=(40,90))
 # 设置鼠标拖拽对象的函数
 # 这里硬编码了只能修改全局的Actor对象a，后面我会告诉你怎么让函数自动绑定被设置的对象，现在先就这样
 def my_mouse(m):
+    # m 为一个元组
+    # 第一个参数为鼠标键位，0是左键，2是右键
+    # 第二个参数为模式，0是单击模式，2是框选模式
+    # 第三个参数为 “鼠标按下坐标” 和 “鼠标松开坐标” 的两个点的元组，
+    # eg. (0, 0, ((384, 200), (384, 200))) # 这样的参数就代表了一个左键单击操作
     global minfo1, minfo2
     try:
         minfo1
     except:
         minfo1,minfo2 = None,None
-    if m[1] == 2:
+    if m: print(m) # 打印看看这个参数是什么在单击，框选时候两者的参数都有什么区别
+    if m and m[1] == 2:
         x,y,w,h = a.rect
         sx,sy = m[2][0]
         ex,ey = m[2][1]
@@ -111,11 +117,12 @@ a.mouse = my_mouse # 覆盖默认的鼠标操作的函数(这里的对象a必须
 # 设置新的接收控制键位，默认键位是 j,k
 a.controller.control_keys = [vgame.K_j, vgame.K_k, vgame.K_l]
 def my_control(c):
-    j,k,l = c[1]
-    print('------control------')
-    if j: print('j')
-    if k: print('k')
-    if l: print('l'); a.kill() # 测试按下l键删除自身(需要先在控制键列表里面增加键位)
+    if c:
+        j,k,l = c[1]
+        print('------control------')
+        if j: print('j')
+        if k: print('k')
+        if l: print('l'); a.kill() # 测试按下l键删除自身(需要先在控制键列表里面增加键位)
 a.control = my_control
 
 t.regist(a) # 将角色注入舞台t
@@ -254,6 +261,41 @@ t.regist(b) # 将角色 b 注入场景t
 
 # 这里生成两个可以操作的对象，一个用 wasd 来控制移动，另一个用箭头方向键来控制移动
 # 两个方块如果相互碰撞，则两者都消失
+
+s.regist(t) # 将场景 t 注入游戏
+s.run()
+```
+
+- ##### 墙体检测，让物体自动检测其他实体，大幅简化移动的代码，能实现斜方向的贴墙移动
+
+```python
+import vgame
+s = vgame.Initer()
+t = vgame.Theater('main')
+
+vgame.Actor.DEBUG = True
+
+a = vgame.Actor(in_control=True,showsize=(50,100))
+b = vgame.Actor(showsize=(510,10))
+c = vgame.Actor(showsize=(80,80))
+d = vgame.Actor(showsize=(40,40),in_physics=False) 
+# 如果不想让某些块实体物理属性，实例化时候设置 in_physics=False，自动去除墙体检测
+
+# 使用物理性质来进行移动，自动对其他实体对象实现刚体碰撞，并能极大简化代码
+a.direction = lambda self,d: self.physics.move(d.get('p1')) 
+
+# physics.move 这种移动会检测其他刚体，或停止或切边移动，直接修改坐标则无法处理碰撞
+# 后续接口可能修改，因为目前还在初版，修改会很多。
+c.idle = lambda self,d: self.physics.move([4, 2]) # 不断向左下移动
+
+a.rect[0:2] = 100, 100
+b.rect[0:2] = 10, 400
+c.rect[0:2] = 400, 200
+d.rect[0:2] = 200, 200
+t.regist(a)
+t.regist(b)
+t.regist(c)
+t.regist(d)
 
 s.regist(t) # 将场景 t 注入游戏
 s.run()

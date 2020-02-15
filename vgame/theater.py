@@ -12,7 +12,7 @@ class Theater:
     '''
     def __init__(self,
                  theater_name,       # 场景名字，用于定位、调整、切换场景使用
-                 bg_filename = None, # 背景图片（不确定开发：动态背景？例如白天黑夜效果？其实，白天黑夜可以通过加一层半透明的actor实现。）
+                 bg_filename = None, # 背景图片，可以传很多类型的数据，详细请看 Image 实例化时的参数
                  music = None        # 后期扩展，音乐
                  ):
 
@@ -40,7 +40,7 @@ class Theater:
             actor.theater = self
 
     def _add_background(self, bg_filename):
-        self.background = Actor(bg_filename)
+        self.background = Actor(bg_filename, in_physics=False)
         self.background.theater = self
         if self.background.image:
             self.group.add(self.background)
