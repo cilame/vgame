@@ -13,7 +13,6 @@ class Controller:
     '''
     控制事件的对象，每个 Actor 都会生成一个属于他们自身的 Controller 对象在类内部，
     可以通过 in_control 参数进行配置是否需要使用控制处理
-    状态转化 # 战斗计算 # 血条显示之类 # 属性配置之类 # 子弹发射 # 我个人想到什么就扩展什么，各种功能...
     '''
     def __init__(self, in_control=False):
         # 

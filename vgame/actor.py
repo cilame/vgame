@@ -123,44 +123,123 @@ class Physics:
         self.smooth_speed = pygame.Vector2(7., 7.) # 初始化有个值，方便看到效果，可以通过对象修改
         self.gravity      = pygame.Vector2(0., 0.) # 重力和速度可以有方向，所以是一个两个数字的向量
         self.speed        = pygame.Vector2(0., 0.) # 与加速度相关的速度
-        self.speed_max    = 7.
+        self.speed_inc    = pygame.Vector2(2., 6.) # 加速度，每个操作片x/y方向的速大小
+        self.speed_dec    = pygame.Vector2(1., 1.) # 减速度，类似摩擦力，若为0，则增速之后会想速度方向无限移动下去
+        self.speed_max    = pygame.Vector2(10., 10.) # x/y 两个方向上的最大速度
         self.actor        = None # 用于逆向绑定
         self.in_physics   = in_physics
         self.has_bind     = False
+        self.is_idle_x    = True
+        self.is_idle_y    = True
 
-        # 设置减速的频率，让速度变化有一个平滑的改变时间 # 后续可能这个参数会暴露出去？
-        self.delay      = 15
-        self._tick      = 0
+        # 设置空闲状态的减速的频率，让速度变化有一个平滑的改变时间 # 后续可能这个参数会暴露出去？
+        self._update_tick_delay  = 15 # 一般更新时间
+        self._update_tick        = 0
+        self._gravity_tick_delay = 50 # 重力状态更新时间
+        self._gravity_tick       = 0
 
     def move(self, d):
-        if d: 
-            self.smooth_move(d)
+        if d: self.smooth_move(d)
+
+    def move2(self, d):
+        if d:
+            self.inertia_speed_direction(d)
+            self.is_idle_x = False if 6 in d or 4 in d else True
+            self.is_idle_y = False if 8 in d or 2 in d else True
         else:
-            pass
+            self.is_idle_x = True
+            self.is_idle_y = True
 
     def update(self,ticks):
-        # 之所以需要将内容放置在这里是因为考虑到要处理惯性的需求
+        # 之所以需要将 idle 处理放置在这里是因为考虑到当你没有操作更新的时候
+        # 有时候有人在 inertia_move 操作的时候，可能先判断了 d 是否为空
+        # 然后再进行的操作，那样的话，如果将这里的 idle 操作放在 inertia_move 里面
+        # 那么 idle 状态的操作就永远不会执行。所以需要将这个函数执行放置在循环里面
+        # 防止一些情况下操作失效的问题
+        # *非常要注意的是！！！
+        # 重力系统和摩擦系统不能用在一个系统里面，所以这里用了一个简单的处理
+        # 当 gravity.x == 0 的时候就默认使用 x 方向归零式的摩擦
+        # 当 gravity.x != 0 的时候就在 x 方向使用重力
+        # y 方向同理
+        # 所以对于一般的游戏来说，只要你给 gravity.y 设置一个比较小的数字
+        # 对象的空间就有了重力系统。左右方向用的是一般的摩擦系统，这样和一般游戏的概念基本相等了
+        if self._gravity_delay(ticks):
+            if self.gravity.x != 0: self.gravity_speed_idle_x()
+            if self.gravity.y != 0: self.gravity_speed_idle_y()
+
         if self._update_delay(ticks):
-            self.inertia_move()
+            if self.speed.x != 0 or self.speed.y != 0:
+                if self.is_idle_x and self.gravity.x == 0: self.inertia_speed_idle_x()
+                if self.is_idle_y and self.gravity.y == 0: self.inertia_speed_idle_y()
+                self.inertia_speed_move()
 
     def _update_delay(self,ticks):
-        if ticks - self._tick > self.delay:
-            self._tick = ticks
+        if ticks - self._update_tick > self._update_tick_delay:
+            self._update_tick = ticks
             return True
 
-    def inertia_move(self):
+    def _gravity_delay(self,ticks):
+        if ticks - self._gravity_tick > self._gravity_tick_delay:
+            self._gravity_tick = ticks
+            return True
+
+    def inertia_speed_direction(self, d):
+        for dirc in d:
+            if dirc == 6:
+                if self.speed.x >= 0:
+                    self.speed.x = min(self.speed.x + self.speed_inc.x, self.speed_max.x)
+                if self.speed.x < 0:
+                    self.speed.x = min(self.speed.x + self.speed_inc.x, 0)
+            if dirc == 4:
+                if self.speed.x <= 0:
+                    self.speed.x = max(self.speed.x - self.speed_inc.x, -self.speed_max.x)
+                if self.speed.x > 0:
+                    self.speed.x = max(self.speed.x - self.speed_inc.x, 0)
+            if dirc == 2:
+                if self.speed.y >= 0:
+                    self.speed.y = min(self.speed.y + self.speed_inc.y, self.speed_max.y)
+                if self.speed.y < 0:
+                    self.speed.y = min(self.speed.y + self.speed_inc.y, 0)
+            if dirc == 8:
+                if self.speed.y <= 0:
+                    self.speed.y = max(self.speed.y - self.speed_inc.y, -self.speed_max.y)
+                if self.speed.y > 0:
+                    self.speed.y = max(self.speed.y - self.speed_inc.y, 0)
+
+    def inertia_speed_idle_x(self):
+        if self.speed.x < 0: self.speed.x = min(self.speed.x + self.speed_dec.x, 0)
+        if self.speed.x > 0: self.speed.x = max(self.speed.x - self.speed_dec.x, 0)
+
+    def inertia_speed_idle_y(self):
+        if self.speed.y < 0: self.speed.y = min(self.speed.y + self.speed_dec.y, 0)
+        if self.speed.y > 0: self.speed.y = max(self.speed.y - self.speed_dec.y, 0)
+
+    def gravity_speed_idle_x(self):
+        if self.gravity.x > 0: self.speed.x = min(self.speed.x + self.gravity.x, self.speed_max.x)
+        if self.gravity.x < 0: self.speed.x = max(self.speed.x + self.gravity.x, -self.speed_max.y)
+
+    def gravity_speed_idle_y(self):
+        if self.gravity.y > 0: self.speed.y = min(self.speed.y + self.gravity.y, self.speed_max.y)
+        if self.gravity.y < 0: self.speed.y = max(self.speed.y + self.gravity.y, -self.speed_max.y)
+
+    def inertia_speed_move(self):
         self.actor.rect[0] = self.actor.rect[0] + self.speed.x
         aw = self.collide()
+        x, y = 0, 0
         if aw:
+            x = 1
             for w in aw:
                 if self.speed.x > 0: self.actor.rect.x = w.rect.left - self.actor.rect.width
                 if self.speed.x < 0: self.actor.rect.x = w.rect.right
         self.actor.rect[1] = self.actor.rect[1] + self.speed.y
         aw = self.collide()
         if aw:
+            y = 1
             for w in aw:
-                self.speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height
-                self.speed.y < 0: self.actor.rect.y = w.rect.bottom
+                if self.speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height
+                if self.speed.y < 0: self.actor.rect.y = w.rect.bottom
+        if x == 1 and y == 0: self.speed.x = 0
+        if x == 0 and y == 1: self.speed.y = 0
 
     def smooth_move(self, d):
         # 这里的 d 为一个方向数字的列表，例如: [2,4] 代表的左下角的方向
@@ -234,6 +313,7 @@ class Actor(pygame.sprite.Sprite):
         self.controller   = self.regist_controller(Controller(in_control))
         self.computer     = self.regist_idle(Idler())
         self.physics      = self.regist_physics(Physics(in_physics))
+        self.ticks        = None
 
     def regist_idle(self,computer):
         computer.actor = self # 让事件对象能找到宿主本身
@@ -272,6 +352,7 @@ class Actor(pygame.sprite.Sprite):
             operations['direction'] = d
             operations['control'] = c
             self.idle(self, operations)
+        self.physics.update(ticks) # 惯性处理相关的内容
 
     def collide(self, *list_sprite):
         scollide = pygame.sprite.spritecollide(self, self.theater.group, False, pygame.sprite.collide_mask)
