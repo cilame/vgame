@@ -120,12 +120,17 @@ class Physics:
     # 使用的 rect 直接来检测即可
 
     def __init__(self, in_physics=False):
-        self.gravity    = pygame.Vector2(0., 0.) # 重力和速度可以有方向，所以是一个两个数字的向量
-        self.speed      = pygame.Vector2(7., 7.) # 初始化有个值，方便看到效果，可以通过对象修改
-        self.speed_max  = 0.
-        self.actor      = None # 用于逆向绑定
-        self.in_physics = in_physics
-        self.has_bind   = False
+        self.smooth_speed = pygame.Vector2(7., 7.) # 初始化有个值，方便看到效果，可以通过对象修改
+        self.gravity      = pygame.Vector2(0., 0.) # 重力和速度可以有方向，所以是一个两个数字的向量
+        self.speed        = pygame.Vector2(0., 0.) # 与加速度相关的速度
+        self.speed_max    = 7.
+        self.actor        = None # 用于逆向绑定
+        self.in_physics   = in_physics
+        self.has_bind     = False
+
+        # 设置减速的频率，让速度变化有一个平滑的改变时间 # 后续可能这个参数会暴露出去？
+        self.delay      = 15
+        self._tick      = 0
 
     def move(self, d):
         if d: 
@@ -133,18 +138,43 @@ class Physics:
         else:
             pass
 
+    def update(self,ticks):
+        # 之所以需要将内容放置在这里是因为考虑到要处理惯性的需求
+        if self._update_delay(ticks):
+            self.inertia_move()
+
+    def _update_delay(self,ticks):
+        if ticks - self._tick > self.delay:
+            self._tick = ticks
+            return True
+
+    def inertia_move(self):
+        self.actor.rect[0] = self.actor.rect[0] + self.speed.x
+        aw = self.collide()
+        if aw:
+            for w in aw:
+                if self.speed.x > 0: self.actor.rect.x = w.rect.left - self.actor.rect.width
+                if self.speed.x < 0: self.actor.rect.x = w.rect.right
+        self.actor.rect[1] = self.actor.rect[1] + self.speed.y
+        aw = self.collide()
+        if aw:
+            for w in aw:
+                self.speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height
+                self.speed.y < 0: self.actor.rect.y = w.rect.bottom
+
     def smooth_move(self, d):
         # 这里的 d 为一个方向数字的列表，例如: [2,4] 代表的左下角的方向
+        # 这里的处理也只能是平滑移动相关，和重力速度无关
         for i in d:
-            if i == 6: self.actor.rect[0] = self.actor.rect[0] + self.speed.x
-            if i == 4: self.actor.rect[0] = self.actor.rect[0] - self.speed.x
+            if i == 6: self.actor.rect[0] = self.actor.rect[0] + self.smooth_speed.x
+            if i == 4: self.actor.rect[0] = self.actor.rect[0] - self.smooth_speed.x
             aw = self.collide()
             if aw:
                 for w in aw:
                     if 6 in d: self.actor.rect.x = w.rect.left - self.actor.rect.width
                     if 4 in d: self.actor.rect.x = w.rect.right
-            if i == 2: self.actor.rect[1] = self.actor.rect[1] + self.speed.y
-            if i == 8: self.actor.rect[1] = self.actor.rect[1] - self.speed.y
+            if i == 2: self.actor.rect[1] = self.actor.rect[1] + self.smooth_speed.y
+            if i == 8: self.actor.rect[1] = self.actor.rect[1] - self.smooth_speed.y
             aw = self.collide()
             if aw:
                 for w in aw:
