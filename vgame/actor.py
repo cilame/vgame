@@ -1,4 +1,4 @@
-import os, re
+import os, re, time
 import traceback
 from itertools import cycle, product
 
@@ -120,35 +120,68 @@ class Physics:
     # 使用的 rect 直接来检测即可
 
     def __init__(self, in_physics=False):
-        self.smooth_speed = pygame.Vector2(7., 7.) # 初始化有个值，方便看到效果，可以通过对象修改
-        self.gravity      = pygame.Vector2(0., 0.) # 重力和速度可以有方向，所以是一个两个数字的向量
-        self.speed        = pygame.Vector2(0., 0.) # 与加速度相关的速度
-        self.speed_inc    = pygame.Vector2(2., 6.) # 加速度，每个操作片x/y方向的速大小
-        self.speed_dec    = pygame.Vector2(1., 1.) # 减速度，类似摩擦力，若为0，则增速之后会想速度方向无限移动下去
-        self.speed_max    = pygame.Vector2(10., 10.) # x/y 两个方向上的最大速度
-        self.actor        = None # 用于逆向绑定
-        self.in_physics   = in_physics
-        self.has_bind     = False
-        self.is_idle_x    = True
-        self.is_idle_y    = True
+        self.smooth_speed  = pygame.Vector2(7., 7.) # 初始化有个值，方便看到效果，可以通过对象修改
+        self.gravity       = pygame.Vector2(0., 0.) # 重力和速度可以有方向，所以是一个两个数字的向量
+        self.speed         = pygame.Vector2(0., 0.) # 与加速度相关的速度
+        self.speed_inc     = pygame.Vector2(2., 6.) # 加速度，每个操作片x/y方向的速大小
+        self.speed_dec     = pygame.Vector2(1., 1.) # 减速度，类似摩擦力，若为0，则增速之后会想速度方向无限移动下去
+        self.speed_max     = pygame.Vector2(10., 10.) # x/y 两个方向上的最大速度
+        self.actor         = None # 用于逆向绑定
+        self.in_physics    = in_physics
+        self.has_bind      = False
+        self.is_idle_x     = True
+        self.is_idle_y     = True
+        self.effect_start  = {8:None, 2:None, 6:None, 4:None}
+        self.effect_toggle = {8:None, 2:None, 6:None, 4:None}
+        self.effect_highs  = None
+        self.jump          = {8:0, 2:0, 6:0, 4:0} # *这部分后续可能用于处理多段跳
+        self.jump_toggle   = {8:0, 2:0, 6:0, 4:0} # *这部分后续可能用于处理多段跳
+        self.jump_times    = 2                    # *这部分后续可能用于处理多段跳
+        self.fall_ground_l = False # 可以用于检测什么时候落到地面
+        self.fall_ground_r = False # 
+        self.fall_ground_u = False # 
+        self.fall_ground_d = False # 一般2d卷轴基本上都用这个检测
 
         # 设置空闲状态的减速的频率，让速度变化有一个平滑的改变时间 # 后续可能这个参数会暴露出去？
         self._update_tick_delay  = 15 # 一般更新时间
         self._update_tick        = 0
-        self._gravity_tick_delay = 50 # 重力状态更新时间
+        self._gravity_tick_delay = 45 # 重力状态更新时间
         self._gravity_tick       = 0
 
     def move(self, d):
         if d: self.smooth_move(d)
 
-    def move2(self, d):
+    def move2(self, d, effect_key_times=None):
         if d:
+            self.effect_time_check(d, effect_key_times)
             self.inertia_speed_direction(d)
             self.is_idle_x = False if 6 in d or 4 in d else True
             self.is_idle_y = False if 8 in d or 2 in d else True
         else:
             self.is_idle_x = True
             self.is_idle_y = True
+
+    def effect_time_check(self, d, effect_highs):
+        if effect_highs:
+            if self.effect_highs == None:
+                self.effect_highs = effect_highs
+            for key in self.effect_highs:
+                if key == 8:
+                    if self.effect_start[key] == None:
+                        self.effect_start[key] = self.actor.rect.y - self.speed.y
+                        self.effect_toggle[key] = True
+                    # 这部分的开发尤为重要，为了能够固定住跳跃的高度，这块代码需要与核心移动模块同频
+                    # 所以这部分需要移动到核心的移动代码里面，所以这里的注释就是为了提示自己而已
+                    # if self.effect_toggle[key] and self.actor.rect.y < self.effect_start[key] - self.effect_highs[key]:
+                    #     self.effect_toggle[key] = False
+                    #     self.actor.rect.y = self.effect_start[key] - self.effect_highs[key]
+                    #     self.speed.y = 0
+                    if not self.effect_toggle[key]:
+                        if key in d:
+                            d.remove(key)
+                    if self.fall_ground_d:
+                        self.effect_start[key] = None
+        return d
 
     def update(self,ticks):
         # 之所以需要将 idle 处理放置在这里是因为考虑到当你没有操作更新的时候
@@ -238,8 +271,35 @@ class Physics:
             for w in aw:
                 if self.speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height
                 if self.speed.y < 0: self.actor.rect.y = w.rect.bottom
-        if x == 1 and y == 0: self.speed.x = 0
-        if x == 0 and y == 1: self.speed.y = 0
+        if x == 1 and y == 0: 
+            if self.speed.x > 0:
+                self.fall_ground_r = True
+            else:
+                self.fall_ground_l = True
+            self.speed.x = 0
+        else:
+            self.fall_ground_r = False
+            self.fall_ground_l = False
+        if x == 0 and y == 1: 
+            if self.speed.y > 0:
+                self.fall_ground_d = True
+            else:
+                self.fall_ground_u = True
+            self.speed.y = 0
+        else:
+            self.fall_ground_d = False
+            self.fall_ground_u = False
+
+        for key in self.effect_toggle:
+            # TODO 后续需要补完其他方向
+            if key == 8:
+                if self.effect_start.get(key):
+                    if (  self.fall_ground_u or self.effect_toggle[key] and 
+                          self.actor.rect.y < self.effect_start[key] - self.effect_highs[key]  ):
+                        self.effect_toggle[key] = False
+                        if not self.fall_ground_u: 
+                            self.actor.rect.y = self.effect_start[key] - self.effect_highs[key]
+                        self.speed.y = 0
 
     def smooth_move(self, d):
         # 这里的 d 为一个方向数字的列表，例如: [2,4] 代表的左下角的方向
@@ -297,28 +357,28 @@ class Actor(pygame.sprite.Sprite):
     DEBUG = False # 方便让全部的 Actor 对象都使用 debug 模式，方便开发
     DEBUG_MASK_LINE_CORLOR = (0, 255, 0) # debug 模式将显示 actor 的 mask 边框线颜色
 
-    def __init__(self, img=None, showsize=None, in_control=False, in_physics=True, debug=False):
+    def __init__(self, img=None, showsize=None, in_control=False, in_physics=True, rate=0, debug=False):
         pygame.sprite.Sprite.__init__(self)
 
         # 后续这两行需要修改，因为角色的状态资源应该可以有多个，并且由于每个 Image 都要逆向绑定 Actor
         # 所以后续要考虑怎么更加合理的添加角色状态动画的处理
-        self._image       = img if not (img is None or isinstance(img, (str, tuple))) else Image(img, showsize)
+        self._image       = img if not (img is None or isinstance(img, (str, tuple))) else Image(img, showsize, rate)
         self._image.actor = self
 
         self.debug        = debug # 如果 DEBUG 为 False，这里为 True 则仅仅让该 Actor 这个对象用 debug 模式
         self.image        = self._image.image
         self.mask         = self._image.mask
-        self.rect         = self.image.get_rect() if self.image else None
+        self.rect         = self.image.get_rect()
         self.theater      = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
         self.controller   = self.regist_controller(Controller(in_control))
-        self.computer     = self.regist_idle(Idler())
+        self.idler        = self.regist_idler(Idler())
         self.physics      = self.regist_physics(Physics(in_physics))
         self.ticks        = None
 
-    def regist_idle(self,computer):
-        computer.actor = self # 让事件对象能找到宿主本身
-        self.computer  = computer # 这里是为了兼容外部 computer 的注册
-        return computer
+    def regist_idler(self,idler):
+        idler.actor = self # 让事件对象能找到宿主本身
+        self.idler  = idler # 这里是为了兼容外部 idler 的注册
+        return idler
 
     def regist_controller(self,controller):
         controller.actor = self # 让事件对象能找到宿主本身
@@ -331,28 +391,31 @@ class Actor(pygame.sprite.Sprite):
         return physics
 
     def update(self,ticks):
+        self.ticks = ticks
         self._image.update_image(ticks)
         self.physics._delay_bind()
         self.image = self._image.image
         self.mask  = self._image.mask
-        i = self.computer.update(ticks)
         m, d, c = self.controller.update(ticks)
         # 根据函数的参数数量，来决定是否传入 Actor 对象自身。
         # 但是有时候传入自身可能会对新手造成一定困惑，我也不想一定要传入自身，下面的代码可以兼容两者
         self.mouse(m)     if self.mouse.__code__.co_argcount     == 1 else self.mouse(self, m)
         self.direction(d) if self.direction.__code__.co_argcount == 1 else self.direction(self, d)
         self.control(c)   if self.control.__code__.co_argcount   == 1 else self.control(self, c)
-        if self.idle.__code__.co_argcount == 0:
-            self.idle()
-        elif self.idle.__code__.co_argcount == 1:
-            self.idle(self)
-        elif self.idle.__code__.co_argcount == 2:
-            operations = {}
-            operations['mouse'] = m
-            operations['direction'] = d
-            operations['control'] = c
-            self.idle(self, operations)
-        self.physics.update(ticks) # 惯性处理相关的内容
+        # 空闲状态的持续执行的函数
+        if self.idler.update(ticks):
+            if self.idle.__code__.co_argcount == 0:
+                self.idle()
+            elif self.idle.__code__.co_argcount == 1:
+                self.idle(self)
+            elif self.idle.__code__.co_argcount == 2:
+                operations = {}
+                operations['mouse'] = m
+                operations['direction'] = d
+                operations['control'] = c
+                self.idle(self, operations)
+        # 惯性，重力处理相关的内容
+        self.physics.update(ticks)
 
     def collide(self, *list_sprite):
         scollide = pygame.sprite.spritecollide(self, self.theater.group, False, pygame.sprite.collide_mask)
