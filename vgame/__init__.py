@@ -74,14 +74,15 @@ class Initer:
 
             # 测试时候使用
             # 在标题后面添加内容来显示 fps
-            pygame.display.set_caption(self.title + " fps:{:.2f}".format(self.artist.framerate.get_fps()))
+            pygame.display.set_caption(self.title + " fps:{:.3f}".format(self.artist.framerate.get_fps()))
 
             # 测试时候使用
             # 按下 ESC 直接退出游戏
             if pygame.key.get_pressed()[K_ESCAPE]:
                 self.quit()
 
-            # 该处仅为测试使用，功能为按下 TAB 键按照一定的顺序循环切换至下一个场景
+            # 测试时候使用
+            # 按下 TAB 键按照一定的顺序循环切换至下一个场景
             # 后期肯定会删除掉的功能
             def _random_change(self):
                 v = list(self.artist.theaters)

@@ -342,8 +342,8 @@ d = vgame.Actor(showsize=(40,40),in_physics=False)
 # a.physics.smooth_speed.y = 20
 
 # 示例：
-# y重力系统，x摩擦系统
-a.direction = lambda self,d: self.physics.move2(d.get('p1')) # p1:wasd键方向消息
+# y重力系统，x摩擦系统 # physics.move2 有第二个参数 effect_highs，限制某个方向跳跃的高度
+a.direction = lambda self,d: self.physics.move2(d.get('p1'), effect_highs={8:80}) # p1:wasd键方向消息
 a.physics.gravity.y = 3.5   # 修改 gravity.y 即在 y 方向上增加重力常量【参数可正可负】
 # “重力系统” 和 “摩擦系统” 均能使用的参数，摩擦系统需要的参数
 a.physics.speed_inc.x = 3  # 加速度             【只能正数，整数小数均可】

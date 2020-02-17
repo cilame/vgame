@@ -16,7 +16,7 @@ vgame.Actor.DEBUG = True
 
 
 i_fra = vgame.Image('../test_data/fish/right_attck1', rate=60)
-a = vgame.Actor(i_fra,in_control=True,showsize=(50,50))
+a = vgame.Actor(i_fra,in_control=True)
 b = vgame.Actor(showsize=(510,10))
 c = vgame.Actor(showsize=(80,80))
 d = vgame.Actor(showsize=(40,40)) 
@@ -60,7 +60,7 @@ d = vgame.Actor(showsize=(40,40))
 
 # 示例：
 # y重力系统，x摩擦系统
-a.direction = lambda self,d: self.physics.move2(d.get('p1'), effect_key_times={8:80}) # p1:wasd键方向消息
+a.direction = lambda self,d: self.physics.move2(d.get('p1'), effect_highs={8:80}) # p1:wasd键方向消息
 a.physics.gravity.y = 2.5  # 修改 gravity.y 即在 y 方向上增加重力常量【参数可正可负】
 # “重力系统” 和 “摩擦系统” 均能使用的参数，摩擦系统需要的参数
 a.physics.speed_inc.x = 2  # 加速度             【只能正数，整数小数均可】
