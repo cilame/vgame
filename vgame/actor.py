@@ -131,12 +131,14 @@ class Physics:
         self.has_bind      = False
         self.is_idle_x     = True
         self.is_idle_y     = True
+        self.curr_directs  = {8:None, 2:None, 6:None, 4:None}
         self.effect_start  = {8:None, 2:None, 6:None, 4:None}
         self.effect_toggle = {8:None, 2:None, 6:None, 4:None}
-        self.effect_highs  = None
-        self.jump          = {8:0, 2:0, 6:0, 4:0} # *这部分后续可能用于处理多段跳
-        self.jump_toggle   = {8:0, 2:0, 6:0, 4:0} # *这部分后续可能用于处理多段跳
-        self.jump_times    = 2                    # *这部分后续可能用于处理多段跳
+        self.effect_fall   = {8:None, 2:None, 6:None, 4:None}
+        self.limit_highs  = None
+        self._jump_times   = {8:1, 2:1, 6:1, 4:1}
+        self._jump_default = {8:1, 2:1, 6:1, 4:1}
+        self.jump_times    = None
         self.fall_ground_l = False # 可以用于检测什么时候落到地面
         self.fall_ground_r = False # 
         self.fall_ground_u = False # 
@@ -152,6 +154,8 @@ class Physics:
         if d: self.smooth_move(d)
 
     def move2(self, d):
+        for key in self.curr_directs:
+            self.curr_directs[key] = True if key in (d or []) else False
         if d:
             self._effect_high_check_direction(d)
             self.inertia_speed_direction(d)
@@ -162,76 +166,121 @@ class Physics:
             self.is_idle_y = True
 
     def _effect_high_check_direction(self, d):
-        # 这部分的开发尤为重要，为了能够固定住跳跃的高度，这块代码需要与核心移动模块同频
-        # 所以这部分需要移动到核心的移动代码里面，也就有了两个函数
+        # 这部分的开发尤为重要，为了能够固定住跳跃的高度，检测变化的函数需要与核心移动模块同频
+        # 所以也就有了两个函数
         #  _effect_high_check_direction # 放在控制操作中，作为开关
         #  _effect_high_check_core_move # 放在核心移动操作中，与核心移动函数同频
-        if self.effect_highs:
-            for key in self.effect_highs:
+        if self.limit_highs:
+            for key in self.limit_highs:
                 if key == 8 and self.gravity.y != 0:
-                    if self.effect_start[key] == None:
+                    if self.effect_start[key] == None and key in d:
                         self.effect_start[key] = self.actor.rect.y - self.speed.y
                         self.effect_toggle[key] = True
                     if not self.effect_toggle[key]:
                         if key in d: d.remove(key)
-                    if self.fall_ground_d: self.effect_start[key] = None
                 if key == 2 and self.gravity.y != 0:
-                    if self.effect_start[key] == None:
+                    if self.effect_start[key] == None and key in d:
                         self.effect_start[key] = self.actor.rect.y - self.speed.y
                         self.effect_toggle[key] = True
                     if not self.effect_toggle[key]:
                         if key in d: d.remove(key)
-                    if self.fall_ground_u: self.effect_start[key] = None
                 if key == 4 and self.gravity.x != 0:
-                    if self.effect_start[key] == None:
+                    if self.effect_start[key] == None and key in d:
                         self.effect_start[key] = self.actor.rect.x - self.speed.x
                         self.effect_toggle[key] = True
                     if not self.effect_toggle[key]:
                         if key in d: d.remove(key)
-                    if self.fall_ground_r: self.effect_start[key] = None
                 if key == 6 and self.gravity.x != 0:
-                    if self.effect_start[key] == None:
+                    if self.effect_start[key] == None and key in d:
                         self.effect_start[key] = self.actor.rect.x - self.speed.x
                         self.effect_toggle[key] = True
                     if not self.effect_toggle[key]:
                         if key in d: d.remove(key)
-                    if self.fall_ground_l: self.effect_start[key] = None
 
     def _effect_high_check_core_move(self):
-        if self.effect_highs:
+        # 这个函数必须放在核心移动函数 _core_move 里面，这个函数需要与核心函数同频
+        # 否则会有很麻烦的问题。
+        if self.limit_highs:
             for key in self.effect_toggle:
-                if key == 8:
-                    if self.effect_start.get(key):
-                        if (  self.fall_ground_u or self.effect_toggle[key] and 
-                              self.actor.rect.y < self.effect_start[key] - self.effect_highs[key]  ):
-                            self.effect_toggle[key] = False
-                            if not self.fall_ground_u: 
-                                self.actor.rect.y = self.effect_start[key] - self.effect_highs[key]
-                            self.speed.y = 0
-                if key == 2:
-                    if self.effect_start.get(key):
-                        if (  self.fall_ground_d or self.effect_toggle[key] and 
-                              self.actor.rect.y > self.effect_start[key] + self.effect_highs[key]  ):
-                            self.effect_toggle[key] = False
-                            if not self.fall_ground_d: 
-                                self.actor.rect.y = self.effect_start[key] + self.effect_highs[key]
-                            self.speed.y = 0
-                if key == 4:
-                    if self.effect_start.get(key):
-                        if (  self.fall_ground_l or self.effect_toggle[key] and 
-                              self.actor.rect.x < self.effect_start[key] - self.effect_highs[key]  ):
-                            self.effect_toggle[key] = False
-                            if not self.fall_ground_l: 
-                                self.actor.rect.x = self.effect_start[key] - self.effect_highs[key]
-                            self.speed.x = 0
-                if key == 6:
-                    if self.effect_start.get(key):
-                        if (  self.fall_ground_r or self.effect_toggle[key] and 
-                              self.actor.rect.x > self.effect_start[key] + self.effect_highs[key]  ):
-                            self.effect_toggle[key] = False
-                            if not self.fall_ground_r: 
-                                self.actor.rect.x = self.effect_start[key] + self.effect_highs[key]
-                            self.speed.x = 0
+                if self.effect_start.get(key) is not None:
+                    self._catch_jump_up(key)
+                    self._catch_jumps(key)
+                self._catch_jump_fall(key)
+
+    def _catch_jump_up(self, key):
+        if key == 8:
+            if (  self.fall_ground_u or (self.effect_toggle[key] and 
+                  self.actor.rect.y < self.effect_start[key] - self.limit_highs[key])  ):
+                self.effect_toggle[key] = False
+                self.effect_fall[key] = True
+                if not self.fall_ground_u: 
+                    self.actor.rect.y = self.effect_start[key] - self.limit_highs[key]
+                self.speed.y = 0
+        if key == 2:
+            if (  self.fall_ground_d or self.effect_toggle[key] and 
+                  self.actor.rect.y > self.effect_start[key] + self.limit_highs[key]  ):
+                self.effect_toggle[key] = False
+                self.effect_fall[key] = True
+                if not self.fall_ground_d: 
+                    self.actor.rect.y = self.effect_start[key] + self.limit_highs[key]
+                self.speed.y = 0
+        if key == 6:
+            if (  self.fall_ground_r or self.effect_toggle[key] and 
+                  self.actor.rect.x > self.effect_start[key] + self.limit_highs[key]  ):
+                self.effect_toggle[key] = False
+                self.effect_fall[key] = True
+                if not self.fall_ground_r: 
+                    self.actor.rect.x = self.effect_start[key] + self.limit_highs[key]
+                self.speed.x = 0
+        if key == 4:
+            if (  self.fall_ground_l or self.effect_toggle[key] and 
+                  self.actor.rect.x < self.effect_start[key] - self.limit_highs[key]  ):
+                self.effect_toggle[key] = False
+                self.effect_fall[key] = True
+                if not self.fall_ground_l: 
+                    self.actor.rect.x = self.effect_start[key] - self.limit_highs[key]
+                self.speed.x = 0
+
+    def _catch_jumps(self, key):
+        if self.effect_toggle[key]:
+            # 跳起阶段的松手
+            if not self.curr_directs[key]: 
+                if self.jump_times:
+                    self._jump_times[key] -= 1
+                    if self._jump_times[key]:
+                        self.effect_start[key] = None
+                else:
+                    self.effect_start[key] = None
+                self.effect_toggle[key] = False
+        if self.effect_fall[key]:
+            # 下落阶段的松手
+            if not self.curr_directs[key]: 
+                if self.jump_times:
+                    self._jump_times[key] -= 1
+                    if self._jump_times[key]:
+                        self.effect_start[key] = None
+                else:
+                    self.effect_start[key] = None
+                self.effect_toggle[key] = False
+                self.effect_fall[key] = False
+
+    def _catch_jump_fall(self, key):
+        if key == 8:
+            if self.fall_ground_d and self.jump_times:
+                self._jump_times[key] = self.jump_times[key] if self.jump_times.get(key) is not None else self._jump_default[key]
+                self.effect_start[key] = None
+        if key == 2:
+            if self.fall_ground_u and self.jump_times:
+                self._jump_times[key] = self.jump_times[key] if self.jump_times.get(key) is not None else self._jump_default[key]
+                self.effect_start[key] = None
+        if key == 6:
+            if self.fall_ground_l and self.jump_times:
+                self._jump_times[key] = self.jump_times[key] if self.jump_times.get(key) is not None else self._jump_default[key]
+                self.effect_start[key] = None
+        if key == 4:
+            if self.fall_ground_r and self.jump_times:
+                self._jump_times[key] = self.jump_times[key] if self.jump_times.get(key) is not None else self._jump_default[key]
+                self.effect_start[key] = None
 
     def update(self,ticks):
         # 之所以需要将 idle 处理放置在这里是因为考虑到当你没有操作更新的时候
@@ -254,7 +303,7 @@ class Physics:
             if self.speed.x != 0 or self.speed.y != 0:
                 if self.is_idle_x and self.gravity.x == 0: self.inertia_speed_idle_x()
                 if self.is_idle_y and self.gravity.y == 0: self.inertia_speed_idle_y()
-                self.inertia_speed_move()
+        self._core_move()
 
     def _update_delay(self,ticks):
         if ticks - self._update_tick > self._update_tick_delay:
@@ -298,14 +347,12 @@ class Physics:
         if self.speed.y > 0: self.speed.y = max(self.speed.y - self.speed_dec.y, 0)
 
     def gravity_speed_idle_x(self):
-        if self.gravity.x > 0: self.speed.x = min(self.speed.x + self.gravity.x, self.speed_max.x)
-        if self.gravity.x < 0: self.speed.x = max(self.speed.x + self.gravity.x, -self.speed_max.y)
+        self.speed.x = max(min(self.speed.x + self.gravity.x, self.speed_max.x), -self.speed_max.y)
 
     def gravity_speed_idle_y(self):
-        if self.gravity.y > 0: self.speed.y = min(self.speed.y + self.gravity.y, self.speed_max.y)
-        if self.gravity.y < 0: self.speed.y = max(self.speed.y + self.gravity.y, -self.speed_max.y)
+        self.speed.y = max(min(self.speed.y + self.gravity.y, self.speed_max.y), -self.speed_max.y)
 
-    def inertia_speed_move(self):
+    def _core_move(self):
         self.actor.rect[0] = self.actor.rect[0] + self.speed.x
         aw = self.collide()
         x, y = 0, 0
@@ -324,7 +371,7 @@ class Physics:
         if x == 1 and y == 0:
             if self.speed.x > 0:
                 self.fall_ground_r = True
-            else:
+            if self.speed.x < 0:
                 self.fall_ground_l = True
             self.speed.x = 0
         else:
@@ -333,7 +380,7 @@ class Physics:
         if x == 0 and y == 1:
             if self.speed.y > 0:
                 self.fall_ground_d = True
-            else:
+            if self.speed.y < 0:
                 self.fall_ground_u = True
             self.speed.y = 0
         else:
@@ -440,8 +487,13 @@ class Actor(pygame.sprite.Sprite):
         # 根据函数的参数数量，来决定是否传入 Actor 对象自身。
         # 但是有时候传入自身可能会对新手造成一定困惑，我也不想一定要传入自身，下面的代码可以兼容两者
         self.mouse(m)     if self.mouse.__code__.co_argcount     == 1 else self.mouse(self, m)
-        self.direction(d) if self.direction.__code__.co_argcount == 1 else self.direction(self, d)
         self.control(c)   if self.control.__code__.co_argcount   == 1 else self.control(self, c)
+        if self.direction.__code__.co_argcount == 1:
+            self.direction(d)
+        elif self.direction.__code__.co_argcount == 2:
+            self.direction(self, d)
+        elif self.direction.__code__.co_argcount == 3:
+            self.direction(self, d, c) # 2d卷轴游戏可能需要别的键作为跳跃功能，所以需要处理更多消息
         # 空闲状态的持续执行的函数
         if self.idler.update(ticks):
             if self.idle.__code__.co_argcount == 0:

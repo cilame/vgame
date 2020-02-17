@@ -14,13 +14,12 @@ t = vgame.Theater('main')
 
 vgame.Actor.DEBUG = True
 
-i_fra = vgame.Image('../test_data/fish/right_attck1', rate=60)
-a = vgame.Actor(in_control=True)
+a = vgame.Actor(i_fra, in_control=True)
 b = vgame.Actor(showsize=(80,80))
 c = vgame.Actor(showsize=(40,40)) 
 
-wd = vgame.Actor(showsize=(300,10))
-wu = vgame.Actor(showsize=(300,10))
+wd = vgame.Actor(showsize=(600,10))
+wu = vgame.Actor(showsize=(500,10))
 wl = vgame.Actor(showsize=(10,300))
 wr = vgame.Actor(showsize=(10,300))
 
@@ -29,16 +28,36 @@ wr = vgame.Actor(showsize=(10,300))
 
 # 示例：
 # y重力系统，x摩擦系统
-# effect_highs 为一个限制跳跃的高度字典，key为跳跃方向的数字，value为限制高度的参数
-a.direction = lambda self,d: self.physics.move2(d.get('p1'))
-a.physics.gravity.y = 3
-a.physics.effect_highs = {8:80}
-# a.physics.gravity.x = -2.5
+
+# direction 也可以使用三个参数的函数覆盖，使用三个参数时候第三个为控制键的消息
+# 你可以如下处理来使用控制键作为跳跃处理。
+def direct_a(self, d, c):
+    q = d.get('p1')
+    if d and 8 in q:
+        q.remove(8)
+    if c and c[1][0]:
+        if q is None: q = []
+        q.append(8)
+    self.physics.move2(q)
+
+a.direction = direct_a
+a.physics.gravity.y = 5
+
+# 这里封装了两个参数，是一个非常重要的游戏性，如果在外部单独处理起来非常麻烦的功能
+# limit_highs 为一个限制跳跃的高度字典，key为跳跃方向的数字，value为限制高度的参数
+# jump_times  为一个限制跳跃的次数字段，key为跳跃方向的数字，value为限制高度的参数
+# 1 某个方向跳跃的最大高度，限制了高度，才是一个好的跳跃游戏
+#  *注意，这个高度最好适当调整一些 y 方向上的加速度、重力、最大速度调整到最佳会方便游戏
+a.physics.limit_highs = {8:80}
+# 2 某个方向跳跃的最大次数，跳跃后直到落到地面才会重新更新次数
+#  *注意，如果不设置这个参数，默认跳跃次数无限，类似游戏 flappy bird 的模式。
+#   一般游戏设置 1 或 2 已经足够
+a.physics.jump_times = {8:2}
 
 # “重力系统” 和 “摩擦系统” 均能使用的参数
-a.physics.speed_inc.x = 3  # 加速度             【只能正数，整数小数均可】
-a.physics.speed_dec.x = 5  # 减速度（类似于摩擦）【只能正数，整数小数均可】
-a.physics.speed_max.x = 5  # 最大速度           【只能正数，整数小数均可】
+a.physics.speed_inc.x = 3 # 加速度           【整数小数均可，只能正数】
+a.physics.speed_dec.x = 1 # 减速度（摩擦系统）【整数小数均可，只能正数】
+a.physics.speed_max.x = 5 # 最大速度         【整数小数均可，只能正数】
 a.physics.speed_max.y = 8
 
 # 测试移动模块，
