@@ -369,7 +369,7 @@ s.regist(t) # 将场景 t 注入游戏
 s.run()
 ```
 
-- ##### 2D横版卷轴很有必要的一个功能，跳跃，跳跃次数
+- ##### 2D横版卷轴很有必要的一个功能，跳跃，跳跃次数，使用其他按键处理跳跃消息的代码模板
 
 ```python
 import vgame
@@ -378,7 +378,7 @@ t = vgame.Theater('main')
 
 vgame.Actor.DEBUG = True
 
-a = vgame.Actor(i_fra, in_control=True)
+a = vgame.Actor((255,0,0),in_control=True)
 b = vgame.Actor(showsize=(80,80))
 c = vgame.Actor(showsize=(40,40)) 
 
