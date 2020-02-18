@@ -14,7 +14,7 @@ t = vgame.Theater('main')
 
 vgame.Actor.DEBUG = True
 
-a = vgame.Actor(i_fra, in_control=True)
+a = vgame.Actor(in_control=True)
 b = vgame.Actor(showsize=(80,80))
 c = vgame.Actor(showsize=(40,40)) 
 

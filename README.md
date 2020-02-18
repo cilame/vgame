@@ -319,7 +319,7 @@ d = vgame.Actor(showsize=(40,40),in_physics=False)
 # 接口：self.physics.move
 # 如果只想用到自动碰撞检测，平滑移动，不想用重力，摩擦，之类的复杂功能
 # 那么你只要使用 physics.move 来实现移动即可
-# 而且可以使用 physics.speed.x 和 physics.speed.y 来修改这种平滑移动的速度
+# 而且可以使用 physics.smooth_speed.x 和 physics.smooth_speed.y 来修改这种平滑移动的速度
 # 2 高级物理移动：
 # 接口：self.physics.move2
 # 高级物理移动的原理是改变x/y速度的分量。物体会在 speed 影响下移动一定的距离。

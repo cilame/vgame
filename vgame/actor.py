@@ -9,7 +9,8 @@ from .controller import Controller
 
 class Image:
     '''
-    用于单个图片资源的加载，可以是动图但是
+    用于单个图片资源的加载，可以是动图，不过现在实现暂时还是不够好
+    因为动图的加载模式有时候很不一样，会有细微的位置需要调整
     '''
     def __init__(self, img=None, showsize=None, rate=0):
         # 一些默认配置，用于图片动画的刷新率，可以通过图片名字进行配置
@@ -247,7 +248,7 @@ class Physics:
             if not self.curr_directs[key]: 
                 if self.jump_times:
                     self._jump_times[key] -= 1
-                    if self._jump_times[key]:
+                    if self._jump_times[key] > 0:
                         self.effect_start[key] = None
                 else:
                     self.effect_start[key] = None
@@ -257,7 +258,7 @@ class Physics:
             if not self.curr_directs[key]: 
                 if self.jump_times:
                     self._jump_times[key] -= 1
-                    if self._jump_times[key]:
+                    if self._jump_times[key] > 0:
                         self.effect_start[key] = None
                 else:
                     self.effect_start[key] = None
