@@ -33,9 +33,8 @@ wr = vgame.Actor(showsize=(10,300))
 # 你可以如下处理来使用控制键作为跳跃处理。
 def direct_a(self, d, c):
     q = d.get('p1')
-    if d and 8 in q:
-        q.remove(8)
-    if c and c[1][0]:
+    if d and 8 in q: q.remove(8) # 先去除原本存在的上方向键传递的跳跃消息
+    if c and c[1][0]: # 使用控制功能键来做为跳跃的消息
         if q is None: q = []
         q.append(8)
     self.physics.move2(q)

@@ -23,14 +23,13 @@ class Image:
         self.rects      = None # 后续用于动图
         self.image      = self.load_img(img)
         self.mask       = pygame.mask.from_surface(self.image)
-        self.rigid_mask = None # TODO 这里需要考虑怎么加载成 rect 形式的 mask
 
     def load_img(self,img):
         try:
             if img is None:
                 image = pygame.Surface((60, 60)).convert_alpha()
                 image.fill((255,255,255,255))
-            elif isinstance(img, tuple):
+            elif isinstance(img, (tuple, list)):
                 image = pygame.Surface((60, 60)).convert_alpha()
                 image.fill(img)
             elif isinstance(img, str) and os.path.isdir(img):
@@ -62,6 +61,8 @@ class Image:
                     self.cur_tick  = 0
                     self.rects     = cycle(all_rects)
                     image = self.src_image.subsurface(next(self.rects))
+            elif isinstance(img, pygame.Surface):
+                image = img
             if self.showsize:
                 image = pygame.transform.scale(image, self.showsize)
         except:
@@ -124,9 +125,9 @@ class Physics:
         self.smooth_speed  = pygame.Vector2(7., 7.) # 初始化有个值，方便看到效果，可以通过对象修改
         self.gravity       = pygame.Vector2(0., 0.) # 重力和速度可以有方向，所以是一个两个数字的向量
         self.speed         = pygame.Vector2(0., 0.) # 与加速度相关的速度
-        self.speed_inc     = pygame.Vector2(2., 6.) # 加速度，每个操作片x/y方向的速大小
-        self.speed_dec     = pygame.Vector2(1., 1.) # 减速度，类似摩擦力，若为0，则增速之后会想速度方向无限移动下去
-        self.speed_max     = pygame.Vector2(10., 10.) # x/y 两个方向上的最大速度
+        self.speed_inc     = pygame.Vector2(4., 8.) # 加速度，每个操作片x/y方向的速大小
+        self.speed_dec     = pygame.Vector2(2., 3.) # 减速度，类似摩擦力，若为0，则增速之后会想速度方向无限移动下去
+        self.speed_max     = pygame.Vector2(6., 8.) # x/y 两个方向上的最大速度
         self.actor         = None # 用于逆向绑定
         self.in_physics    = in_physics
         self.has_bind      = False
@@ -136,14 +137,11 @@ class Physics:
         self.effect_start  = {8:None, 2:None, 6:None, 4:None}
         self.effect_toggle = {8:None, 2:None, 6:None, 4:None}
         self.effect_fall   = {8:None, 2:None, 6:None, 4:None}
-        self.limit_highs  = None
+        self.limit_highs   = None
         self._jump_times   = {8:1, 2:1, 6:1, 4:1}
         self._jump_default = {8:1, 2:1, 6:1, 4:1}
         self.jump_times    = None
-        self.fall_ground_l = False # 可以用于检测什么时候落到地面
-        self.fall_ground_r = False # 
-        self.fall_ground_u = False # 
-        self.fall_ground_d = False # 一般2d卷轴基本上都用这个检测
+        self.fall_grounds  = {8:None, 2:None, 6:None, 4:None}
 
         # 设置空闲状态的减速的频率，让速度变化有一个平滑的改变时间 # 后续可能这个参数会暴露出去？
         self._update_tick_delay  = 15 # 一般更新时间
@@ -210,35 +208,35 @@ class Physics:
 
     def _catch_jump_up(self, key):
         if key == 8:
-            if (  self.fall_ground_u or (self.effect_toggle[key] and 
+            if (  self.fall_grounds[8] or (self.effect_toggle[key] and 
                   self.actor.rect.y < self.effect_start[key] - self.limit_highs[key])  ):
                 self.effect_toggle[key] = False
                 self.effect_fall[key] = True
-                if not self.fall_ground_u: 
+                if not self.fall_grounds[8]: 
                     self.actor.rect.y = self.effect_start[key] - self.limit_highs[key]
                 self.speed.y = 0
         if key == 2:
-            if (  self.fall_ground_d or self.effect_toggle[key] and 
+            if (  self.fall_grounds[2] or self.effect_toggle[key] and 
                   self.actor.rect.y > self.effect_start[key] + self.limit_highs[key]  ):
                 self.effect_toggle[key] = False
                 self.effect_fall[key] = True
-                if not self.fall_ground_d: 
+                if not self.fall_grounds[2]: 
                     self.actor.rect.y = self.effect_start[key] + self.limit_highs[key]
                 self.speed.y = 0
         if key == 6:
-            if (  self.fall_ground_r or self.effect_toggle[key] and 
+            if (  self.fall_grounds[6] or self.effect_toggle[key] and 
                   self.actor.rect.x > self.effect_start[key] + self.limit_highs[key]  ):
                 self.effect_toggle[key] = False
                 self.effect_fall[key] = True
-                if not self.fall_ground_r: 
+                if not self.fall_grounds[6]: 
                     self.actor.rect.x = self.effect_start[key] + self.limit_highs[key]
                 self.speed.x = 0
         if key == 4:
-            if (  self.fall_ground_l or self.effect_toggle[key] and 
+            if (  self.fall_grounds[4] or self.effect_toggle[key] and 
                   self.actor.rect.x < self.effect_start[key] - self.limit_highs[key]  ):
                 self.effect_toggle[key] = False
                 self.effect_fall[key] = True
-                if not self.fall_ground_l: 
+                if not self.fall_grounds[4]: 
                     self.actor.rect.x = self.effect_start[key] - self.limit_highs[key]
                 self.speed.x = 0
 
@@ -267,19 +265,19 @@ class Physics:
 
     def _catch_jump_fall(self, key):
         if key == 8:
-            if self.fall_ground_d and self.jump_times:
+            if self.fall_grounds[2] and self.jump_times:
                 self._jump_times[key] = self.jump_times[key] if self.jump_times.get(key) is not None else self._jump_default[key]
                 self.effect_start[key] = None
         if key == 2:
-            if self.fall_ground_u and self.jump_times:
+            if self.fall_grounds[8] and self.jump_times:
                 self._jump_times[key] = self.jump_times[key] if self.jump_times.get(key) is not None else self._jump_default[key]
                 self.effect_start[key] = None
         if key == 6:
-            if self.fall_ground_l and self.jump_times:
+            if self.fall_grounds[4] and self.jump_times:
                 self._jump_times[key] = self.jump_times[key] if self.jump_times.get(key) is not None else self._jump_default[key]
                 self.effect_start[key] = None
         if key == 4:
-            if self.fall_ground_r and self.jump_times:
+            if self.fall_grounds[6] and self.jump_times:
                 self._jump_times[key] = self.jump_times[key] if self.jump_times.get(key) is not None else self._jump_default[key]
                 self.effect_start[key] = None
 
@@ -355,38 +353,36 @@ class Physics:
 
     def _core_move(self):
         self.actor.rect[0] = self.actor.rect[0] + self.speed.x
-        aw = self.collide()
         x, y = 0, 0
-        if aw:
-            if self.gravity.x != 0: x = 1
-            for w in aw:
-                if self.speed.x > 0: self.actor.rect.x = w.rect.left - self.actor.rect.width
-                if self.speed.x < 0: self.actor.rect.x = w.rect.right
+        if self.in_physics:
+            aw = self.collide()
+            if aw:
+                if self.gravity.x != 0: x = 1
+                for w in aw:
+                    if self.speed.x > 0: self.actor.rect.x = w.rect.left - self.actor.rect.width
+                    if self.speed.x < 0: self.actor.rect.x = w.rect.right
         self.actor.rect[1] = self.actor.rect[1] + self.speed.y
-        aw = self.collide()
-        if aw:
-            if self.gravity.y != 0: y = 1
-            for w in aw:
-                if self.speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height
-                if self.speed.y < 0: self.actor.rect.y = w.rect.bottom
+        if self.in_physics:
+            aw = self.collide()
+            if aw:
+                if self.gravity.y != 0: y = 1
+                for w in aw:
+                    if self.speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height
+                    if self.speed.y < 0: self.actor.rect.y = w.rect.bottom
         if x == 1 and y == 0:
-            if self.speed.x > 0:
-                self.fall_ground_r = True
-            if self.speed.x < 0:
-                self.fall_ground_l = True
+            if self.speed.x > 0: self.fall_grounds[6] = True
+            if self.speed.x < 0: self.fall_grounds[4] = True
             self.speed.x = 0
         else:
-            self.fall_ground_r = False
-            self.fall_ground_l = False
+            self.fall_grounds[6] = False
+            self.fall_grounds[4] = False
         if x == 0 and y == 1:
-            if self.speed.y > 0:
-                self.fall_ground_d = True
-            if self.speed.y < 0:
-                self.fall_ground_u = True
+            if self.speed.y > 0: self.fall_grounds[2] = True
+            if self.speed.y < 0: self.fall_grounds[8] = True
             self.speed.y = 0
         else:
-            self.fall_ground_d = False
-            self.fall_ground_u = False
+            self.fall_grounds[2] = False
+            self.fall_grounds[8] = False
         self._effect_high_check_core_move()
 
     def smooth_move(self, d):
@@ -395,18 +391,20 @@ class Physics:
         for i in d:
             if i == 6: self.actor.rect[0] = self.actor.rect[0] + self.smooth_speed.x
             if i == 4: self.actor.rect[0] = self.actor.rect[0] - self.smooth_speed.x
-            aw = self.collide()
-            if aw:
-                for w in aw:
-                    if 6 in d: self.actor.rect.x = w.rect.left - self.actor.rect.width
-                    if 4 in d: self.actor.rect.x = w.rect.right
+            if self.in_physics:
+                aw = self.collide()
+                if aw:
+                    for w in aw:
+                        if 6 in d: self.actor.rect.x = w.rect.left - self.actor.rect.width
+                        if 4 in d: self.actor.rect.x = w.rect.right
             if i == 2: self.actor.rect[1] = self.actor.rect[1] + self.smooth_speed.y
             if i == 8: self.actor.rect[1] = self.actor.rect[1] - self.smooth_speed.y
-            aw = self.collide()
-            if aw:
-                for w in aw:
-                    if 2 in d: self.actor.rect.y = w.rect.top - self.actor.rect.height
-                    if 8 in d: self.actor.rect.y = w.rect.bottom
+            if self.in_physics:
+                aw = self.collide()
+                if aw:
+                    for w in aw:
+                        if 2 in d: self.actor.rect.y = w.rect.top - self.actor.rect.height
+                        if 8 in d: self.actor.rect.y = w.rect.bottom
 
     def _delay_bind(self):
         # 这里之所以用 self.actor.theater.artist.currrent 获取当前场景的原因是因为可以节省资源
@@ -414,7 +412,6 @@ class Physics:
         # 只能延迟绑定，因为在实例化的时候是不确定 actor 或 theater 有没有绑定上 artist。
         if not self.has_bind and self.in_physics:
             cur = self.actor.theater.artist.currrent
-            if cur not in self.RIGID_BODY: self.RIGID_BODY[cur] = []
             self.RIGID_BODY[cur].append(self.actor)
             self.has_bind = True
 
@@ -450,12 +447,12 @@ class Actor(pygame.sprite.Sprite):
 
         # 后续这两行需要修改，因为角色的状态资源应该可以有多个，并且由于每个 Image 都要逆向绑定 Actor
         # 所以后续要考虑怎么更加合理的添加角色状态动画的处理
-        self._image       = img if not (img is None or isinstance(img, (str, tuple))) else Image(img, showsize, rate)
-        self._image.actor = self
+        self.imager       = img if not (img is None or isinstance(img, (str, tuple, pygame.Surface))) else Image(img, showsize, rate)
+        self.imager.actor = self
 
         self.debug        = debug # 如果 DEBUG 为 False，这里为 True 则仅仅让该 Actor 这个对象用 debug 模式
-        self.image        = self._image.image
-        self.mask         = self._image.mask
+        self.image        = self.imager.image
+        self.mask         = self.imager.mask
         self.rect         = self.image.get_rect()
         self.theater      = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
         self.controller   = self.regist_controller(Controller(in_control))
@@ -480,10 +477,10 @@ class Actor(pygame.sprite.Sprite):
 
     def update(self,ticks):
         self.ticks = ticks
-        self._image.update_image(ticks)
+        self.imager.update_image(ticks)
         self.physics._delay_bind()
-        self.image = self._image.image
-        self.mask  = self._image.mask
+        self.image = self.imager.image
+        self.mask  = self.imager.mask
         m, d, c = self.controller.update(ticks)
         # 根据函数的参数数量，来决定是否传入 Actor 对象自身。
         # 但是有时候传入自身可能会对新手造成一定困惑，我也不想一定要传入自身，下面的代码可以兼容两者
@@ -517,6 +514,12 @@ class Actor(pygame.sprite.Sprite):
             if sprite in scollide:
                 rcollide.append(sprite)
         return rcollide
+
+    def kill(self):
+        cur = self.theater.artist.currrent
+        if self in self.physics.RIGID_BODY[cur]:
+            self.physics.RIGID_BODY[cur].remove(self)
+        super().kill()
 
     @staticmethod
     def mouse(mouse_info): pass

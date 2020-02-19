@@ -1,4 +1,5 @@
 import pygame
+import pygame.font as font
 from pygame.locals import *
 
 from .theater import Theater
@@ -65,8 +66,9 @@ class Initer:
         self.artist = Artist(self.screen, self.ticks)
         pygame.display.set_caption(title)
 
-    def regist(self,theater):
-        self.artist.regist(theater)
+    def regist(self,*theaters):
+        for theater in theaters:
+            self.artist.regist(theater)
 
     def run(self):
         while True:
@@ -102,6 +104,6 @@ class Initer:
 
 
 __author__ = 'cilame'
-__version__ = '0.0.7'
+__version__ = '0.0.8'
 __email__ = 'opaquism@hotmail.com'
 __github__ = 'https://github.com/cilame/vgame'
