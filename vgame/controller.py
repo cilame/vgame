@@ -39,15 +39,20 @@ class Controller:
         # 用于键盘方向操作的参数，目前可支持2p（由于处理方向键的延迟处理有点特殊，所以需要这样处理）
         self.direction_key_tick_p1  = 0  # 后期发现只用 self._delay 函数，如果混合其他操作可能会出现灵敏丢失的情况
         self.direction_key_delay_p1 = 15 # 所以最后还是把键盘的操作延时也单独出来了
+        self.direction_keys_p1      = [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d]
         self.un_oblique_p1          = 0  # 如果没有斜角操作的话，处理斜角的操作滞粘操作参数
         self.direction_key_tick_p2  = 0
         self.direction_key_delay_p2 = 15
+        self.direction_keys_p2      = [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]
         self.un_oblique_p2          = 0
 
         # 用于键盘控制操作的参数
-        self.control_key_tick  = 0
-        self.control_key_delay = 15
-        self.control_keys      = [pygame.K_j, pygame.K_k]
+        self.control_key_tick_p1  = 0
+        self.control_key_delay_p1 = 15
+        self.control_keys_p1      = [pygame.K_j, pygame.K_k]
+        self.control_key_tick_p2  = 0
+        self.control_key_delay_p2 = 15
+        self.control_keys_p2      = [pygame.K_KP1, pygame.K_KP2] # 小键盘数字键
 
         # 用于实现栈效果式的更新函数
         self.update_stack = []
@@ -208,10 +213,8 @@ class Controller:
         if ticks - self.direction_key_tick_p2 > self.direction_key_delay_p2:
             self.direction_key_tick_p2 = ticks
             return True
-    def _direction_ret_p1(self, rek, oblique):
-        return self._direction_ret(self.un_oblique_p1, rek, oblique)
-    def _direction_ret_p2(self, rek, oblique):
-        return self._direction_ret(self.un_oblique_p2, rek, oblique)
+    def _direction_ret_p1(self, rek, oblique): return self._direction_ret(self.un_oblique_p1, rek, oblique)
+    def _direction_ret_p2(self, rek, oblique): return self._direction_ret(self.un_oblique_p2, rek, oblique)
     def _direction_ret(self, p, rek, oblique):
         target = []
         if rek == 4: target.append(LEFT)
@@ -226,6 +229,7 @@ class Controller:
             if rek == 3: target.append(RIGHT), target.append(DOWN)
         else:
             # 只允许正方向键[只有上下左右]的处理方法（最优解是根据后一个按下的正方向键[只有上下左右]来实现）
+            # 不过这个借口目前基本上不暴露出去，基本不会被用到，只为提供给后面考虑是否使用这里作为扩展。
             if rek in [2,4,6,8]:
                 p = rek
             if rek == 7:
@@ -244,10 +248,10 @@ class Controller:
     def _direction_key_pressed_p1(self, key):
         ret = 0
         p = 'p1'
-        a = key[pygame.K_w]
-        b = key[pygame.K_s]
-        c = key[pygame.K_a]
-        d = key[pygame.K_d]
+        a = key[self.direction_keys_p1[0]]
+        b = key[self.direction_keys_p1[1]]
+        c = key[self.direction_keys_p1[2]]
+        d = key[self.direction_keys_p1[3]]
         v = [a,b,c,d]
         if any(v):
             if v.count(1) == 1:
@@ -264,10 +268,10 @@ class Controller:
     def _direction_key_pressed_p2(self, key):
         ret = 0
         p = 'p2'
-        a = key[pygame.K_UP]
-        b = key[pygame.K_DOWN]
-        c = key[pygame.K_LEFT]
-        d = key[pygame.K_RIGHT]
+        a = key[self.direction_keys_p2[0]]
+        b = key[self.direction_keys_p2[1]]
+        c = key[self.direction_keys_p2[2]]
+        d = key[self.direction_keys_p2[3]]
         v = [a,b,c,d]
         if any(v):
             if v.count(1) == 1:
@@ -317,24 +321,27 @@ class Controller:
     # 一般控制键操作 #
     #================#
     def general_control_key(self,ticks):
-        # 类似于一般手柄上面的AB键位的功能，简单的提供一些接口
-        # 让某些键位注册后返回一些对于编写者来说更方便查调用的数据接口
-        # 类似注册了键盘 jk 键位为 ab（手柄），按j、k键时候返回为a、b，之类的。ab会更好进行功能辨识
-        rck = self._control_key_pressed() # 获取当前按键（或组合键）的方向，以小键盘八方向数字为准
-        if rck and self._control_key_delay(ticks):
-            return rck
-    def _control_key_delay(self,ticks):
-        if ticks - self.control_key_tick > self.control_key_delay:
-            self.control_key_tick = ticks
+        rck1, rck2 = self._control_key_pressed()
+        d = {}
+        p, rck = rck1
+        if rck and self._control_key_delay_p1(ticks):
+            d[p] = rck
+        p, rck = rck2
+        if rck and self._control_key_delay_p2(ticks):
+            d[p] = rck
+        return d
+    def _control_key_delay_p1(self,ticks):
+        if ticks - self.control_key_tick_p1 > self.control_key_delay_p2:
+            self.control_key_tick_p1 = ticks
+            return True
+    def _control_key_delay_p2(self,ticks):
+        if ticks - self.control_key_tick_p2 > self.control_key_delay_p2:
+            self.control_key_tick_p2 = ticks
             return True
     def _control_key_pressed(self):
-        # 一些普通的键盘非方向键的按键返回，这里需要考虑的是一般游戏ab键的单按和连发的区分和识别
-        # 所以可能需要和鼠标那样的方式去实现功能。方向键和ab键和鼠标都是需要各自的延迟参数(必须)
-        # 动作类游戏不可能按住方向键ab键就不能使用，分开延迟就可以实现互不影响
-        # 这里先实现分类，向上封装后再由上一层进行延迟封装，这里需要实现注册功能，因为wasd本身就是键盘上的按键，所以需要考虑
-        # 这里默认只给予三种游戏选择键的处理（ab）（abxy）（abcxyz），就是说，self.control_keys 只接受长度为2、4、6的list参数。
-        # 并且xyz分别为abc三个功能按键的连发，仅此而已。
-        # 考虑一下多个按键同时按下的话怎么处理，
         key = pygame.key.get_pressed()
-        v = [key[i] for i in self.control_keys]
-        if any(v): return (len(self.control_keys),v)
+        p1 = [key[i] for i in self.control_keys_p1]
+        p2 = [key[i] for i in self.control_keys_p2]
+        p1 = p1 if any(p1) else []
+        p2 = p2 if any(p2) else []
+        return ('p1', p1), ('p2', p2)

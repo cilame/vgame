@@ -94,17 +94,18 @@ dly = Delayer(200) # 换枪键的响应延迟
 def direct_a(self, d, c):
     global gun
     q = d.get('p1')
+    p = c.get('p1')
     if d and 8 in q: q.remove(8) # 去除 w 键的跳跃消息，改用下面的 J 键响应
-    if c and c[1][0]: q = [] if q is None else q; q.append(8) # J 键跳跃
-    if c and c[1][1]: gun.create_random_bullet(self) # K 键射出子弹
-    if c and c[1][2]: # L 键切枪
+    if p and p[0]: q = [] if q is None else q; q.append(8) # J 键跳跃
+    if p and p[1]: gun.create_random_bullet(self) # K 键射出子弹
+    if p and p[2]: # L 键切枪
         if dly.delaying(self.ticks):
             gun = next(_guns)
             guninfo.imager.image = guninfo.imager.load_img(font.render('当前枪械:{}'.format(gunsn[guns.index(gun)]), 3, (255,255,255)))
     self.physics.move2(q)
 # 操作系统的初始化
 a.direction = direct_a
-a.controller.control_keys = [vgame.K_j, vgame.K_k, vgame.K_l]
+a.controller.control_keys_p1 = [vgame.K_j, vgame.K_k, vgame.K_l]
 
 # 主角的物理系统初始化
 a.physics.gravity.y = 5 # y方向设置后自动变成重力系统（可以有负数）
@@ -118,7 +119,7 @@ a.physics.speed_max.y = 8 # y方向的最大速度
 def check_a_is_dead(self):
     if self.rect.y > self.theater.artist.screen.get_rect().height:
         self.kill()
-        self.theater.artist.change_theater('end')
+        self.change_theater('end')
 a.idle = check_a_is_dead
 b.idle = lambda self,d: self.physics.move2([2])
 

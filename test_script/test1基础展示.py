@@ -90,11 +90,11 @@ if __name__ == "__main__":
                 actor2.rect[0] = ex - dx
                 actor2.rect[1] = ey - dy
     # 3修改需要的控制键，默认使用的key是 jk
-    actor2.controller.control_keys = [vgame.K_j, vgame.K_k, vgame.K_l]
+    actor2.controller.control_keys_p1 = [vgame.K_j, vgame.K_k, vgame.K_l]
     def my_control(c):
         if c:
-            j,k,l = c[1]
-            if any(c[1]):
+            j,k,l = c.get('p1')
+            if any(c.get('p1')):
                 print('------control------')
                 if j: print('j')
                 if k: print('k')

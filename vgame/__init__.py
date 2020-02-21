@@ -1,5 +1,6 @@
 import pygame
 import pygame.font as font
+from pygame import Rect
 from pygame.locals import *
 
 from .theater import Theater
@@ -59,8 +60,8 @@ class Initer:
                  ):
 
         pygame.init()
-        self.title  = title
         self.ticks  = fps
+        self.title  = title
         self.size   = size
         self.screen = pygame.display.set_mode(size, flag, depth)
         self.artist = Artist(self.screen, self.ticks)

@@ -5,87 +5,8 @@ from itertools import cycle, product
 import pygame
 from pygame.locals import *
 
+from .image import Image
 from .controller import Controller
-
-class Image:
-    '''
-    用于单个图片资源的加载，可以是动图，不过现在实现暂时还是不够好
-    因为动图的加载模式有时候很不一样，会有细微的位置需要调整
-    '''
-    def __init__(self, img=None, showsize=None, rate=0):
-        # 一些默认配置，用于图片动画的刷新率，可以通过图片名字进行配置
-        self.showsize   = showsize # 该参数仅用于对象
-        self.rate       = rate # 不同的单位可以使用不同的速率
-        self.actor      = None
-        self.active     = None # 会在加载图片的时候根据图片类型自动设置
-        self.src_image  = None
-        self.cur_tick   = 0
-        self.rects      = None # 后续用于动图
-        self.image      = self.load_img(img)
-        self.mask       = pygame.mask.from_surface(self.image)
-
-    def load_img(self,img):
-        try:
-            if img is None:
-                image = pygame.Surface((60, 60)).convert_alpha()
-                image.fill((255,255,255,255))
-            elif isinstance(img, (tuple, list)):
-                image = pygame.Surface((60, 60)).convert_alpha()
-                image.fill(img)
-            elif isinstance(img, str) and os.path.isdir(img):
-                imgfs, imgfv = {}, []
-                for idx, imgf in enumerate(sorted(os.listdir(img))):
-                    v = tuple(map(int, re.findall(r'\d+', imgf)))
-                    v = v if v else idx
-                    imgfs[v] = imgf
-                    imgfv.append(v)
-                func = lambda i:pygame.image.load(os.path.join(img,i)).convert_alpha()
-                all_rects = [func(imgfs[i]) for i in sorted(imgfv)]
-                self.active    = True
-                self.src_image = None
-                self.cur_tick  = 0
-                self.rects     = cycle(all_rects)
-                image = next(self.rects)
-            elif isinstance(img, str) and os.path.isfile(img):
-                image = pygame.image.load(img).convert_alpha()
-                move = re.findall(r'_(\d+)x(\d+)\.', img.lower()) # 根据图片的命名自动切割图片，生成动图
-                if move:
-                    move        = list(map(int,move[0]))
-                    src_h,src_w = image.get_height(),image.get_width()
-                    pro_h,pro_w = move[:2]
-                    nraws,ncols = int(src_h/pro_h),int(src_w/pro_w)
-                    mfunc       = lambda i:(i[0]*pro_w, i[1]*pro_h, pro_w, pro_h)
-                    all_rects   = list(map(mfunc,product(range(ncols),range(nraws))))
-                    self.active    = True
-                    self.src_image = image
-                    self.cur_tick  = 0
-                    self.rects     = cycle(all_rects)
-                    image = self.src_image.subsurface(next(self.rects))
-            elif isinstance(img, pygame.Surface):
-                image = img
-            if self.showsize:
-                image = pygame.transform.scale(image, self.showsize)
-        except:
-            print("无法加载图片.",img)
-            print(traceback.format_exc())
-            image = None
-        return image
-
-    def update_image(self, ticks):
-        if self.active and self._time_update(ticks):
-            self.image = self.src_image.subsurface(next(self.rects)) if self.src_image else next(self.rects)
-            if self.showsize: 
-                self.image = pygame.transform.scale(self.image, self.showsize)
-            self.mask  = pygame.mask.from_surface(self.image)
-        # 显示 mask 边框线，让边框检测处理起来更加的直观
-        if self.actor and (self.actor.debug or self.actor.DEBUG):
-            pygame.draw.polygon(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, self.mask.outline(), 1)
-            pygame.draw.rect(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, self.actor.rect, 1)
-
-    def _time_update(self, ticks):
-        if ticks - self.cur_tick > self.rate:
-            self.cur_tick = ticks
-            return True
 
 class Idler:
     '''
@@ -150,7 +71,7 @@ class Physics:
         self._gravity_tick       = 0
 
     def move(self, d):
-        if d: self.smooth_move(d)
+        if d: self.smooth_move(d, self.smooth_speed)
 
     def move2(self, d):
         for key in self.curr_directs:
@@ -163,6 +84,11 @@ class Physics:
         else:
             self.is_idle_x = True
             self.is_idle_y = True
+
+    def move_angle(self, angle, speed):
+        # 开发按照角度进行移动的物理移动处理
+        print(angle)
+        self.smooth_move
 
     def _effect_high_check_direction(self, d):
         # 这部分的开发尤为重要，为了能够固定住跳跃的高度，检测变化的函数需要与核心移动模块同频
@@ -385,20 +311,20 @@ class Physics:
             self.fall_grounds[8] = False
         self._effect_high_check_core_move()
 
-    def smooth_move(self, d):
+    def smooth_move(self, d, speed):
         # 这里的 d 为一个方向数字的列表，例如: [2,4] 代表的左下角的方向
         # 这里的处理也只能是平滑移动相关，和重力速度无关
         for i in d:
-            if i == 6: self.actor.rect[0] = self.actor.rect[0] + self.smooth_speed.x
-            if i == 4: self.actor.rect[0] = self.actor.rect[0] - self.smooth_speed.x
+            if i == 6: self.actor.rect[0] = self.actor.rect[0] + speed.x
+            if i == 4: self.actor.rect[0] = self.actor.rect[0] - speed.x
             if self.in_physics:
                 aw = self.collide()
                 if aw:
                     for w in aw:
                         if 6 in d: self.actor.rect.x = w.rect.left - self.actor.rect.width
                         if 4 in d: self.actor.rect.x = w.rect.right
-            if i == 2: self.actor.rect[1] = self.actor.rect[1] + self.smooth_speed.y
-            if i == 8: self.actor.rect[1] = self.actor.rect[1] - self.smooth_speed.y
+            if i == 2: self.actor.rect[1] = self.actor.rect[1] + speed.y
+            if i == 8: self.actor.rect[1] = self.actor.rect[1] - speed.y
             if self.in_physics:
                 aw = self.collide()
                 if aw:
@@ -442,7 +368,7 @@ class Actor(pygame.sprite.Sprite):
     DEBUG = False # 方便让全部的 Actor 对象都使用 debug 模式，方便开发
     DEBUG_MASK_LINE_CORLOR = (0, 255, 0) # debug 模式将显示 actor 的 mask 边框线颜色
 
-    def __init__(self, img=None, showsize=None, in_control=False, in_physics=True, rate=0, debug=False):
+    def __init__(self, img=None, showsize=None, showpoint=None, in_control=False, in_physics=True, rate=0, debug=False):
         pygame.sprite.Sprite.__init__(self)
 
         # 后续这两行需要修改，因为角色的状态资源应该可以有多个，并且由于每个 Image 都要逆向绑定 Actor
@@ -459,6 +385,8 @@ class Actor(pygame.sprite.Sprite):
         self.idler        = self.regist_idler(Idler())
         self.physics      = self.regist_physics(Physics(in_physics))
         self.ticks        = None
+
+        if showpoint: self.rect[:2] = showpoint
 
     def regist_idler(self,idler):
         idler.actor = self # 让事件对象能找到宿主本身
@@ -515,11 +443,20 @@ class Actor(pygame.sprite.Sprite):
                 rcollide.append(sprite)
         return rcollide
 
+    def angle(self, sprite):
+        sx, sy = self.rect.center
+        tx, ty = sprite.rect.center
+        ag = (ty - sy)/(tx - sx)
+        return ag
+
     def kill(self):
         cur = self.theater.artist.currrent
         if self in self.physics.RIGID_BODY[cur]:
             self.physics.RIGID_BODY[cur].remove(self)
         super().kill()
+
+    def change_theater(self, theatername):
+        self.theater.artist.change_theater(theatername)
 
     @staticmethod
     def mouse(mouse_info): pass

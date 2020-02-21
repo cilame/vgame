@@ -29,6 +29,7 @@ a.direction = direct_a
 a.physics.smooth_speed[:2] = 3,3
 a.rect[:2] = 310, 230
 def create_enemy(self):
+    if len(bullets) >= 80: return
     bullet = vgame.Actor(showsize=(6,6), in_physics=False)
     v = random.choice(('x','y'))
     if v == 'x': x, y = random.random()*640, random.choice([-10, 480])
@@ -56,7 +57,7 @@ a.idle = create_enemy
 m = vgame.Actor(f.render('游戏结束(按J重新开始游戏)', 3, (255,255,255)), in_physics=False, in_control=True)
 def restart(self, option):
     global bullets
-    if option.get('control') and option.get('control')[1][0]:
+    if option.get('control') and option.get('control').get('p1')[0]:
         for i in bullets: i.kill()
         bullets = []
         d['starttime'] = time.time()

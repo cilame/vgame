@@ -113,10 +113,10 @@ def my_mouse(m):
             a.rect[1] = ey - dy
 a.mouse = my_mouse # 覆盖默认的鼠标操作的函数(这里的对象a必须在实例化时设置 in_control 为 True)
 # 设置新的接收控制键位，默认键位是 j,k
-a.controller.control_keys = [vgame.K_j, vgame.K_k, vgame.K_l]
+a.controller.control_keys_p1 = [vgame.K_j, vgame.K_k, vgame.K_l]
 def my_control(c):
     if c:
-        j,k,l = c[1]
+        j,k,l = c.get('p1')
         print('------control------')
         if j: print('j')
         if k: print('k')
@@ -340,8 +340,9 @@ d = vgame.Actor(showsize=(40,40),in_physics=False)
 # a.physics.smooth_speed.y = 20
 
 # 示例：
-# y重力系统，x摩擦系统 # physics.move2 有第二个参数 effect_highs，限制某个方向跳跃的高度
-a.direction = lambda self,d: self.physics.move2(d.get('p1'), effect_highs={8:80}) # p1:wasd键方向消息
+# y重力系统，x摩擦系统
+a.direction = lambda self,d: self.physics.move2(d.get('p1')) # p1:wasd键方向消息
+a.physics.limit_highs = {8:80} # 直接配置 a 对象的物理系统的跳跃限制高度
 a.physics.gravity.y = 3.5   # 修改 gravity.y 即在 y 方向上增加重力常量【参数可正可负】
 # “重力系统” 和 “摩擦系统” 均能使用的参数，摩擦系统需要的参数
 a.physics.speed_inc.x = 3  # 加速度             【只能正数，整数小数均可】
@@ -388,21 +389,24 @@ wr = vgame.Actor(showsize=(10,300))
 # 经过测试
 # 如果使用重力/惯性系统做移动的话，请尽量使用默认 fps。
 
-# direction 也可以使用三个参数的函数覆盖，使用三个参数时候第三个为控制键的消息
-# 你可以如下处理来使用控制键作为跳跃处理。
-# 控制键参数的消息，默认情况下是使用的键盘jk两个参数，如何增减请在本README教程中
-# 检索 a.controller.control_keys 即可
-# 下面的示例则是使用 j键代替了跳跃的功能
-def direct_a(self, d, c):
-    q = d.get('p1')
-    if d and 8 in q:
-        q.remove(8)
-    if c and c[1][0]:
-        if q is None: q = []
-        q.append(8)
-    self.physics.move2(q)
-
-a.direction = direct_a
+# 处理使用其他按键作为跳跃键
+# 方法1：
+# 在操作中函数内同时获取方向键和操作键的信息，然后用操作键消息覆盖上键的消息
+# 因为 direction 也可以使用三个参数的函数覆盖，使用三个参数时候第三个为控制键的消息
+# def direct_a(self, d, c):
+#     q = d.get('p1')
+#     p = c.get('p1')
+#     if d and 8 in q: q.remove(8) # 先去除原本存在的上方向键传递的跳跃消息
+#     if p and p[0]: # 使用控制功能键来做为跳跃的消息
+#         if q is None: q = []
+#         q.append(8)
+#     self.physics.move2(q)
+# a.direction = direct_a
+# 方法2：
+# 直接修改上键操作为J按键即可 a.controller.direction_keys_p1 默认顺序为 上下左右
+# 方法2也会比较简单，或许也能扩展成其他没有设置过的按键都行
+a.direction = lambda self,d: self.physics.move2(d.get('p1'))
+a.controller.direction_keys_p1[0] = vgame.K_j
 a.physics.gravity.y = 5
 
 # 这里封装了两个参数，非常重要的两个游戏性参数，是一个在外部单独实现会非常麻烦的参数
@@ -542,17 +546,18 @@ dly = Delayer(200) # 换枪键的响应延迟
 def direct_a(self, d, c):
     global gun
     q = d.get('p1')
+    p = c.get('p1')
     if d and 8 in q: q.remove(8) # 去除 w 键的跳跃消息，改用下面的 J 键响应
-    if c and c[1][0]: q = [] if q is None else q; q.append(8) # J 键跳跃
-    if c and c[1][1]: gun.create_random_bullet(self) # K 键射出子弹
-    if c and c[1][2]: # L 键切枪
+    if p and p[0]: q = [] if q is None else q; q.append(8) # J 键跳跃
+    if p and p[1]: gun.create_random_bullet(self) # K 键射出子弹
+    if p and p[2]: # L 键切枪
         if dly.delaying(self.ticks):
             gun = next(_guns)
             guninfo.imager.image = guninfo.imager.load_img(font.render('当前枪械:{}'.format(gunsn[guns.index(gun)]), 3, (255,255,255)))
     self.physics.move2(q)
 # 操作系统的初始化
 a.direction = direct_a
-a.controller.control_keys = [vgame.K_j, vgame.K_k, vgame.K_l]
+a.controller.control_keys_p1 = [vgame.K_j, vgame.K_k, vgame.K_l]
 
 # 主角的物理系统初始化
 a.physics.gravity.y = 5 # y方向设置后自动变成重力系统（可以有负数）
@@ -615,6 +620,7 @@ a.direction = direct_a
 a.physics.smooth_speed[:2] = 3,3
 a.rect[:2] = 310, 230
 def create_enemy(self):
+    if len(bullets) >= 80: return # 限制存在的子弹的数量
     bullet = vgame.Actor(showsize=(6,6), in_physics=False)
     v = random.choice(('x','y'))
     if v == 'x': x, y = random.random()*640, random.choice([-10, 480])
