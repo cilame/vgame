@@ -43,10 +43,10 @@ wr = vgame.Actor(showsize=(10,300))
 #     self.physics.move2(q)
 # a.direction = direct_a
 # 方法2：
-# 直接修改上键操作为J按键即可 a.controller.direction_keys_p1 默认顺序为 上下左右
+# 直接修改上键操作为J按键即可 a.controller.direction_keys_p1.up
 # 方法2也会比较简单，或许也能扩展成其他没有设置过的按键都行
 a.direction = lambda self,d: self.physics.move2(d.get('p1'))
-a.controller.direction_keys_p1[0] = vgame.K_j
+a.controller.direction_keys_p1.up = vgame.K_j
 a.physics.gravity.y = 5
 
 # 这里封装了两个参数，是一个非常重要的游戏性，如果在外部单独处理起来非常麻烦的功能

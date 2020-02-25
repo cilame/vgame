@@ -20,7 +20,7 @@ a = vgame.Actor(i_fra,in_control=True)
 b = vgame.Actor(showsize=(510,10))
 c = vgame.Actor(showsize=(80,80))
 d = vgame.Actor(showsize=(40,40)) 
-# 如果不想让某些块处理实体碰撞，实例化时候设置 in_physics 为 False，自动去除实体检测
+# 如果不想让某些块处理实体碰撞，实例化时候设置 in_entity 为 False，自动去除实体检测
 
 # 使用物理性质进行移动，将会自动对其他实体对象实现实体碰撞，并能极大简化代码
 
@@ -39,7 +39,7 @@ d = vgame.Actor(showsize=(40,40))
 # 高级物理移动的原理是改变x/y速度的分量。物体会在 speed 影响下移动一定的距离。
 # 速度会自动在“摩擦函数”或者“碰撞其他实体”墙壁的时候自动归零。
 # 1重力系统，2摩擦系统，这两个系统互斥，在 x/y 方向各有分量
-# 一个 Actor 对象如果设置了 in_physics，则默认自带一个高级物理环境
+# 一个 Actor 对象如果设置了 in_entity，则默认自带一个高级物理环境
 # 默认情况 x/y 方向均为摩擦系统。
 # 如何设置重力系统？
 # 当 x 方向设置了 physics.gravity.x 为非零整数或浮点数，则 x 方向自动转换成重力系统
@@ -67,6 +67,7 @@ a.physics.gravity.y = 2.5  # 修改 gravity.y 即在 y 方向上增加重力常�
 a.physics.speed_inc.x = 2  # 加速度             【只能正数，整数小数均可】
 a.physics.speed_dec.x = 1  # 减速度（类似于摩擦）【只能正数，整数小数均可】
 a.physics.speed_max.x = 5  # 最大速度           【只能正数，整数小数均可】
+a.physics.speed_inc.y = 2.5
 a.physics.speed_max.y = 8
 # 额外描述：
 # physics.move2 函数的第二个参数为执行时间

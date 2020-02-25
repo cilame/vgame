@@ -24,9 +24,9 @@ t.regist(a, b, c)
 
 font = vgame.font.SysFont("simhei", 15)
 hp = 1000
-boss = vgame.Actor(font.render('boss HP: {:>4}'.format(hp), 3, (255,255,255)), in_physics=False)
-operate = vgame.Actor(font.render('操作说明：A(左)D(右)J(跳跃/二段跳)K(发射子弹)L(切换枪械)', 3, (255,255,255)), in_physics=False)
-guninfo = vgame.Actor(font.render('当前枪械:pistol', 3, (255,255,255)), in_physics=False)
+boss = vgame.Actor(font.render('boss HP: {:>4}'.format(hp), 3, (255,255,255)), in_entity=False)
+operate = vgame.Actor(font.render('操作说明：A(左)D(右)J(跳跃/二段跳)K(发射子弹)L(切换枪械)', 3, (255,255,255)), in_entity=False)
+guninfo = vgame.Actor(font.render('当前枪械:pistol', 3, (255,255,255)), in_entity=False)
 boss.rect[0:2] = 150, 150
 operate.rect[0:2] = 100, 100
 guninfo.rect[0:2] = 100, 80
@@ -35,7 +35,7 @@ t.regist(boss, operate, guninfo)
 import random
 # 创建子弹，并对子弹的运行进行编辑
 def create_bullet(self,speed_inc_x,speed_inc_y,speed_max_x,speed_max_y,target_y):
-    bullet = vgame.Actor(showsize=(6,6), in_physics=False)
+    bullet = vgame.Actor(showsize=(6,6), in_entity=False)
     bullet.rect[:2] = self.rect.center
     bullet.physics.speed_inc.x = speed_inc_x
     bullet.physics.speed_max.x = speed_max_x
@@ -119,7 +119,7 @@ a.physics.speed_max.y = 8 # y方向的最大速度
 def check_a_is_dead(self):
     if self.rect.y > self.theater.artist.screen.get_rect().height:
         self.kill()
-        self.change_theater('end')
+        self.theater.artist.change_theater('end')
 a.idle = check_a_is_dead
 b.idle = lambda self,d: self.physics.move2([2])
 
@@ -136,7 +136,7 @@ walls = [wd,wu,wl,wr]
 t.regist(*walls)
 
 e = vgame.Theater('end')
-end = vgame.Actor(font.render('游戏结束', 3, (255,255,255)), in_physics=False)
+end = vgame.Actor(font.render('游戏结束', 3, (255,255,255)), in_entity=False)
 end.rect[0:2] = 300, 200
 e.regist(end)
 

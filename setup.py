@@ -21,7 +21,7 @@ setup(
     packages = [
         "vgame",
     ],
-    python_requires=">=3.5",
+    python_requires=">=3.3",
     install_requires=[
        'pygame',
     ],

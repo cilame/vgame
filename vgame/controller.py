@@ -9,6 +9,13 @@ DOWN  = 2 # 固定值
 LEFT  = 4 # 固定值
 RIGHT = 6 # 固定值
 
+class Direction:
+    def __init__(self, up, down, left, right):
+        self.up    = up
+        self.down  = down
+        self.left  = left
+        self.right = right
+
 class Controller:
     '''
     控制事件的对象，每个 Actor 都会生成一个属于他们自身的 Controller 对象在类内部，
@@ -39,11 +46,11 @@ class Controller:
         # 用于键盘方向操作的参数，目前可支持2p（由于处理方向键的延迟处理有点特殊，所以需要这样处理）
         self.direction_key_tick_p1  = 0  # 后期发现只用 self._delay 函数，如果混合其他操作可能会出现灵敏丢失的情况
         self.direction_key_delay_p1 = 15 # 所以最后还是把键盘的操作延时也单独出来了
-        self.direction_keys_p1      = [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d]
+        self.direction_keys_p1      = Direction(*[pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d])
         self.un_oblique_p1          = 0  # 如果没有斜角操作的话，处理斜角的操作滞粘操作参数
         self.direction_key_tick_p2  = 0
         self.direction_key_delay_p2 = 15
-        self.direction_keys_p2      = [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]
+        self.direction_keys_p2      = Direction(*[pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT])
         self.un_oblique_p2          = 0
 
         # 用于键盘控制操作的参数
@@ -248,10 +255,10 @@ class Controller:
     def _direction_key_pressed_p1(self, key):
         ret = 0
         p = 'p1'
-        a = key[self.direction_keys_p1[0]]
-        b = key[self.direction_keys_p1[1]]
-        c = key[self.direction_keys_p1[2]]
-        d = key[self.direction_keys_p1[3]]
+        a = key[self.direction_keys_p1.up]
+        b = key[self.direction_keys_p1.down]
+        c = key[self.direction_keys_p1.left]
+        d = key[self.direction_keys_p1.right]
         v = [a,b,c,d]
         if any(v):
             if v.count(1) == 1:
@@ -268,10 +275,10 @@ class Controller:
     def _direction_key_pressed_p2(self, key):
         ret = 0
         p = 'p2'
-        a = key[self.direction_keys_p2[0]]
-        b = key[self.direction_keys_p2[1]]
-        c = key[self.direction_keys_p2[2]]
-        d = key[self.direction_keys_p2[3]]
+        a = key[self.direction_keys_p2.up]
+        b = key[self.direction_keys_p2.down]
+        c = key[self.direction_keys_p2.left]
+        d = key[self.direction_keys_p2.right]
         v = [a,b,c,d]
         if any(v):
             if v.count(1) == 1:

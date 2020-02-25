@@ -5,6 +5,7 @@ from pygame.locals import *
 
 from .theater import Theater
 from .actor import Actor, Image
+from .actor import Player, Wall, Bullet # 比较高一层的封装
 
 class Artist:
     '''

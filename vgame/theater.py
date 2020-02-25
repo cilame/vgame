@@ -1,7 +1,8 @@
 import pygame
 from pygame.locals import *
 
-from .actor import Actor, Physics
+from .actor import Actor
+from .actor import Player, Wall, Enemy
 
 class Theater:
     '''
@@ -26,7 +27,10 @@ class Theater:
         self.artist         = None
 
         # 用这个初始化每个场景的物理检测的 Actor 列表
-        Physics.RIGID_BODY[self.theater_name] = []
+        Actor .RIGID_BODY[self.theater_name] = []
+        Player.RIGID_BODY[self.theater_name] = []
+        Wall  .RIGID_BODY[self.theater_name] = []
+        Enemy .RIGID_BODY[self.theater_name] = []
 
         # *暂未使用的参数，后续要考虑入场和出场的动画表演，否则切换场景会非常僵硬（至少要提供配置接口）
         # *后面可以考虑实现一些可配置的淡入淡出的效果
@@ -44,7 +48,7 @@ class Theater:
                 actor.theater = self
 
     def _add_background(self, bg_filename):
-        self.background = Actor(bg_filename, in_physics=False)
+        self.background = Actor(bg_filename, in_entity=False)
         self.background.theater = self
         if self.background.image:
             self.group.add(self.background)

@@ -5,18 +5,22 @@
 - ##### 该框架相比于 pygame 有哪些改进
 
 ```
-1 控制相关的内容大幅度简化，并且将帧率考虑进去，你修改了帧率不会影响控制响应的频率
-    你不需要关心帧率的影响，速度固定有一定好处，如何使用这些操作信息绑定角色下面有示例，非常简单
-    控制处理包含了：方向键处理、鼠标的单击和框选、控制键
+1 控制相关的内容大幅度简化
 2 简化了碰撞检测，并且增加一些可供开关的 DEBUG 模式，让你快速检查全部角色或单个角色的碰撞边框线
 3 增加一些角色内循环，这些循环和控制的内容一样，速率恒定，不受帧率影响
-4 抽象出了舞台的概念，让一个场景做一个场景的事情，让场景切换变得超级简单
-    基于这个概念，你能做的事情有很多，快速暂停，商店场景切换，地图切换，各种各样。
+4 抽象出了舞台的概念，基于这个概念，你能做的事情有很多，快速暂停，商店场景切换，地图切换，各种各样。
 5 已经初步处理了物体的刚体碰撞，也实现了简单的 摩擦系统 和 重力系统
-    让你的人物可以极快的速度开发，在地面进行移动，甚至进行自定的多段跳了。
+    让你的人物可以极快的速度开发，在地面进行移动，甚至进行多段跳了。
 
-尚在开发的部分
-    MYLOG日志
+尚在开发
+    目前版本非常早期，所以很多接口暂时还有商榷的部分
+    有可能有些接口过一段时间直接废弃，所以不建议从现在就开始学习该框架
+    除非你的水平能够达到直接阅读框架代码的水平，否则：
+    不建议从现在就开始使用该框架！！！
+    不建议从现在就开始使用该框架！！！
+    不建议从现在就开始使用该框架！！！
+
+    目前仅供一些爱好者试试接口的优点。
 ```
 
 - ##### 游戏框架的安装
@@ -276,8 +280,8 @@ vgame.Actor.DEBUG = True
 a = vgame.Actor(in_control=True,showsize=(50,100))
 b = vgame.Actor(showsize=(510,10))
 c = vgame.Actor(showsize=(80,80))
-d = vgame.Actor(showsize=(40,40),in_physics=False) 
-# 如果不想让某些块实体物理属性，实例化时候设置 in_physics=False，自动去除墙体检测
+d = vgame.Actor(showsize=(40,40),in_entity=False) 
+# 如果不想让某些块实体物理属性，实例化时候设置 in_entity=False，自动去除墙体检测
 
 # 使用物理性质来进行移动，自动对其他实体对象实现实体碰撞，并能极大简化代码
 a.direction = lambda self,d: self.physics.move(d.get('p1')) 
@@ -309,8 +313,8 @@ t = vgame.Theater('main')
 a = vgame.Actor(in_control=True,showsize=(50,100))
 b = vgame.Actor(showsize=(510,10))
 c = vgame.Actor(showsize=(80,80))
-d = vgame.Actor(showsize=(40,40),in_physics=False) 
-# 如果不想让某些块处理实体碰撞，实例化时候设置 in_physics 为 False，自动去除实体检测
+d = vgame.Actor(showsize=(40,40),in_entity=False) 
+# 如果不想让某些块处理实体碰撞，实例化时候设置 in_entity 为 False，自动去除实体检测
 # 使用物理性质进行移动，将会自动对其他实体对象实现实体碰撞，并能极大简化代码
 
 # 1 简单物理移动：
@@ -323,7 +327,7 @@ d = vgame.Actor(showsize=(40,40),in_physics=False)
 # 高级物理移动的原理是改变x/y速度的分量。物体会在 speed 影响下移动一定的距离。
 # 速度会自动在“摩擦函数”或者“碰撞其他实体”墙壁的时候自动归零。
 # 1重力系统，2摩擦系统，这两个系统互斥，在 x/y 方向各有分量
-# 一个 Actor 对象如果设置了 in_physics，则默认自带一个高级物理环境
+# 一个 Actor 对象如果设置了 in_entity，则默认自带一个高级物理环境
 # 默认情况 x/y 方向均为摩擦系统。
 # 如何设置重力系统？
 # 当 x 方向设置了 physics.gravity.x 为非零整数或浮点数，则 x 方向自动转换成重力系统
@@ -476,9 +480,9 @@ t.regist(a, b, c)
 
 font = vgame.font.SysFont("simhei", 15)
 hp = 1000
-boss = vgame.Actor(font.render('boss HP: {:>4}'.format(hp), 3, (255,255,255)), in_physics=False)
-operate = vgame.Actor(font.render('操作说明：A(左)D(右)J(跳跃/二段跳)K(发射子弹)L(切换枪械)', 3, (255,255,255)), in_physics=False)
-guninfo = vgame.Actor(font.render('当前枪械:pistol', 3, (255,255,255)), in_physics=False)
+boss = vgame.Actor(font.render('boss HP: {:>4}'.format(hp), 3, (255,255,255)), in_entity=False)
+operate = vgame.Actor(font.render('操作说明：A(左)D(右)J(跳跃/二段跳)K(发射子弹)L(切换枪械)', 3, (255,255,255)), in_entity=False)
+guninfo = vgame.Actor(font.render('当前枪械:pistol', 3, (255,255,255)), in_entity=False)
 boss.rect[0:2] = 150, 150
 operate.rect[0:2] = 100, 100
 guninfo.rect[0:2] = 100, 80
@@ -487,7 +491,7 @@ t.regist(boss, operate, guninfo)
 import random
 # 创建子弹，并对子弹的运行进行编辑
 def create_bullet(self,speed_inc_x,speed_inc_y,speed_max_x,speed_max_y,target_y):
-    bullet = vgame.Actor(showsize=(6,6), in_physics=False)
+    bullet = vgame.Actor(showsize=(6,6), in_entity=False)
     bullet.rect[:2] = self.rect.center
     bullet.physics.speed_inc.x = speed_inc_x
     bullet.physics.speed_max.x = speed_max_x
@@ -588,7 +592,7 @@ walls = [wd,wu,wl,wr]
 t.regist(*walls)
 
 e = vgame.Theater('end')
-end = vgame.Actor(font.render('游戏结束', 3, (255,255,255)), in_physics=False)
+end = vgame.Actor(font.render('游戏结束', 3, (255,255,255)), in_entity=False)
 end.rect[0:2] = 300, 200
 e.regist(end)
 
@@ -612,8 +616,8 @@ d = {}
 d['starttime'] = time.time()
 currtime = lambda:time.time() - d['starttime']
 currlens = lambda:len(bullets)
-n = vgame.Actor(f.render('游戏时间:{:.5f}'.format(currtime()), 3, (255,255,255)), in_physics=False)
-l = vgame.Actor(f.render('当前数量:{}'.format(currlens()), 3, (255,255,255)), in_physics=False)
+n = vgame.Actor(f.render('游戏时间:{:.5f}'.format(currtime()), 3, (255,255,255)), in_entity=False)
+l = vgame.Actor(f.render('当前数量:{}'.format(currlens()), 3, (255,255,255)), in_entity=False)
 n.rect.x, n.rect.y, l.rect.x, l.rect.y = 200, 0, 200, 18
 a = vgame.Actor(showsize=(20,20),in_control=True)
 a.direction = direct_a
@@ -621,7 +625,7 @@ a.physics.smooth_speed[:2] = 3,3
 a.rect[:2] = 310, 230
 def create_enemy(self):
     if len(bullets) >= 80: return # 限制存在的子弹的数量
-    bullet = vgame.Actor(showsize=(6,6), in_physics=False)
+    bullet = vgame.Actor(showsize=(6,6), in_entity=False)
     v = random.choice(('x','y'))
     if v == 'x': x, y = random.random()*640, random.choice([-10, 480])
     else:        y, x = random.random()*480, random.choice([-10, 640])
@@ -645,7 +649,7 @@ def create_enemy(self):
         m.imager.image = m.imager.load_img(f.render('游戏结束(按J重新开始游戏)', 3, (255,255,255)))
         s.change_theater('end')
 a.idle = create_enemy
-m = vgame.Actor(f.render('游戏结束(按J重新开始游戏)', 3, (255,255,255)), in_physics=False, in_control=True)
+m = vgame.Actor(f.render('游戏结束(按J重新开始游戏)', 3, (255,255,255)), in_entity=False, in_control=True)
 def restart(self, option):
     global bullets
     if option.get('control') and option.get('control')[1][0]:

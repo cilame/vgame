@@ -1,4 +1,4 @@
-import os, re, time
+import os, re, time, math
 import traceback
 from itertools import cycle, product
 
@@ -37,20 +37,16 @@ class Physics:
     将物理检测的部分交给这个函数，例如一些角色与墙体、路面的交互行为
     '''
 
-    RIGID_BODY = {}
-    # 将所有设置 in_physics 为 True 的对象都加入刚体检测
-    # 另外这里使用的刚体检测函数，这里将仿照 pygame.sprite.collide_mask 的源代码来实现新的检测
-    # 使用的 rect 直接来检测即可
-
-    def __init__(self, in_physics=False):
+    def __init__(self, in_entity=False):
         self.smooth_speed  = pygame.Vector2(7., 7.) # 初始化有个值，方便看到效果，可以通过对象修改
         self.gravity       = pygame.Vector2(0., 0.) # 重力和速度可以有方向，所以是一个两个数字的向量
         self.speed         = pygame.Vector2(0., 0.) # 与加速度相关的速度
-        self.speed_inc     = pygame.Vector2(4., 8.) # 加速度，每个操作片x/y方向的速大小
-        self.speed_dec     = pygame.Vector2(2., 3.) # 减速度，类似摩擦力，若为0，则增速之后会想速度方向无限移动下去
-        self.speed_max     = pygame.Vector2(6., 8.) # x/y 两个方向上的最大速度
+        self.speed_inc     = pygame.Vector2(4., 3.) # 加速度，每个操作片x/y方向的速大小
+        self.speed_dec     = pygame.Vector2(2., 2.) # 减速度，类似摩擦力，若为0，则增速之后会想速度方向无限移动下去
+        self.speed_max     = pygame.Vector2(6., 9.) # x/y 两个方向上的最大速度
         self.actor         = None # 用于逆向绑定
-        self.in_physics    = in_physics
+        self.in_entity     = in_entity
+        self.ignore_entity = []
         self.has_bind      = False
         self.is_idle_x     = True
         self.is_idle_y     = True
@@ -63,12 +59,28 @@ class Physics:
         self._jump_default = {8:1, 2:1, 6:1, 4:1}
         self.jump_times    = None
         self.fall_grounds  = {8:None, 2:None, 6:None, 4:None}
-
         # 设置空闲状态的减速的频率，让速度变化有一个平滑的改变时间 # 后续可能这个参数会暴露出去？
         self._update_tick_delay  = 15 # 一般更新时间
         self._update_tick        = 0
         self._gravity_tick_delay = 45 # 重力状态更新时间
         self._gravity_tick       = 0
+
+    def check_parameter_bug(self):
+        # 最大速度必须大于重力速度，否则跳不起来
+        # 如果存在重力，则重力速度必须大于加速度，否则跳跃时有可能让物体超越限制高度
+        try:
+            assert self.speed_max.x >= abs(self.gravity.x), "maximum speed must be greater than gravity"
+            assert self.speed_max.y >= abs(self.gravity.y), "maximum speed must be greater than gravity"
+            if self.gravity.x:
+                assert abs(self.gravity.x) >= self.speed_inc.x, "gravity must be greater than acceleration"
+            if self.gravity.y:
+                assert abs(self.gravity.y) >= self.speed_inc.y, "gravity must be greater than acceleration"
+        except Exception as e:
+            print(('err actor id: {}\n'
+                   '    currrent gravity: {}\n'
+                   '    currrent speed_max: {}\n'
+                   '    currrent speed_inc: {}\n').format(id(self.actor),self.gravity, self.speed_max, self.speed_inc))
+            raise e
 
     def move(self, d):
         if d: self.smooth_move(d, self.smooth_speed)
@@ -85,10 +97,8 @@ class Physics:
             self.is_idle_x = True
             self.is_idle_y = True
 
-    def move_angle(self, angle, speed):
-        # 开发按照角度进行移动的物理移动处理
-        print(angle)
-        self.smooth_move
+    def move_angle(self, angle):
+        self.smooth_move([6], self.smooth_speed, angle)
 
     def _effect_high_check_direction(self, d):
         # 这部分的开发尤为重要，为了能够固定住跳跃的高度，检测变化的函数需要与核心移动模块同频
@@ -134,35 +144,35 @@ class Physics:
 
     def _catch_jump_up(self, key):
         if key == 8:
-            if (  self.fall_grounds[8] or (self.effect_toggle[key] and 
+            if (  self.fall_grounds[key] or (self.effect_toggle[key] and 
                   self.actor.rect.y < self.effect_start[key] - self.limit_highs[key])  ):
                 self.effect_toggle[key] = False
                 self.effect_fall[key] = True
-                if not self.fall_grounds[8]: 
+                if not self.fall_grounds[key]: 
                     self.actor.rect.y = self.effect_start[key] - self.limit_highs[key]
                 self.speed.y = 0
         if key == 2:
-            if (  self.fall_grounds[2] or self.effect_toggle[key] and 
+            if (  self.fall_grounds[key] or self.effect_toggle[key] and 
                   self.actor.rect.y > self.effect_start[key] + self.limit_highs[key]  ):
                 self.effect_toggle[key] = False
                 self.effect_fall[key] = True
-                if not self.fall_grounds[2]: 
+                if not self.fall_grounds[key]: 
                     self.actor.rect.y = self.effect_start[key] + self.limit_highs[key]
                 self.speed.y = 0
         if key == 6:
-            if (  self.fall_grounds[6] or self.effect_toggle[key] and 
+            if (  self.fall_grounds[key] or self.effect_toggle[key] and 
                   self.actor.rect.x > self.effect_start[key] + self.limit_highs[key]  ):
                 self.effect_toggle[key] = False
                 self.effect_fall[key] = True
-                if not self.fall_grounds[6]: 
+                if not self.fall_grounds[key]: 
                     self.actor.rect.x = self.effect_start[key] + self.limit_highs[key]
                 self.speed.x = 0
         if key == 4:
-            if (  self.fall_grounds[4] or self.effect_toggle[key] and 
+            if (  self.fall_grounds[key] or self.effect_toggle[key] and 
                   self.actor.rect.x < self.effect_start[key] - self.limit_highs[key]  ):
                 self.effect_toggle[key] = False
                 self.effect_fall[key] = True
-                if not self.fall_grounds[4]: 
+                if not self.fall_grounds[key]: 
                     self.actor.rect.x = self.effect_start[key] - self.limit_highs[key]
                 self.speed.x = 0
 
@@ -280,7 +290,7 @@ class Physics:
     def _core_move(self):
         self.actor.rect[0] = self.actor.rect[0] + self.speed.x
         x, y = 0, 0
-        if self.in_physics:
+        if self.in_entity:
             aw = self.collide()
             if aw:
                 if self.gravity.x != 0: x = 1
@@ -288,7 +298,7 @@ class Physics:
                     if self.speed.x > 0: self.actor.rect.x = w.rect.left - self.actor.rect.width
                     if self.speed.x < 0: self.actor.rect.x = w.rect.right
         self.actor.rect[1] = self.actor.rect[1] + self.speed.y
-        if self.in_physics:
+        if self.in_entity:
             aw = self.collide()
             if aw:
                 if self.gravity.y != 0: y = 1
@@ -311,41 +321,48 @@ class Physics:
             self.fall_grounds[8] = False
         self._effect_high_check_core_move()
 
-    def smooth_move(self, d, speed):
-        # 这里的 d 为一个方向数字的列表，例如: [2,4] 代表的左下角的方向
-        # 这里的处理也只能是平滑移动相关，和重力速度无关
+    def smooth_move(self, d, speed, rotate=None):
+        vx, vy = 0, 0
         for i in d:
-            if i == 6: self.actor.rect[0] = self.actor.rect[0] + speed.x
-            if i == 4: self.actor.rect[0] = self.actor.rect[0] - speed.x
-            if self.in_physics:
-                aw = self.collide()
-                if aw:
-                    for w in aw:
-                        if 6 in d: self.actor.rect.x = w.rect.left - self.actor.rect.width
-                        if 4 in d: self.actor.rect.x = w.rect.right
-            if i == 2: self.actor.rect[1] = self.actor.rect[1] + speed.y
-            if i == 8: self.actor.rect[1] = self.actor.rect[1] - speed.y
-            if self.in_physics:
-                aw = self.collide()
-                if aw:
-                    for w in aw:
-                        if 2 in d: self.actor.rect.y = w.rect.top - self.actor.rect.height
-                        if 8 in d: self.actor.rect.y = w.rect.bottom
+            if i == 6: vx = speed.x
+            if i == 4: vx = -speed.x
+            if i == 2: vy = speed.y
+            if i == 8: vy = -speed.y
+        speed = pygame.Vector2(vx, vy)
+        if rotate:
+            speed = speed.rotate(rotate)
+        self.actor.rect[0] = self.actor.rect[0] + speed.x
+        if self.in_entity:
+            aw = self.collide()
+            if aw:
+                for w in aw:
+                    if speed.x > 0: self.actor.rect.x = w.rect.left - self.actor.rect.width
+                    if speed.x < 0: self.actor.rect.x = w.rect.right
+        self.actor.rect[1] = self.actor.rect[1] + speed.y
+        if self.in_entity:
+            aw = self.collide()
+            if aw:
+                for w in aw:
+                    if speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height
+                    if speed.y < 0: self.actor.rect.y = w.rect.bottom
 
     def _delay_bind(self):
         # 这里之所以用 self.actor.theater.artist.currrent 获取当前场景的原因是因为可以节省资源
         # 尽量将一个物体的物理属性只跟当前场景的其他对象进行对比，比每次都与所有对象对比要好。
         # 只能延迟绑定，因为在实例化的时候是不确定 actor 或 theater 有没有绑定上 artist。
-        if not self.has_bind and self.in_physics:
+        if not self.has_bind and self.in_entity:
             cur = self.actor.theater.artist.currrent
-            self.RIGID_BODY[cur].append(self.actor)
+            self.actor.RIGID_BODY[cur].append(self.actor)
+            self.ignore_entity.append(self.actor)
             self.has_bind = True
 
     def collide(self):
         # 这里的 collide 和 Actor 里面的不一样，这里主要用于处理检测移动相关的内容
         # 所以可以不用直接暴露给用户使用，
         cur = self.actor.theater.artist.currrent
-        rigid_bodys = [i for i in self.RIGID_BODY[cur] if self.actor != i]
+        rigid_bodys = [i for i in Actor.RIGID_BODY[cur] if i not in self.ignore_entity]
+        rigid_walls = [i for i in Wall.RIGID_BODY[cur]]
+        rigid_bodys.extend(rigid_walls)
         scollide = []
         for rigid in rigid_bodys:
             if self.collide_rigid_rect(self.actor, rigid):
@@ -366,9 +383,11 @@ class Actor(pygame.sprite.Sprite):
     如果主动传入了 img(Image类的对象)，那么传入 Image 的 showsize 即可。
     '''
     DEBUG = False # 方便让全部的 Actor 对象都使用 debug 模式，方便开发
-    DEBUG_MASK_LINE_CORLOR = (0, 255, 0) # debug 模式将显示 actor 的 mask 边框线颜色
+    DEBUG_MASK_LINE_CORLOR = (0, 200, 0, 200) # debug 模式将显示 actor 的 mask 边框线颜色
 
-    def __init__(self, img=None, showsize=None, showpoint=None, in_control=False, in_physics=True, rate=0, debug=False):
+    RIGID_BODY = {}
+
+    def __init__(self, img=None, showsize=None, showpoint=None, in_control=False, in_entity=True, rate=0, debug=False):
         pygame.sprite.Sprite.__init__(self)
 
         # 后续这两行需要修改，因为角色的状态资源应该可以有多个，并且由于每个 Image 都要逆向绑定 Actor
@@ -383,10 +402,12 @@ class Actor(pygame.sprite.Sprite):
         self.theater      = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
         self.controller   = self.regist_controller(Controller(in_control))
         self.idler        = self.regist_idler(Idler())
-        self.physics      = self.regist_physics(Physics(in_physics))
+        self.physics      = self.regist_physics(Physics(in_entity))
         self.ticks        = None
 
         if showpoint: self.rect[:2] = showpoint
+
+        self.bug_check    = None
 
     def regist_idler(self,idler):
         idler.actor = self # 让事件对象能找到宿主本身
@@ -404,6 +425,10 @@ class Actor(pygame.sprite.Sprite):
         return physics
 
     def update(self,ticks):
+        if not self.bug_check:
+            self.bug_check = True
+            self.physics.check_parameter_bug()
+
         self.ticks = ticks
         self.imager.update_image(ticks)
         self.physics._delay_bind()
@@ -446,13 +471,12 @@ class Actor(pygame.sprite.Sprite):
     def angle(self, sprite):
         sx, sy = self.rect.center
         tx, ty = sprite.rect.center
-        ag = (ty - sy)/(tx - sx)
-        return ag
+        return math.atan2((ty - sy), (tx - sx)) * 57.2958
 
     def kill(self):
         cur = self.theater.artist.currrent
-        if self in self.physics.RIGID_BODY[cur]:
-            self.physics.RIGID_BODY[cur].remove(self)
+        if self in self.RIGID_BODY[cur]:
+            self.RIGID_BODY[cur].remove(self)
         super().kill()
 
     def change_theater(self, theatername):
@@ -469,3 +493,39 @@ class Actor(pygame.sprite.Sprite):
 
     @staticmethod
     def idle(): pass
+
+
+
+# 后面基于 Actor 封装出三种类型的对象
+# 1 玩家，自动将 in_control 设置为 True
+# 2 墙面，自动将 in_entity 设置为 True
+# 3 子弹，自动将 in_entity 设置为 False
+# 4 敌人，敌人同时存在实体和非实体两种类型
+# 让使用的人能够更加少的使用配置一些不够清晰的参数
+# 其中存在部分虽然为实体但是相互间不能作为实体进行碰撞的对象
+# player1 与 player2 与 enemy 。
+
+class Player(Actor):
+    RIGID_BODY = {}
+    def __init__(self, *a, player='p1', **kw):
+        kw['in_control'] = True
+        kw['in_entity'] = True
+        super().__init__(*a, **kw)
+
+class Wall(Actor):
+    RIGID_BODY = {}
+    def __init__(self, *a, **kw):
+        kw['in_entity'] = True
+        super().__init__(*a, **kw)
+
+class Bullet(Actor):
+    RIGID_BODY = {}
+    def __init__(self, *a, **kw):
+        kw['in_entity'] = False
+        super().__init__(*a, **kw)
+
+class Enemy(Actor):
+    RIGID_BODY = {}
+    def __init__(self, *a, **kw):
+        kw['in_entity'] = True
+        super().__init__(*a, **kw)

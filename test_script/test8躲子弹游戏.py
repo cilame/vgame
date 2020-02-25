@@ -21,8 +21,8 @@ d = {}
 d['starttime'] = time.time()
 currtime = lambda:time.time() - d['starttime']
 currlens = lambda:len(bullets)
-n = vgame.Actor(f.render('游戏时间:{:.5f}'.format(currtime()), 3, (255,255,255)), in_physics=False)
-l = vgame.Actor(f.render('当前数量:{}'.format(currlens()), 3, (255,255,255)), in_physics=False)
+n = vgame.Actor(f.render('游戏时间:{:.5f}'.format(currtime()), 3, (255,255,255)), in_entity=False)
+l = vgame.Actor(f.render('当前数量:{}'.format(currlens()), 3, (255,255,255)), in_entity=False)
 n.rect.x, n.rect.y, l.rect.x, l.rect.y = 200, 0, 200, 18
 a = vgame.Actor(showsize=(20,20),in_control=True)
 a.direction = direct_a
@@ -30,7 +30,7 @@ a.physics.smooth_speed[:2] = 3,3
 a.rect[:2] = 310, 230
 def create_enemy(self):
     if len(bullets) >= 80: return
-    bullet = vgame.Actor(showsize=(6,6), in_physics=False)
+    bullet = vgame.Actor(showsize=(6,6), in_entity=False)
     v = random.choice(('x','y'))
     if v == 'x': x, y = random.random()*640, random.choice([-10, 480])
     else:        y, x = random.random()*480, random.choice([-10, 640])
@@ -54,7 +54,7 @@ def create_enemy(self):
         m.imager.image = m.imager.load_img(f.render('游戏结束(按J重新开始游戏)', 3, (255,255,255)))
         s.change_theater('end')
 a.idle = create_enemy
-m = vgame.Actor(f.render('游戏结束(按J重新开始游戏)', 3, (255,255,255)), in_physics=False, in_control=True)
+m = vgame.Actor(f.render('游戏结束(按J重新开始游戏)', 3, (255,255,255)), in_entity=False, in_control=True)
 def restart(self, option):
     global bullets
     if option.get('control') and option.get('control').get('p1')[0]:
