@@ -45,7 +45,7 @@ wr = vgame.Wall(showsize=(10,300))
 # 方法2：
 # 直接修改上键操作为J按键即可 a.controller.direction_keys_p1.up
 # 方法2也会比较简单，或许也能扩展成其他没有设置过的按键都行
-a.direction = lambda self,d: self.physics.move2(d.get('p1'))
+a.direction = lambda self,d: self.physics.move(d.get('p1'))
 a.controller.direction_keys_p1.up = vgame.K_j
 a.physics.gravity.y = 3
 
@@ -71,7 +71,7 @@ a.physics.speed_inc.y = 3
 # physics.move 和 physics.move2 接收的参数为一个数字的列表
 # 数字只能为 8,2,4,6 即为小键盘的键位方向 上下左右 的意思。
 # 例如下面这个示例就是不断向左下方向移动的意思。
-b.idle = lambda self,d: self.physics.move([4, 2])
+b.idle = lambda self,d: self.mover.move([4, 2])
 
 a.rect[0:2] = 100, 100
 b.rect[0:2] = 400, 200

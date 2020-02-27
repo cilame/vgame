@@ -61,7 +61,7 @@ c.in_entitys = [a, b, d]
 
 # 示例：
 # y重力系统，x摩擦系统
-a.direction = lambda self,d: self.physics.move2(d.get('p1')) # p1:wasd键方向消息
+a.direction = lambda self,d: self.physics.move(d.get('p1')) # p1:wasd键方向消息
 a.physics.limit_highs = {8:80}
 a.physics.gravity.y = 2.5  # 修改 gravity.y 即在 y 方向上增加重力常量【参数可正可负】
 # “重力系统” 和 “摩擦系统” 均能使用的参数，摩擦系统需要的参数

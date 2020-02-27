@@ -52,13 +52,13 @@ def create_bullet(self,speed_inc_x,speed_inc_y,speed_max_x,speed_max_y,target_y)
             hp -= 1
             boss.imager.image = boss.imager.load_img(font.render('boss HP: {:>4}'.format(hp), 3, (255,255,255)))
             i.physics.smooth_speed.x = 1
-            i.physics.move([6])
+            i.mover.move([6])
             if hp <= 0: i.kill()
             self.kill() 
         # 子弹超过边界自动消失
         if self.rect.x > self.theater.artist.screen.get_rect().width: self.kill()
         target = [6, target_y]
-        self.physics.move2(target)
+        self.physics.move(target)
     bullet.idle = bullet_move
     self.theater.regist(bullet)
 class Delayer:
@@ -102,7 +102,7 @@ def direct_a(self, d, c):
         if dly.delaying(self.ticks):
             gun = next(_guns)
             guninfo.imager.image = guninfo.imager.load_img(font.render('当前枪械:{}'.format(gunsn[guns.index(gun)]), 3, (255,255,255)))
-    self.physics.move2(q)
+    self.physics.move(q)
 # 操作系统的初始化
 a.direction = direct_a
 a.controller.control_keys_p1 = [vgame.K_j, vgame.K_k, vgame.K_l]
@@ -121,7 +121,7 @@ def check_a_is_dead(self):
         self.kill()
         self.theater.artist.change_theater('end')
 a.idle = check_a_is_dead
-b.idle = lambda self,d: self.physics.move2([2])
+b.idle = lambda self,d: self.physics.move([2])
 
 # 墙体
 wd = vgame.Wall(showsize=(600,10))

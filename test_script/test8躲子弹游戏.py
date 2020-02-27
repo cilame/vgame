@@ -16,7 +16,7 @@ s = vgame.Initer()
 t = vgame.Theater('main')
 f = vgame.font.SysFont("simhei", 15)
 bullets = []
-def direct_a(self, d): self.physics.move(d.get('p1'))
+def direct_a(self, d): self.mover.move(d.get('p1'))
 d = {}
 d['starttime'] = time.time()
 currtime = lambda:time.time() - d['starttime']
@@ -26,7 +26,7 @@ l = vgame.Actor(f.render('当前数量:{}'.format(currlens()), 3, (255,255,255))
 n.rect.x, n.rect.y, l.rect.x, l.rect.y = 200, 0, 200, 18
 a = vgame.Actor(showsize=(20,20),in_control=True)
 a.direction = direct_a
-a.physics.smooth_speed[:2] = 3,3
+a.mover.speed[:2] = 3,3
 a.rect[:2] = 310, 230
 def create_enemy(self):
     if len(bullets) >= 80: return
@@ -37,14 +37,14 @@ def create_enemy(self):
     bullet.rect[:2] = x, y
     x = 6 if (bullet.rect.x - a.rect.x) < 0 else 4
     y = 2 if (bullet.rect.y - a.rect.y) < 0 else 8
-    bullet.physics.smooth_speed.x = random.choice([-4,-3,-2,-1,1,2,3,4])*.5
-    bullet.physics.smooth_speed.y = random.choice([-4,-3,-2,-1,1,2,3,4])*.5
+    bullet.mover.speed.x = random.choice([-4,-3,-2,-1,1,2,3,4])*.5
+    bullet.mover.speed.y = random.choice([-4,-3,-2,-1,1,2,3,4])*.5
     target = [x, y]
     def bullet_shut(self):
         if ( self.rect.x < -30 or self.rect.x > 660 or self.rect.y < -20 or self.rect.y > 500):
             self.kill()
             if self in bullets: bullets.remove(self)
-        self.physics.move(target)
+        self.mover.move(target)
     bullet.idle = bullet_shut
     bullets.append(bullet)
     t.regist(bullet)

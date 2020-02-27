@@ -32,8 +32,77 @@ class Idler:
 
 
 
+class Mover:
+    '''
+    用于处理碰撞检测的原始函数部分，一般的mover直接继承使用
+    '''
+    def _delay_bind(self):
+        if not self.has_bind and self.in_entity:
+            cur = self.actor.theater.artist.currrent
+            self.actor.RIGID_BODY[cur].append(self.actor)
+            self.has_bind = True
 
-class Physics:
+    def collide(self):
+        cur = self.actor.theater.artist.currrent
+        rigid_bodys = []
+        for entitys in self.actor.in_entitys or []:
+            if entitys in ENTITYS:
+                rigid_bodys.extend([i for i in entitys.RIGID_BODY[cur] if i != self.actor])
+            else:
+                rigid_bodys.append(entitys) # 处理单独某个 Actor 对象的互斥
+        scollide = []
+        for rigid in rigid_bodys:
+            if self.collide_rigid(self.actor, rigid):
+                scollide.append(rigid)
+        return scollide
+
+    @staticmethod
+    def collide_rigid(one, two):
+        return pygame.Rect.colliderect(one.rect, two.rect)
+
+
+class SmoothMover(Mover):
+    '''
+    平滑移动的处理
+    '''
+    def __init__(self, in_entity=False):
+        self.speed     = pygame.Vector2(7., 7.) # 初始化有个值，方便看到效果，可以通过对象修改
+        self.in_entity = in_entity
+
+    def move(self, d):
+        if d: self.smooth_move(d, self.speed)
+
+    def move_angle(self, angle):
+        self.smooth_move([6], self.speed, angle)
+
+    def smooth_move(self, d, speed, rotate=None):
+        vx, vy = 0, 0
+        for i in d:
+            if i == 6: vx = speed.x
+            if i == 4: vx = -speed.x
+            if i == 2: vy = speed.y
+            if i == 8: vy = -speed.y
+        speed = pygame.Vector2(vx, vy)
+        if rotate:
+            speed = speed.rotate(rotate)
+        self.actor.rect[0] = self.actor.rect[0] + speed.x
+        if self.in_entity:
+            aw = self.collide()
+            if aw:
+                for w in aw:
+                    if speed.x > 0: self.actor.rect.x = w.rect.left - self.actor.rect.width
+                    if speed.x < 0: self.actor.rect.x = w.rect.right
+        self.actor.rect[1] = self.actor.rect[1] + speed.y
+        if self.in_entity:
+            aw = self.collide()
+            if aw:
+                for w in aw:
+                    if speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height
+                    if speed.y < 0: self.actor.rect.y = w.rect.bottom
+
+
+
+class PhysicsMover(Mover):
     '''
     负责物理功能的处理，让方向的操作不仅仅只是像素的简单加减，想让一般物理性质能使用
     重力，惯性，速度，加速度一类的处理全部交给这里来处理，这里面会进行一定的更新处理
@@ -83,9 +152,6 @@ class Physics:
             raise e
 
     def move(self, d):
-        if d: self.smooth_move(d, self.smooth_speed)
-
-    def move2(self, d):
         for key in self.curr_directs:
             self.curr_directs[key] = True if key in (d or []) else False
         if d:
@@ -96,9 +162,6 @@ class Physics:
         else:
             self.is_idle_x = True
             self.is_idle_y = True
-
-    def move_angle(self, angle):
-        self.smooth_move([6], self.smooth_speed, angle)
 
     def _effect_high_check_direction(self, d):
         # 这部分的开发尤为重要，为了能够固定住跳跃的高度，检测变化的函数需要与核心移动模块同频
@@ -321,31 +384,6 @@ class Physics:
             self.fall_grounds[8] = False
         self._effect_high_check_core_move()
 
-    def smooth_move(self, d, speed, rotate=None):
-        vx, vy = 0, 0
-        for i in d:
-            if i == 6: vx = speed.x
-            if i == 4: vx = -speed.x
-            if i == 2: vy = speed.y
-            if i == 8: vy = -speed.y
-        speed = pygame.Vector2(vx, vy)
-        if rotate:
-            speed = speed.rotate(rotate)
-        self.actor.rect[0] = self.actor.rect[0] + speed.x
-        if self.in_entity:
-            aw = self.collide()
-            if aw:
-                for w in aw:
-                    if speed.x > 0: self.actor.rect.x = w.rect.left - self.actor.rect.width
-                    if speed.x < 0: self.actor.rect.x = w.rect.right
-        self.actor.rect[1] = self.actor.rect[1] + speed.y
-        if self.in_entity:
-            aw = self.collide()
-            if aw:
-                for w in aw:
-                    if speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height
-                    if speed.y < 0: self.actor.rect.y = w.rect.bottom
-
     def _delay_bind(self):
         # 这里之所以用 self.actor.theater.artist.currrent 获取当前场景的原因是因为可以节省资源
         # 尽量将一个物体的物理属性只跟当前场景的其他对象进行对比，比每次都与所有对象对比要好。
@@ -374,6 +412,40 @@ class Physics:
     @staticmethod
     def collide_rigid(one, two):
         return pygame.Rect.colliderect(one.rect, two.rect)
+
+
+
+
+class Clicker:
+    '''
+    增强鼠标的功能，例如使用鼠标左键拖动对象之类的处理。
+    后续看情况增强额外功能。
+    '''
+    def __init__(self,):
+        self.m1    = None # 用于处理拖动图标功能
+        self.m2    = None # 用于处理拖动图标功能
+        self.actor = None
+
+    def drag_and_drop(self, m, lr='left'):
+        # m 如非 None，则为一个三元组：
+        # m[0] 表示按键，数字0代表左键，数字2代表右键
+        # m[1] 表示模式，数字0代表单击，数字2代表拖动
+        # m[2] 表示两个点的坐标，m[2][0] 为按下鼠标时的坐标， m[2][1] 为松开鼠标时的坐标
+        if m and m[1] == 2:
+            if (lr == 'left'  and m[0] == 0) or \
+               (lr == 'right' and m[0] == 2):
+                x,y,w,h = self.actor.rect
+                sx,sy = m[2][0]
+                ex,ey = m[2][1]
+                self.m1,self.m2 = ((sx,sy),(x, y, w, h)) if self.m1 != (sx,sy) else (self.m1,self.m2)
+                if ( (sx >= self.m2[0] and sx <= self.m2[0] + self.m2[2]) and 
+                     (sy >= self.m2[1] and sy <= self.m2[1] + self.m2[3]) ):
+                    dx,dy = self.m1[0] - self.m2[0], self.m1[1] - self.m2[1]
+                    self.actor.rect[0] = ex - dx
+                    self.actor.rect[1] = ey - dy
+
+    def dnd(self, m, lr='left'): # 功能同上，简化使用名
+        self.drag_and_drop(m, lr)
 
 
 
@@ -414,29 +486,21 @@ class Actor(pygame.sprite.Sprite):
         self.mask         = self.imager.mask
         self.rect         = self.image.get_rect()
         self.theater      = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
-        self.controller   = self.regist_controller(Controller(in_control))
-        self.idler        = self.regist_idler(Idler())
-        self.physics      = self.regist_physics(Physics(in_entity))
+        self.controller   = self.regist(Controller(in_control))
+        self.idler        = self.regist(Idler())
+        self.physics      = self.regist(PhysicsMover(in_entity))
+        self.pmover       = self.physics # 简化使用名
+        self.mover        = self.regist(SmoothMover(in_entity))
+        self.clicker      = self.regist(Clicker())
         self.in_entitys   = in_entitys if in_entitys is not None else ENTITYS_DEFAULT.copy()
         self.ticks        = None
 
         if showpoint: self.rect[:2] = showpoint
         self.bug_check    = None
 
-    def regist_idler(self,idler):
-        idler.actor = self # 让事件对象能找到宿主本身
-        self.idler  = idler # 这里是为了兼容外部 idler 的注册
-        return idler
-
-    def regist_controller(self,controller):
-        controller.actor = self # 让事件对象能找到宿主本身
-        self.controller  = controller # 这里是为了兼容外部 controller 的注册
-        return controller
-
-    def regist_physics(self,physics):
-        physics.actor = self
-        self.physics = physics
-        return physics
+    def regist(self, reg):
+        reg.actor = self # 逆向绑定
+        return reg
 
     def update(self,ticks):
         if not self.bug_check:
@@ -543,7 +607,8 @@ class Enemy(Actor):
 class Bullet(Actor):
     RIGID_BODY = {}
     def __init__(self, *a, **kw):
-        kw['in_entitys'] = [] # 默认情况只检测 ENTITYS_DEFAULT 内的物体
+        kw['in_entity'] = False
+        kw['in_entitys'] = [] # 默认情况只检测 ENTITYS_DEFAULT 内的物体，子弹类则无需实体检测
         super().__init__(*a, **kw)
 
 class Wall(Actor):

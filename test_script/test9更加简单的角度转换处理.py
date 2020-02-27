@@ -30,7 +30,7 @@ def create_bullet(self):
     bullet.rect[:2] = self.rect.center
     curr_angle = self.angle(c) # 子弹射出的瞬间，主角与目标的角度
     def bullet_move(self):
-        self.physics.move_angle(curr_angle)
+        self.mover.move_angle(curr_angle)
     bullet.idle = bullet_move
     self.theater.regist(bullet)
 
@@ -40,7 +40,7 @@ def control_a(self, cc):
             create_bullet(self)
 
 def direction_a(self, d):
-    self.physics.move2(d.get('p1'))
+    self.physics.move(d.get('p1'))
 
 p1.control = control_a
 p1.direction = direction_a
@@ -51,7 +51,7 @@ p1.physics.gravity.y = 3
 p1.in_entitys = [vgame.Player,vgame.Enemy,b]
 
 def direction_p2(self, d):
-    self.physics.move2(d.get('p2'))
+    self.physics.move(d.get('p2'))
 p2.direction = direction_p2
 p2.physics.gravity.y = 3
 
