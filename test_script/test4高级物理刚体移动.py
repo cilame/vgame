@@ -25,6 +25,9 @@ c = vgame.Actor(showsize=(20,20))
 a.direction = lambda self,d: self.physics.move(d.get('p1')) 
 b.direction = lambda self,d: self.physics.move(d.get('p2'))
 
+a.in_entitys = [b, c] # AB相互互斥，因为 AB 均可移动所以需要考虑这些。
+b.in_entitys = [a, c] # C 不会移动，所以无需给C一个额外绑定
+
 a.rect[0:2] = 100, 100
 b.rect[0:2] = 400, 200
 c.rect[0:2] = 350, 180

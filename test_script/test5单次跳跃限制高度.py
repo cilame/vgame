@@ -49,7 +49,8 @@ d = vgame.Actor(showsize=(40,40))
 # 一般带有跳跃的游戏中，y 方向一般都为重力系统，而 x 方向都为摩擦系统
 # 所以如果想要主角拥有重力影响，则直接设置 physics.gravity.y 为一个很小的整数即可
 
-
+a.in_entitys = [b, c, d]
+c.in_entitys = [a, b, d]
 
 
 # 示例：

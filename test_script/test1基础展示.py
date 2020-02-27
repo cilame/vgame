@@ -54,6 +54,7 @@ if __name__ == "__main__":
     actor2 = Actor(i_fra, in_control=True)
     actor3 = Actor(i_fsd)
     actor4 = Actor(i_fsr)
+    actor2.rect[0], actor2.rect[1] = 100, 100
     actor3.rect[0], actor3.rect[1] = 300, 300
     actor4.rect[0], actor4.rect[1] = 400, 200
     theater_1.regist(actor2)

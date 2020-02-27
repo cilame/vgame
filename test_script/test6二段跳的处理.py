@@ -18,10 +18,10 @@ a = vgame.Actor(in_control=True)
 b = vgame.Actor(showsize=(80,80))
 c = vgame.Actor(showsize=(40,40)) 
 
-wd = vgame.Actor(showsize=(600,10))
-wu = vgame.Actor(showsize=(500,10))
-wl = vgame.Actor(showsize=(10,300))
-wr = vgame.Actor(showsize=(10,300))
+wd = vgame.Wall(showsize=(600,10))
+wu = vgame.Wall(showsize=(500,10))
+wl = vgame.Wall(showsize=(10,300))
+wr = vgame.Wall(showsize=(10,300))
 
 # 经过测试
 # 如果使用重力/惯性系统做移动的话，请尽量使用默认 fps。
@@ -47,7 +47,7 @@ wr = vgame.Actor(showsize=(10,300))
 # 方法2也会比较简单，或许也能扩展成其他没有设置过的按键都行
 a.direction = lambda self,d: self.physics.move2(d.get('p1'))
 a.controller.direction_keys_p1.up = vgame.K_j
-a.physics.gravity.y = 5
+a.physics.gravity.y = 3
 
 # 这里封装了两个参数，是一个非常重要的游戏性，如果在外部单独处理起来非常麻烦的功能
 # limit_highs 为一个限制跳跃的高度字典，key为跳跃方向的数字，value为限制高度的参数
@@ -65,6 +65,7 @@ a.physics.speed_inc.x = 3 # 加速度           【整数小数均可，只能�
 a.physics.speed_dec.x = 1 # 减速度（摩擦系统）【整数小数均可，只能正数】
 a.physics.speed_max.x = 5 # 最大速度         【整数小数均可，只能正数】
 a.physics.speed_max.y = 8
+a.physics.speed_inc.y = 3
 
 # 测试移动模块，
 # physics.move 和 physics.move2 接收的参数为一个数字的列表

@@ -5,7 +5,7 @@ from pygame.locals import *
 
 from .theater import Theater
 from .actor import Actor, Image
-from .actor import Player, Wall, Bullet # 比较高一层的封装
+from .actor import Player, Wall, Bullet, Enemy # 比较高一层的封装
 
 class Artist:
     '''
@@ -106,6 +106,6 @@ class Initer:
 
 
 __author__ = 'cilame'
-__version__ = '0.0.8'
+__version__ = '0.0.9'
 __email__ = 'opaquism@hotmail.com'
 __github__ = 'https://github.com/cilame/vgame'

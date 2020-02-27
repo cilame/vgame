@@ -13,6 +13,8 @@ import sys;print(sys.stdout.encoding)
 # 完全没有必要对一些子弹加上各种物理量来处理，子弹的移动就用最简单的处理方式即可。
 import vgame
 
+vgame.Actor.DEBUG = True
+
 s = vgame.Initer()
 t = vgame.Theater('main')
 
@@ -20,12 +22,13 @@ p1 = vgame.Player(showpoint=(100, 100))
 p2 = vgame.Player((255,0,0),showpoint=(100, 200))
 b = vgame.Wall(showsize=(500, 20),showpoint=(100, 400))
 c = vgame.Wall(showsize=(20, 20),showpoint=(400, 100))
+d = vgame.Enemy((0,255,255), showpoint=(300, 200))
 
 
 def create_bullet(self):
     bullet = vgame.Bullet(showsize=(6,6))
     bullet.rect[:2] = self.rect.center
-    curr_angle = self.angle(c)
+    curr_angle = self.angle(c) # 子弹射出的瞬间，主角与目标的角度
     def bullet_move(self):
         self.physics.move_angle(curr_angle)
     bullet.idle = bullet_move
@@ -45,13 +48,16 @@ p1.controller.direction_keys_p1.up = vgame.K_j
 p1.physics.limit_highs = {8:120}
 p1.physics.jump_times = {8:2}
 p1.physics.gravity.y = 3
+p1.in_entitys = [vgame.Player,vgame.Enemy,b]
 
 def direction_p2(self, d):
     self.physics.move2(d.get('p2'))
 p2.direction = direction_p2
 p2.physics.gravity.y = 3
 
+# d.physics.gravity.y = 3
 
-t.regist(p1, p2, b, c)
+
+t.regist(p1, p2, b, c, d)
 s.regist(t)
 s.run()

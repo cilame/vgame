@@ -14,7 +14,7 @@ t = vgame.Theater('main')
 
 vgame.Actor.DEBUG = True
 
-a = vgame.Actor(in_control=True)
+a = vgame.Player(in_control=True)
 b = vgame.Actor(showsize=(80,80))
 c = vgame.Actor(showsize=(40,40)) 
 a.rect[0:2] = 100, 100
@@ -124,10 +124,10 @@ a.idle = check_a_is_dead
 b.idle = lambda self,d: self.physics.move2([2])
 
 # 墙体
-wd = vgame.Actor(showsize=(600,10))
-wu = vgame.Actor(showsize=(500,10))
-wl = vgame.Actor(showsize=(10,300))
-wr = vgame.Actor(showsize=(10,300))
+wd = vgame.Wall(showsize=(600,10))
+wu = vgame.Wall(showsize=(500,10))
+wl = vgame.Wall(showsize=(10,300))
+wr = vgame.Wall(showsize=(10,300))
 wd.rect[0:2] = 100, 400
 wu.rect[0:2] = 100, 10
 wl.rect[0:2] = 600, 100

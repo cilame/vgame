@@ -21,6 +21,8 @@ class Image:
         self.image      = self.load_img(img)
         self.mask       = pygame.mask.from_surface(self.image)
 
+
+
     def load_img(self,img):
         try:
             if img is None:
@@ -74,12 +76,16 @@ class Image:
             if self.showsize: 
                 self.image = pygame.transform.scale(self.image, self.showsize)
             self.mask  = pygame.mask.from_surface(self.image)
-        # 显示 mask 边框线，让边框检测处理起来更加的直观
-        if self.actor and (self.actor.debug or self.actor.DEBUG):
-            pygame.draw.polygon(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, self.mask.outline(), 1)
-            pygame.draw.rect(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, self.actor.rect, 1)
+        self._delay_bind_debug()
 
     def _time_update(self, ticks):
         if ticks - self.cur_tick > self.rate:
             self.cur_tick = ticks
             return True
+
+    def _delay_bind_debug(self):
+        # 显示 mask 边框线，让边框检测处理起来更加的直观
+        if self.actor and (self.actor.debug or self.actor.DEBUG):
+            x, y, w, h = self.actor.rect
+            pygame.draw.polygon(self.image, self.actor.DEBUG_RECT_LINE_CORLOR, self.mask.outline(), 1)
+            pygame.draw.polygon(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, [(0,0),(w-1,0),(w-1,h-1),(0,h-1)], 1)

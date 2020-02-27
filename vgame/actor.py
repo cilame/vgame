@@ -30,6 +30,9 @@ class Idler:
             self._tick = ticks
             return True
 
+
+
+
 class Physics:
     '''
     负责物理功能的处理，让方向的操作不仅仅只是像素的简单加减，想让一般物理性质能使用
@@ -46,7 +49,6 @@ class Physics:
         self.speed_max     = pygame.Vector2(6., 9.) # x/y 两个方向上的最大速度
         self.actor         = None # 用于逆向绑定
         self.in_entity     = in_entity
-        self.ignore_entity = []
         self.has_bind      = False
         self.is_idle_x     = True
         self.is_idle_y     = True
@@ -76,10 +78,8 @@ class Physics:
             if self.gravity.y:
                 assert abs(self.gravity.y) >= self.speed_inc.y, "gravity must be greater than acceleration"
         except Exception as e:
-            print(('err actor id: {}\n'
-                   '    currrent gravity: {}\n'
-                   '    currrent speed_max: {}\n'
-                   '    currrent speed_inc: {}\n').format(id(self.actor),self.gravity, self.speed_max, self.speed_inc))
+            print(('err actor id: {}\n    currrent gravity: {}\n    currrent speed_max: {}\n    currrent speed_inc: {}\n')
+                        .format(id(self.actor), self.gravity, self.speed_max, self.speed_inc))
             raise e
 
     def move(self, d):
@@ -353,25 +353,29 @@ class Physics:
         if not self.has_bind and self.in_entity:
             cur = self.actor.theater.artist.currrent
             self.actor.RIGID_BODY[cur].append(self.actor)
-            self.ignore_entity.append(self.actor)
             self.has_bind = True
 
     def collide(self):
         # 这里的 collide 和 Actor 里面的不一样，这里主要用于处理检测移动相关的内容
         # 所以可以不用直接暴露给用户使用，
         cur = self.actor.theater.artist.currrent
-        rigid_bodys = [i for i in Actor.RIGID_BODY[cur] if i not in self.ignore_entity]
-        rigid_walls = [i for i in Wall.RIGID_BODY[cur]]
-        rigid_bodys.extend(rigid_walls)
+        rigid_bodys = []
+        for entitys in self.actor.in_entitys or []:
+            if entitys in ENTITYS:
+                rigid_bodys.extend([i for i in entitys.RIGID_BODY[cur] if i != self.actor])
+            else:
+                rigid_bodys.append(entitys) # 处理单独某个 Actor 对象的互斥
         scollide = []
         for rigid in rigid_bodys:
-            if self.collide_rigid_rect(self.actor, rigid):
+            if self.collide_rigid(self.actor, rigid):
                 scollide.append(rigid)
         return scollide
 
     @staticmethod
-    def collide_rigid_rect(one, two):
+    def collide_rigid(one, two):
         return pygame.Rect.colliderect(one.rect, two.rect)
+
+
 
 
 class Actor(pygame.sprite.Sprite):
@@ -384,10 +388,20 @@ class Actor(pygame.sprite.Sprite):
     '''
     DEBUG = False # 方便让全部的 Actor 对象都使用 debug 模式，方便开发
     DEBUG_MASK_LINE_CORLOR = (0, 200, 0, 200) # debug 模式将显示 actor 的 mask 边框线颜色
+    DEBUG_RECT_LINE_CORLOR = (200, 0, 0, 200)
 
     RIGID_BODY = {}
 
-    def __init__(self, img=None, showsize=None, showpoint=None, in_control=False, in_entity=True, rate=0, debug=False):
+    def __init__( self, 
+                  img        = None,  # 图片信息
+                  showsize   = None,  # 图片展示大小
+                  showpoint  = None,  # 图片初始位置
+                  in_control = False, # 是否接收操作信息
+                  in_entity  = True,  # 是否拥有实体
+                  in_entitys = None,  # 需要互斥的实体列表，可以传入Actor对象也可以传入类对
+                  rate       = 0,     # 动态图循环的速率
+                  debug      = False  # 是否开启单个 Actor 对象的 Debug 模式
+            ):
         pygame.sprite.Sprite.__init__(self)
 
         # 后续这两行需要修改，因为角色的状态资源应该可以有多个，并且由于每个 Image 都要逆向绑定 Actor
@@ -403,10 +417,10 @@ class Actor(pygame.sprite.Sprite):
         self.controller   = self.regist_controller(Controller(in_control))
         self.idler        = self.regist_idler(Idler())
         self.physics      = self.regist_physics(Physics(in_entity))
+        self.in_entitys   = in_entitys if in_entitys is not None else ENTITYS_DEFAULT.copy()
         self.ticks        = None
 
         if showpoint: self.rect[:2] = showpoint
-
         self.bug_check    = None
 
     def regist_idler(self,idler):
@@ -496,36 +510,47 @@ class Actor(pygame.sprite.Sprite):
 
 
 
-# 后面基于 Actor 封装出三种类型的对象
-# 1 玩家，自动将 in_control 设置为 True
-# 2 墙面，自动将 in_entity 设置为 True
-# 3 子弹，自动将 in_entity 设置为 False
-# 4 敌人，敌人同时存在实体和非实体两种类型
-# 让使用的人能够更加少的使用配置一些不够清晰的参数
-# 其中存在部分虽然为实体但是相互间不能作为实体进行碰撞的对象
-# player1 与 player2 与 enemy 。
+
+# 后面基于 Actor 封装出几种类型的对象
+# 1 玩家, 2 墙面, 3 子弹, 4 敌人, 5 NPC
+# 默认情况下，除了墙以外，其他实体都不互斥，并且其他所有物体均与墙体互斥
+# 如果想要单独修改某个对象是否互斥某些类型互斥就直接修改对象的属性
+# eg.
+#    import vgame
+#    s = vgame.Actor()
+#    b = vgame.Actor()
+#    s.in_entitys = [vgame.Wall, vgame.Enemy, b] # 设置与墙和敌人互斥，也能设置与某些对象互斥
+#
+# 也可以实例化的时候就传入 in_entitys 的参数，不过那样的话不太便利，
+# 因为游戏中有时是需要对某个单独的对象互斥而非某一类互斥，这个接口也可以传入 Actor 实例，
+# 但是对实例对象处理的时候，需要考虑到有时候有些对象是后续才实例化的
+# 如果非要在实例化时候传入会在代码排序上不够自由，所以十分推荐用动态修改属性的方式进行互斥配置
+# 这样不用调整顺序，而且代码看上去会更加清晰一些。
 
 class Player(Actor):
     RIGID_BODY = {}
     def __init__(self, *a, player='p1', **kw):
         kw['in_control'] = True
-        kw['in_entity'] = True
+        super().__init__(*a, **kw)
+class NPC(Actor):
+    RIGID_BODY = {}
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+class Enemy(Actor):
+    RIGID_BODY = {}
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+class Bullet(Actor):
+    RIGID_BODY = {}
+    def __init__(self, *a, **kw):
+        kw['in_entitys'] = [] # 默认情况只检测 ENTITYS_DEFAULT 内的物体
         super().__init__(*a, **kw)
 
 class Wall(Actor):
     RIGID_BODY = {}
     def __init__(self, *a, **kw):
-        kw['in_entity'] = True
         super().__init__(*a, **kw)
 
-class Bullet(Actor):
-    RIGID_BODY = {}
-    def __init__(self, *a, **kw):
-        kw['in_entity'] = False
-        super().__init__(*a, **kw)
 
-class Enemy(Actor):
-    RIGID_BODY = {}
-    def __init__(self, *a, **kw):
-        kw['in_entity'] = True
-        super().__init__(*a, **kw)
+ENTITYS = [Player, NPC, Enemy, Wall]
+ENTITYS_DEFAULT = [Wall]
