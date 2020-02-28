@@ -5,7 +5,9 @@ from pygame.locals import *
 
 from .theater import Theater
 from .actor import Actor, Image
-from .actor import Player, Wall, Bullet, Enemy # 比较高一层的封装
+from .actor import Player, Wall, Bullet, Enemy, NPC, Menu # 比较高一层的封装
+
+DEBUG = False
 
 class Artist:
     '''
@@ -16,34 +18,51 @@ class Artist:
     游戏存档：就是游戏存档
     由于所有的资源都会在这个类里面汇总，所以在这个类里面来实现保存和快照或者其他功能最合适不过
     '''
+
+    BGCOLOR = (40, 40, 40)
+    GRID_TILE = 32
+    GRID_LINE_COLOR = (100, 100, 100)
+
     def __init__(self, screen, ticks):
-        self.screen     = screen
-        self.ticks      = ticks
-        self.theaters   = {}
-        self.framerate  = pygame.time.Clock()
-        self.currrent   = None
+        self.screen      = screen
+        self.screen_rect = self.screen.get_rect()
+        self.ticks       = ticks
+        self.theaters    = {}
+        self.framerate   = pygame.time.Clock()
+        self.currrent    = None
 
     def update(self):
         self.framerate.tick(self.ticks)
         ticks = pygame.time.get_ticks()
 
-        # 先把底层涂满颜色
-        self.screen.fill((0,0,100))
+        self.screen.fill(self.BGCOLOR)
+        self.draw_grid()
 
         # 这里就需要对指定的剧场进行更新，就是场景切换的扩展就都放在这里
+        # 修改场景就只需要改场景的名字自动就修改掉了场景，方便切换。
         if self.theaters:
             self.theaters[self.currrent].group.update(ticks)
-            self.theaters[self.currrent].group.draw(self.screen)
-        else:
-            pass
+            _camera = self.theaters[self.currrent].camera
+            _camera.update()
+            for sprite in self.theaters[self.currrent].group:
+                if sprite.cam_follow:
+                    # 镜头跟随，用于基本上全部的游戏元素
+                    self.screen.blit(sprite.image, _camera.apply(sprite))
+                else:
+                    # 不使用镜头跟随，一般用于菜单类的处理。
+                    self.screen.blit(sprite.image, sprite.rect)
 
         pygame.display.flip()
 
-    # 通过名字切换场景 # *或许这里后期会增加一些淡入、淡出的效果
+    def draw_grid(self):
+        for x in range(0, self.screen_rect.width, self.GRID_TILE):
+            pygame.draw.line(self.screen, self.GRID_LINE_COLOR, (x, 0), (x, self.screen_rect.height))
+        for y in range(0, self.screen_rect.height, self.GRID_TILE):
+            pygame.draw.line(self.screen, self.GRID_LINE_COLOR, (0, y), (self.screen_rect.width, y))
+
     def change_theater(self, name):
         self.currrent = name
 
-    # 注册舞台组件的方法
     def regist(self,theater):
         self.theaters[theater.theater_name] = theater
         theater.artist = self

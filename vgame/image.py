@@ -3,12 +3,17 @@ import traceback
 from itertools import cycle, product
 
 import pygame
+import pygame.font as font
 
 class Image:
     '''
     用于单个图片资源的加载，可以是动图，不过现在实现暂时还是不够好
     因为动图的加载模式有时候很不一样，会有细微的位置需要调整
     '''
+
+    dfont = None
+    vgame = None
+
     def __init__(self, img=None, showsize=None, rate=0):
         # 一些默认配置，用于图片动画的刷新率，可以通过图片名字进行配置
         self.showsize   = showsize # 该参数仅用于对象
@@ -21,7 +26,13 @@ class Image:
         self.image      = self.load_img(img)
         self.mask       = pygame.mask.from_surface(self.image)
 
-
+        # Image.dfont 只能在游戏初始化之后才能初始化，否则报错。
+        if not Image.dfont:
+            if "papyrus" in pygame.font.get_fonts():
+                Image.dfont = font.SysFont("papyrus", 8)
+            else:
+                Image.dfont = font.SysFont(pygame.font.get_default_font(), 15)
+            Image.vgame = __import__('vgame')
 
     def load_img(self,img):
         try:
@@ -85,7 +96,15 @@ class Image:
 
     def _delay_bind_debug(self):
         # 显示 mask 边框线，让边框检测处理起来更加的直观
-        if self.actor and (self.actor.debug or self.actor.DEBUG):
+        if self.actor and (self.actor.debug or self.actor.DEBUG or Image.vgame.DEBUG):
+            ft = self.dfont.render(self.actor.__class__.__name__, 1, (0, 0, 0), (200, 200, 200))
+            self.image.blit(ft, ft.get_rect())
+
+            # 实体框线 和 碰撞检测线
             x, y, w, h = self.actor.rect
-            pygame.draw.polygon(self.image, self.actor.DEBUG_RECT_LINE_CORLOR, self.mask.outline(), 1)
+            outline = self.mask.outline() # 透明图片outline 为空，如为空下面的函数直接执行会报错
+            if outline:
+                pygame.draw.polygon(self.image, self.actor.DEBUG_RECT_LINE_CORLOR, self.mask.outline(), 1)
             pygame.draw.polygon(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, [(0,0),(w-1,0),(w-1,h-1),(0,h-1)], 1)
+            
+

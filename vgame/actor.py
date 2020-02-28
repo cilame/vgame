@@ -65,6 +65,9 @@ class SmoothMover(Mover):
     '''
     平滑移动的处理
     '''
+
+    ALLDIR = [6, 4, 2, 8]
+
     def __init__(self, in_entity=False):
         self.speed     = pygame.Vector2(7., 7.) # 初始化有个值，方便看到效果，可以通过对象修改
         self.in_entity = in_entity
@@ -77,6 +80,8 @@ class SmoothMover(Mover):
 
     def smooth_move(self, d, speed, rotate=None):
         vx, vy = 0, 0
+        if isinstance(d, int) and d in self.ALLDIR:
+            d = [d]
         for i in d:
             if i == 6: vx = speed.x
             if i == 4: vx = -speed.x
@@ -384,35 +389,6 @@ class PhysicsMover(Mover):
             self.fall_grounds[8] = False
         self._effect_high_check_core_move()
 
-    def _delay_bind(self):
-        # 这里之所以用 self.actor.theater.artist.currrent 获取当前场景的原因是因为可以节省资源
-        # 尽量将一个物体的物理属性只跟当前场景的其他对象进行对比，比每次都与所有对象对比要好。
-        # 只能延迟绑定，因为在实例化的时候是不确定 actor 或 theater 有没有绑定上 artist。
-        if not self.has_bind and self.in_entity:
-            cur = self.actor.theater.artist.currrent
-            self.actor.RIGID_BODY[cur].append(self.actor)
-            self.has_bind = True
-
-    def collide(self):
-        # 这里的 collide 和 Actor 里面的不一样，这里主要用于处理检测移动相关的内容
-        # 所以可以不用直接暴露给用户使用，
-        cur = self.actor.theater.artist.currrent
-        rigid_bodys = []
-        for entitys in self.actor.in_entitys or []:
-            if entitys in ENTITYS:
-                rigid_bodys.extend([i for i in entitys.RIGID_BODY[cur] if i != self.actor])
-            else:
-                rigid_bodys.append(entitys) # 处理单独某个 Actor 对象的互斥
-        scollide = []
-        for rigid in rigid_bodys:
-            if self.collide_rigid(self.actor, rigid):
-                scollide.append(rigid)
-        return scollide
-
-    @staticmethod
-    def collide_rigid(one, two):
-        return pygame.Rect.colliderect(one.rect, two.rect)
-
 
 
 
@@ -426,7 +402,7 @@ class Clicker:
         self.m2    = None # 用于处理拖动图标功能
         self.actor = None
 
-    def drag_and_drop(self, m, lr='left'):
+    def dnd(self, m, lr='left'): # 实现鼠标拖拽对象的功能
         # m 如非 None，则为一个三元组：
         # m[0] 表示按键，数字0代表左键，数字2代表右键
         # m[1] 表示模式，数字0代表单击，数字2代表拖动
@@ -443,9 +419,6 @@ class Clicker:
                     dx,dy = self.m1[0] - self.m2[0], self.m1[1] - self.m2[1]
                     self.actor.rect[0] = ex - dx
                     self.actor.rect[1] = ey - dy
-
-    def dnd(self, m, lr='left'): # 功能同上，简化使用名
-        self.drag_and_drop(m, lr)
 
 
 
@@ -472,6 +445,7 @@ class Actor(pygame.sprite.Sprite):
                   in_entity  = True,  # 是否拥有实体
                   in_entitys = None,  # 需要互斥的实体列表，可以传入Actor对象也可以传入类对
                   rate       = 0,     # 动态图循环的速率
+                  cam_follow = True,  # 镜头跟随，默认开启
                   debug      = False  # 是否开启单个 Actor 对象的 Debug 模式
             ):
         pygame.sprite.Sprite.__init__(self)
@@ -494,6 +468,7 @@ class Actor(pygame.sprite.Sprite):
         self.clicker      = self.regist(Clicker())
         self.in_entitys   = in_entitys if in_entitys is not None else ENTITYS_DEFAULT.copy()
         self.ticks        = None
+        self.cam_follow   = cam_follow
 
         if showpoint: self.rect[:2] = showpoint
         self.bug_check    = None
@@ -504,12 +479,12 @@ class Actor(pygame.sprite.Sprite):
 
     def update(self,ticks):
         if not self.bug_check:
+            # 这小块的代码用于处理一些参数配置时候的不妥当，在运行时进行一次简单的自检，方便查出问题。
             self.bug_check = True
             self.physics.check_parameter_bug()
 
         self.ticks = ticks
         self.imager.update_image(ticks)
-        self.physics._delay_bind()
         self.image = self.imager.image
         self.mask  = self.imager.mask
         m, d, c = self.controller.update(ticks)
@@ -535,7 +510,9 @@ class Actor(pygame.sprite.Sprite):
                 operations['direction'] = d
                 operations['control'] = c
                 self.idle(self, operations)
+
         # 惯性，重力处理相关的内容
+        self.physics._delay_bind()
         self.physics.update(ticks)
 
     def collide(self, *list_sprite):
@@ -575,7 +552,7 @@ class Actor(pygame.sprite.Sprite):
 
 
 
-# 后面基于 Actor 封装出几种类型的对象
+# 后面基于 Actor 封装出几种游戏元素的对象
 # 1 玩家, 2 墙面, 3 子弹, 4 敌人, 5 NPC
 # 默认情况下，除了墙以外，其他实体都不互斥，并且其他所有物体均与墙体互斥
 # 如果想要单独修改某个对象是否互斥某些类型互斥就直接修改对象的属性
@@ -614,8 +591,23 @@ class Bullet(Actor):
 class Wall(Actor):
     RIGID_BODY = {}
     def __init__(self, *a, **kw):
+        kw['in_entitys'] = ENTITYS # 墙体也要自动对其他类型的数据进行互斥，否则墙体运动时候不会与
         super().__init__(*a, **kw)
 
 
 ENTITYS = [Player, NPC, Enemy, Wall]
 ENTITYS_DEFAULT = [Wall]
+
+
+# 菜单的处理和游戏相关性不大，但是由于我开发的思路是每个场景统一使用一个 sprite.group 来装下所有的元素
+# 所以菜单类仍旧使用继承自 Actor，这些所有的 sprite 后续统一在 Theater 里管理，
+# 后续会最终在 Artist 类里面统一更新画面。
+# 这里的菜单肯定需要增加一些更加像是菜单的菜单处理，预计会包含一些点击事件的 HOOK 之类的。
+# 目前先就抽象出这样一个类来。
+class Menu(Actor):
+    RIGID_BODY = {}
+    def __init__(self, *a, **kw):
+        kw['in_entity'] = False
+        kw['in_entitys'] = []
+        kw['cam_follow'] = False # 菜单一般都不需要镜头跟随的处理，之所以都使用
+        super().__init__(*a, **kw)
