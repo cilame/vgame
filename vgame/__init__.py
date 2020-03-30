@@ -5,7 +5,7 @@ from pygame.locals import *
 
 from .theater import Theater
 from .actor import Actor, Image
-from .actor import Player, Wall, Bullet, Enemy, NPC, Menu # 比较高一层的封装
+from .actor import Player, Wall, Bullet, Enemy, NPC, Menu, Background # 比较高一层的封装
 
 DEBUG = False
 
@@ -51,6 +51,7 @@ class Artist:
                 else:
                     # 不使用镜头跟随，一般用于菜单类的处理。
                     self.screen.blit(sprite.image, sprite.rect)
+            _camera.debug_padding()
 
         pygame.display.flip()
 

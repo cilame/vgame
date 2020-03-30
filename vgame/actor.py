@@ -403,6 +403,7 @@ class Clicker:
         self.actor = None
 
     def dnd(self, m, lr='left'): # 实现鼠标拖拽对象的功能
+        # m 为鼠标的消息信息
         # m 如非 None，则为一个三元组：
         # m[0] 表示按键，数字0代表左键，数字2代表右键
         # m[1] 表示模式，数字0代表单击，数字2代表拖动
@@ -610,4 +611,13 @@ class Menu(Actor):
         kw['in_entity'] = False
         kw['in_entitys'] = []
         kw['cam_follow'] = False # 菜单一般都不需要镜头跟随的处理，之所以都使用
+        super().__init__(*a, **kw)
+
+# 该处的背景类仅用于规范游戏的范围使用的
+class Background(Actor):
+    RIGID_BODY = {}
+    def __init__(self, *a, **kw):
+        kw['in_entity'] = False
+        kw['in_entitys'] = []
+        kw['cam_follow'] = True # 背景需要镜头跟随的处理，之所以都使用
         super().__init__(*a, **kw)

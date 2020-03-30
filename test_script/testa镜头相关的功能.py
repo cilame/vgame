@@ -12,7 +12,7 @@ import vgame
 vgame.DEBUG = True
 
 s = vgame.Initer()
-t = vgame.Theater('main')
+t = vgame.Theater('main', size=(1024, 640))
 
 a = vgame.Player()
 b = vgame.Wall(showsize=(500,10),showpoint=(20,300))
