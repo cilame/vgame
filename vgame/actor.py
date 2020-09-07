@@ -69,7 +69,7 @@ class SmoothMover(Mover):
     ALLDIR = [6, 4, 2, 8]
 
     def __init__(self, in_entity=False):
-        self.speed     = pygame.Vector2(7., 7.) # 初始化有个值，方便看到效果，可以通过对象修改
+        self.speed     = pygame.Vector2(5., 5.) # 初始化有个值，方便看到效果，可以通过对象修改
         self.in_entity = in_entity
 
     def move(self, d):
@@ -441,6 +441,7 @@ class Actor(pygame.sprite.Sprite):
     def __init__( self, 
                   img        = None,  # 图片信息
                   showsize   = None,  # 图片展示大小
+                  masksize   = None,  # 实体方框大小
                   showpoint  = None,  # 图片初始位置
                   in_control = False, # 是否接收操作信息
                   in_entity  = True,  # 是否拥有实体
@@ -453,26 +454,38 @@ class Actor(pygame.sprite.Sprite):
 
         # 后续这两行需要修改，因为角色的状态资源应该可以有多个，并且由于每个 Image 都要逆向绑定 Actor
         # 所以后续要考虑怎么更加合理的添加角色状态动画的处理
-        self.imager       = img if not (img is None or isinstance(img, (str, tuple, pygame.Surface))) else Image(img, showsize, rate)
-        self.imager.actor = self
+        self.rate       = rate
+        self.showsize   = showsize # showsize 用于墙体检测，所以比较常用，尽量主动设置
+        self.masksize   = masksize # masksize 用于碰撞检测，使用默认的从图片中读取即可
+        self.imager     = None
+        self.image      = None
+        self.mask       = None
+        self.aload_image(img)
 
-        self.debug        = debug # 如果 DEBUG 为 False，这里为 True 则仅仅让该 Actor 这个对象用 debug 模式
-        self.image        = self.imager.image
-        self.mask         = self.imager.mask
-        self.rect         = self.image.get_rect()
-        self.theater      = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
-        self.controller   = self.regist(Controller(in_control))
-        self.idler        = self.regist(Idler())
-        self.physics      = self.regist(PhysicsMover(in_entity))
-        self.pmover       = self.physics # 简化使用名
-        self.mover        = self.regist(SmoothMover(in_entity))
-        self.clicker      = self.regist(Clicker())
-        self.in_entitys   = in_entitys if in_entitys is not None else ENTITYS_DEFAULT.copy()
-        self.ticks        = None
-        self.cam_follow   = cam_follow
+        self.debug      = debug # 如果 DEBUG 为 False，这里为 True 则仅仅让该 Actor 这个对象用 debug 模式
+        self.rect       = self.image.get_rect()
+        self.theater    = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
+        self.controller = self.regist(Controller(in_control))
+        self.idler      = self.regist(Idler())
+        self.physics    = self.regist(PhysicsMover(in_entity))
+        self.pmover     = self.physics # 简化使用名
+        self.mover      = self.regist(SmoothMover(in_entity))
+        self.clicker    = self.regist(Clicker())
+        self.in_entitys = in_entitys if in_entitys is not None else ENTITYS_DEFAULT.copy()
+        self.ticks      = None
+        self.cam_follow = cam_follow
 
         if showpoint: self.rect[:2] = showpoint
-        self.bug_check    = None
+        self.bug_check  = None
+
+    def aload_image(self, img):
+        if not (img is None or isinstance(img, (str, tuple, pygame.Surface))):
+              self.imager = img  
+        else: self.imager = Image(img, self.showsize, self.rate, self.masksize)
+        self.image  = self.imager.image
+        self.mask   = self.imager.mask
+        self.imager.actor = self
+        return self.imager
 
     def regist(self, reg):
         reg.actor = self # 逆向绑定
@@ -489,10 +502,21 @@ class Actor(pygame.sprite.Sprite):
         self.image = self.imager.image
         self.mask  = self.imager.mask
         m, d, c = self.controller.update(ticks)
+        # 用小技巧实现重载
         # 根据函数的参数数量，来决定是否传入 Actor 对象自身。
         # 但是有时候传入自身可能会对新手造成一定困惑，我也不想一定要传入自身，下面的代码可以兼容两者
-        self.mouse(m)     if self.mouse.__code__.co_argcount     == 1 else self.mouse(self, m)
-        self.control(c)   if self.control.__code__.co_argcount   == 1 else self.control(self, c)
+
+        # 鼠标操作
+        if self.mouse.__code__.co_argcount == 1:
+            self.mouse(m)
+        elif self.mouse.__code__.co_argcount == 2: 
+            self.mouse(self, m)
+        # 控制键操作
+        if self.control.__code__.co_argcount == 1:
+            self.control(c)    
+        elif self.control.__code__.co_argcount == 2: 
+            self.control(self, c)
+        # 方向键操作
         if self.direction.__code__.co_argcount == 1:
             self.direction(d)
         elif self.direction.__code__.co_argcount == 2:
@@ -506,11 +530,7 @@ class Actor(pygame.sprite.Sprite):
             elif self.idle.__code__.co_argcount == 1:
                 self.idle(self)
             elif self.idle.__code__.co_argcount == 2:
-                operations = {}
-                operations['mouse'] = m
-                operations['direction'] = d
-                operations['control'] = c
-                self.idle(self, operations)
+                self.idle(self, {'mouse':m, 'direction':d, 'control':c})
 
         # 惯性，重力处理相关的内容
         self.physics._delay_bind()

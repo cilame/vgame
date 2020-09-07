@@ -14,7 +14,7 @@ class Image:
     dfont = None
     vgame = None
 
-    def __init__(self, img=None, showsize=None, rate=0):
+    def __init__(self, img=None, showsize=None, rate=0, flip=None, masksize=None):
         # 一些默认配置，用于图片动画的刷新率，可以通过图片名字进行配置
         self.showsize   = showsize # 该参数仅用于对象
         self.rate       = rate # 不同的单位可以使用不同的速率
@@ -23,8 +23,14 @@ class Image:
         self.src_image  = None
         self.cur_tick   = 0
         self.rects      = None # 后续用于动图
+        self.flip       = flip
+        if self.flip:
+            self.flipx  = 'x' in flip or 'X' in flip
+            self.flipy  = 'y' in flip or 'Y' in flip
         self.image      = self.load_img(img)
-        self.mask       = pygame.mask.from_surface(self.image)
+
+        self.masksize   = masksize # mask 主要用于处理碰撞检测
+        self.mask       = self._mk_mask()
 
         # Image.dfont 只能在游戏初始化之后才能初始化，否则报错。
         if not Image.dfont:
@@ -41,6 +47,7 @@ class Image:
                 image.fill((255,255,255,255))
             elif isinstance(img, (tuple, list)):
                 image = pygame.Surface((60, 60)).convert_alpha()
+                # image = pygame.transform.flip(image, self.flipx, self.flipy)
                 image.fill(img)
             elif isinstance(img, str) and os.path.isdir(img):
                 imgfs, imgfv = {}, []
@@ -49,8 +56,11 @@ class Image:
                     v = v if v else idx
                     imgfs[v] = imgf
                     imgfv.append(v)
-                func = lambda i:pygame.image.load(os.path.join(img,i)).convert_alpha()
-                all_rects = [func(imgfs[i]) for i in sorted(imgfv)]
+                def _load_img(i):
+                    image = pygame.image.load(os.path.join(img,i)).convert_alpha()
+                    if self.flip: image = pygame.transform.flip(image, self.flipx, self.flipy)
+                    return image
+                all_rects = [_load_img(imgfs[i]) for i in sorted(imgfv)]
                 self.active    = True
                 self.src_image = None
                 self.cur_tick  = 0
@@ -75,6 +85,10 @@ class Image:
                 image = img
             if self.showsize:
                 image = pygame.transform.scale(image, self.showsize)
+            # print(self.flip)
+            # if self.flip:
+            #     print(self.flipx, self.flipy)
+            #     image = pygame.transform.flip(image, self.flipx, self.flipy)
         except:
             print("无法加载图片.",img)
             print(traceback.format_exc())
@@ -86,8 +100,20 @@ class Image:
             self.image = self.src_image.subsurface(next(self.rects)) if self.src_image else next(self.rects)
             if self.showsize: 
                 self.image = pygame.transform.scale(self.image, self.showsize)
-            self.mask  = pygame.mask.from_surface(self.image)
+            self.mask  = self._mk_mask()
         self._delay_bind_debug()
+
+    def _mk_mask(self):
+        if self.masksize:
+            if not getattr(self, 'mskdefault', None):
+                self.mskdefault = pygame.mask.Mask(self.masksize)
+                self.mskdefault.fill()
+                mask = self.mskdefault
+            else:
+                mask = self.mskdefault
+        else:
+            mask = pygame.mask.from_surface(self.image)
+        return mask
 
     def _time_update(self, ticks):
         if ticks - self.cur_tick > self.rate:

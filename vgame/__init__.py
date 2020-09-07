@@ -22,6 +22,7 @@ class Artist:
     BGCOLOR = (40, 40, 40)
     GRID_TILE = 32
     GRID_LINE_COLOR = (100, 100, 100)
+    GRID_LINE_COLOR_MAP_DEBUG = (255, 0, 0)
 
     def __init__(self, screen, ticks):
         self.screen      = screen
@@ -36,7 +37,7 @@ class Artist:
         ticks = pygame.time.get_ticks()
 
         self.screen.fill(self.BGCOLOR)
-        self.draw_grid()
+        self.draw_grid() # 黑幕线，当没有背景时用于凸显黑幕的方式。
 
         # 这里就需要对指定的剧场进行更新，就是场景切换的扩展就都放在这里
         # 修改场景就只需要改场景的名字自动就修改掉了场景，方便切换。
