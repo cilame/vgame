@@ -462,6 +462,8 @@ class Actor(pygame.sprite.Sprite):
         self.mask       = None
         self.aload_image(img)
 
+        self.axis       = None # 用于栅格类游戏，角色可以在 theater.map 中的函数处理运动，最短路径计算等
+
         self.debug      = debug # 如果 DEBUG 为 False，这里为 True 则仅仅让该 Actor 这个对象用 debug 模式
         self.rect       = self.image.get_rect()
         self.theater    = None # 将该对象注册进 theater之后会自动绑定相应的 theater。

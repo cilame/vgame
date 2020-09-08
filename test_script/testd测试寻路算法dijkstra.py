@@ -21,6 +21,7 @@ if __name__ == "__main__":
     main = Initer()
     vgame.DEBUG = True # 调试模式
     vgame.Theater.Map.DEBUG = True # 打开地图栅格调试
+    # vgame.Theater.Camera.DEBUG = True
 
     # 资源加载
     i_bg0 = Image(bg0)
@@ -31,37 +32,40 @@ if __name__ == "__main__":
     i_fsl = Image(fsr, showsize=(30,30), rate=60, flip='x')
     i_fra = Image(fra, showsize=(30,30), rate=60)
 
-    theater_1 = Theater('sea', i_bg0)
+    theater_1 = Theater('sea', i_bg0, gridsize=(40, 40))
     actor2 = vgame.Player(i_fsd)
     actor2.mover.speed.x = 4.
     actor2.mover.speed.y = 4.
-    actor2.status = {
-        'u': i_fsu,
-        'd': i_fsd,
-        'r': i_fsr,
-        'l': i_fsl,
-        'a': i_fra,
-        'dict': {
-            0: i_fsd,
-            1: None,
-        },
-    }
-    actor2.rect[0], actor2.rect[1] = 100, 100
+    actor2.status = { 'u': i_fsu,'d': i_fsd,'r': i_fsr,'l': i_fsl,'a': i_fra,'dict': { 0: i_fsd },}
     theater_1.regist(actor2)
-    # theater_1.camera.follow = actor2 # 
     theater_1.map.local(actor2, (3, 3))
-
-
-
-
-    actor3 = vgame.Wall(i_ims)
-    theater_1.regist(actor3)
-    theater_1.map.local(actor3, (9, 9))
 
     actor4 = vgame.Enemy(i_fsl)
     theater_1.regist(actor4)
     theater_1.map.local(actor4, (12, 6))
-    main.regist(theater_1)
+
+    for i in range(0, 11):
+        ax = (5, i)
+        ac = vgame.Wall(showsize=(40, 40))
+        theater_1.regist(ac)
+        theater_1.map.local(ac, ax, 999)
+
+    for i in range(5, 12):
+        ax = (8, i)
+        ac = vgame.Wall(showsize=(40, 40))
+        theater_1.regist(ac)
+        theater_1.map.local(ac, ax, 999)
+
+    # 计算路径距离
+    tr = theater_1.map.trace(actor2, actor4)
+    for ax in tr[1:-1]:
+        ac = vgame.Enemy((0,0,0,100), showsize=(40, 40))
+        theater_1.regist(ac)
+        theater_1.map.local(ac, ax)
+
+    print(tr)
+    print(theater_1.map)
+    print(theater_1.map.map2d.graph[(12, 5)])
 
     def _my_move(self, d):
         dr = d.get('p1')
@@ -72,29 +76,11 @@ if __name__ == "__main__":
             else:
                 if 2 in dr: self.status['dict'][0] = self.status['d']
                 if 8 in dr: self.status['dict'][0] = self.status['u']
+            self.aload_image(self.status['dict'][0])
             self.mover.move(dr)
 
-    def _my_ctl(self, c):
-        ct = c.get('p1')
-        close = False
-        if ct:
-            if ct[0]:
-                if not self.status['dict'][1]:
-                    self.status['dict'][1] = self.status['a']
-            else: close = True
-        else: close = True
-        if close:
-            if self.status['dict'][1]: self.status['dict'][1] = None
-
-    def _my_idle(self):
-        if self.status['dict'][1]:
-            self.aload_image(self.status['dict'][1])
-        elif self.status['dict'][0]:
-            self.aload_image(self.status['dict'][0])
-
     actor2.direction = _my_move
-    actor2.control = _my_ctl
-    actor2.idle = _my_idle
 
+    main.regist(theater_1)
     main.run() # 启动一切
 
