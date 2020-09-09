@@ -16,9 +16,9 @@ class Idler:
         act = Actor()
         act.idle
     '''
-    def __init__(self):
+    def __init__(self, delay=15):
         self.actor = None
-        self.delay = 15 # 防止资源消耗过高
+        self.delay = delay # 防止资源消耗过高
         self._tick = 0
 
     def update(self, ticks):
@@ -29,8 +29,6 @@ class Idler:
         if ticks - self._tick > self.delay:
             self._tick = ticks
             return True
-
-
 
 class Mover:
     '''
@@ -105,6 +103,55 @@ class SmoothMover(Mover):
                     if speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height
                     if speed.y < 0: self.actor.rect.y = w.rect.bottom
 
+    def gridmove(self, actor, curr_xy, new_xy, speed):
+        # 这里的xy均为 actor 的左上角像素级坐标，所以使用这个函数时请先转换到正确的数据再运行
+        if 'gridmove' not in actor._chain: actor._chain['gridmove'] = []
+        _x, _y = curr_xy
+        nx, ny = new_xy
+        speed = int(1 if speed is None else speed)
+        xline = []
+        yline = []
+        if _y < ny:
+            ty = _y
+            while ty < ny:
+                ty += speed
+                if ty <= ny: yline.append(ty)
+            if ty != ny:
+                yline.append(ny)
+        if _y > ny:
+            ty = _y
+            while ty > ny:
+                ty -= speed
+                if ty >= ny: yline.append(ty)
+            if ty != ny:
+                yline.append(ny)
+        if _y == ny: yline.append(ny)
+        if _x < nx:
+            tx = _x
+            while tx < nx:
+                tx += speed
+                if tx <= nx: xline.append(tx)
+            if tx != nx:
+                xline.append(nx)
+        if _x > nx:
+            tx = _x
+            while tx > nx:
+                tx -= speed
+                if tx >= nx: xline.append(tx)
+            if tx != nx:
+                xline.append(nx)
+        if _x == nx: xline.append(nx)
+        if len(xline) > len(yline):
+            for i in range(len(xline)-len(yline)):
+                yline.append(yline[-1])
+        if len(yline) > len(xline):
+            for i in range(len(yline)-len(xline)):
+                xline.append(xline[-1])
+        for x, y in zip(xline, yline):
+            def func(x, y):
+                actor.rect.x = x
+                actor.rect.y = y
+            actor._chain['gridmove'].append([func, (x, y)])
 
 
 class PhysicsMover(Mover):
@@ -469,6 +516,9 @@ class Actor(pygame.sprite.Sprite):
         self.theater    = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
         self.controller = self.regist(Controller(in_control))
         self.idler      = self.regist(Idler())
+        self._idler     = self.regist(Idler())
+        self._chain     = {}
+        self._toggle    = {}
         self.physics    = self.regist(PhysicsMover(in_entity))
         self.pmover     = self.physics # 简化使用名
         self.mover      = self.regist(SmoothMover(in_entity))
@@ -533,6 +583,12 @@ class Actor(pygame.sprite.Sprite):
                 self.idle(self)
             elif self.idle.__code__.co_argcount == 2:
                 self.idle(self, {'mouse':m, 'direction':d, 'control':c})
+        # 不对外暴露的循环，用于处理某些需要延时操作的动作
+        if self._idler.update(ticks):
+            for ch in self._chain:
+                if self._chain[ch]:
+                    func, a = self._chain[ch].pop(0)
+                    func(*a)
 
         # 惯性，重力处理相关的内容
         self.physics._delay_bind()

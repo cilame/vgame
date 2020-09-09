@@ -29,19 +29,17 @@ class Map:
             '''
             self.mapw  = mapw
             self.maph  = maph
-            self.world = self._create_map2ds(2)
+            self.world = self._create_map2ds()
             self.graph = self._create_graph()
             self.gap   = self.DEFAULT_GAP
-        def _create_map2ds(self, num):
+        def _create_map2ds(self):
             d = {}
-            d['obstacle'] = self._create_map2d()
-            d['extra']    = self._create_map2d() # 此处尚未用到，在这里写入仅为说明可以在此处进行扩展性开发。
+            d['_obs2d'] = self._create_obs2d()  # 存放默认阻值，均为 DEFAULT_OBSTRUCT
+            d['obs2d']  = self._create_obs2d(0) # 地图单位阻值，初始均为 0
+            d['_']      = self._create_obs2d()  # 此处尚未用到，在这里写入仅为说明可以在此处进行扩展性开发。
             return d
-        def _create_map2d(self):
-            mp = []
-            for i in range(self.maph):
-                mp.append([0 for j in range(self.mapw)])
-            return mp
+        def _create_obs2d(self, obstruct=None):
+            return [[Map.Map2D.DEFAULT_OBSTRUCT if obstruct is None else obstruct for j in range(self.mapw)] for i in range(self.maph)]
         def _create_graph(self):
             d = {}
             for i in range(self.mapw):
@@ -54,10 +52,10 @@ class Map:
             rx, ry = x+1, y # r
             ux, uy = x, y-1 # u
             dx, dy = x, y+1 # d
-            if lx >= 0:        p[(lx, ly)] = Map.Map2D.DEFAULT_OBSTRUCT
-            if rx < self.mapw: p[(rx, ry)] = Map.Map2D.DEFAULT_OBSTRUCT
-            if uy >= 0:        p[(ux, uy)] = Map.Map2D.DEFAULT_OBSTRUCT
-            if dy < self.maph: p[(dx, dy)] = Map.Map2D.DEFAULT_OBSTRUCT
+            if lx >= 0:        p[(lx, ly)] = self.world['_obs2d'][ly][lx] # Map.Map2D.DEFAULT_OBSTRUCT
+            if rx < self.mapw: p[(rx, ry)] = self.world['_obs2d'][ry][rx] # Map.Map2D.DEFAULT_OBSTRUCT
+            if uy >= 0:        p[(ux, uy)] = self.world['_obs2d'][uy][ux] # Map.Map2D.DEFAULT_OBSTRUCT
+            if dy < self.maph: p[(dx, dy)] = self.world['_obs2d'][dy][dx] # Map.Map2D.DEFAULT_OBSTRUCT
             return p
         def _shortest_path(self, actor_a, actor_b):
             axis_a = actor_a.axis
@@ -68,26 +66,13 @@ class Map:
             axis = actor.axis
             self._local_set(axis, val)
         def _local_set(self, axis, val):
-            self._local_axis_val(axis, val)
-            self._local_axis_graph(axis, val)
-        def _local_axis_val(self, axis, val):
-            px, py = axis
-            try:    self.world['obstacle'][py][px] = val
-            except: raise "out of bounds"
-        def _local_axis_graph(self, axis, val):
-            try: 
-                if val != 1: 
-                    self._set_graph(axis, val)
-            except: raise "out of bounds"
-        def _set_graph(self, axis, val):
-            px, py = axis
-            self.world['obstacle'][py][px]
+            self.world['obs2d'][axis[1]][axis[0]] = val
+            _val = self.world['_obs2d'][axis[1]][axis[0]] + val
             for i in self.graph[axis]:
-                if axis in self.graph[i]:
-                    self.graph[i][axis] = val
+                if axis in self.graph[i]: self.graph[i][axis] = _val
         def __str__(self):
             pks = []
-            for i in self.world['obstacle']:
+            for i in self.world['obs2d']:
                 pks.append(' '.join(['_'*self.gap if j == 0 else ('{:'+str(self.gap)+'}').format(j) for j in i]))
             return '\n'.join(pks)
 
@@ -100,9 +85,8 @@ class Map:
         self.mapw    = int(sw/gw)
         self.maph    = int(sh/gh)
         self.map2d   = Map.Map2D(self.mapw, self.maph)
-        # print(sw, sh, gw, gh, self.mapw, self.maph)
 
-    def local(self, actor:'actor or sprite', axis, obstruct=None):
+    def local(self, actor:'actor or sprite', axis, obstruct=0):
         # 这里处理某些精灵的定位，换算出真实坐标然后定位到目标位置
         _x, _y, w, h = actor.rect
         px, py = axis
@@ -111,19 +95,65 @@ class Map:
         actor.rect.x = rx
         actor.rect.y = ry
         actor.axis = axis     # 让 actor 绑定一个坐标地址
-        self.map2d._local(actor, obstruct if obstruct is not None else Map.Map2D.DEFAULT_OBSTRUCT)
+        self.map2d._local(actor, obstruct)
 
-    def move(self, axis, delay=True):
+    def move(self, actor, trace, speed=4., delay=True):
         # 处理部分“平滑移动”以及部分“状态转移”以及部分“操作延时”以及最重要的“坐标记录”
         # 操作延时：即让处于正在移动中的角色暂时不再接收控制信息
         # 坐标记录：即让路径算法能够快速算出最短路
-        pass
+        if 'gridmove_start' not in actor._toggle: actor._toggle['gridmove_start'] = False
+        if not actor._toggle['gridmove_start']:
+            actor._toggle['gridmove_start'] = True
+            _x, _y, w, h = actor.rect
+            for curr_pxpy, new_pxpy in zip(trace[:-1], trace[1:]):
+                (cpx, cpy), (npx, npy) = curr_pxpy, new_pxpy
+                cx = int(self.gridw * cpx + self.gridw / 2 - w / 2)
+                cy = int(self.gridh * cpy + self.gridh / 2 - h / 2)
+                nx = int(self.gridw * npx + self.gridw / 2 - w / 2)
+                ny = int(self.gridh * npy + self.gridh / 2 - h / 2)
+                curr_xy, new_xy = (cx, cy), (nx, ny)
+                actor.mover.gridmove(actor, curr_xy, new_xy, speed)
+
+        if actor._toggle['gridmove_start'] and not len(actor._chain['gridmove']):
+            actor._toggle['gridmove_start'] = False
 
     def trace(self, actor_a, actor_b):
         return self.map2d._shortest_path(actor_a, actor_b)
 
-    def clear(self, axis):
-        self.map2d._local_set(axis, Map.Map2D.DEFAULT_OBSTRUCT)
+    def nobody(self, axis):
+        self.map2d._local_set(axis, 0)
+
+    def _judge_direct(self, axis_a, axis_b):
+        # 判断是否为相邻的某个方向，用数字表示 [1-9]
+        # 如果该方向并不存在，则返回 0
+        # b位于a的那个方向
+        xa, ya = axis_a
+        xb, yb = axis_b
+        if xb-xa == 1:
+            if yb-ya ==  1: return 3
+            if yb == ya   : return 6
+            if yb-ya == -1: return 9
+        if xb == xa:
+            if yb-ya ==  1: return 2
+            if yb == ya   : return 5
+            if yb-ya == -1: return 8
+        if xb-xa == -1:
+            if yb-ya ==  1: return 1
+            if yb == ya   : return 4
+            if yb-ya == -1: return 7
+        return 0
+
+    def _change_one2two(id):
+        if id == 3 : return (1, 1)
+        if id == 6 : return (1, 0)
+        if id == 9 : return (1, -1)
+        if id == 2 : return (0, 1)
+        if id == 5 : return (0, 0)
+        if id == 8 : return (0, -1)
+        if id == 1 : return (-1, 1)
+        if id == 4 : return (-1, 0)
+        if id == 7 : return (-1, -1)
+        return None
 
     def _draw_debug_grid(self, image):
         # 用于对背景栅格的调试，绘制显示栅格

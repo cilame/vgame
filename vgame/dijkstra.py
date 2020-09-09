@@ -336,4 +336,5 @@ def test_shortest_path():
     print("{} to {}: path: {}".format(x, y, shortest_path(graph, x, y)))
 
 if __name__ == '__main__':
+    # 有向图的最短路径算法
     test_shortest_path()

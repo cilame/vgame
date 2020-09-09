@@ -116,7 +116,7 @@ class Initer:
             for event in pygame.event.get():
                 if event.type == QUIT :exit()
                 if event.type == KEYDOWN:
-                    if event.key == K_TAB :_random_change(self)# 键盘C测试切换触发随机场景的变化
+                    if event.key == K_TAB :_random_change(self) # 键盘C测试切换触发随机场景的变化
 
     def change_theater(self, name):
         self.artist.change_theater(name)
