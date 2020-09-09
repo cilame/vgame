@@ -86,7 +86,7 @@ class Map:
         self.maph    = int(sh/gh)
         self.map2d   = Map.Map2D(self.mapw, self.maph)
 
-    def local(self, actor:'actor or sprite', axis, obstruct=0):
+    def local(self, actor, axis, obstruct=0):
         # 这里处理某些精灵的定位，换算出真实坐标然后定位到目标位置
         _x, _y, w, h = actor.rect
         px, py = axis
@@ -101,18 +101,32 @@ class Map:
         # 处理部分“平滑移动”以及部分“状态转移”以及部分“操作延时”以及最重要的“坐标记录”
         # 操作延时：即让处于正在移动中的角色暂时不再接收控制信息
         # 坐标记录：即让路径算法能够快速算出最短路
+        if len(trace) <= 1: return # trace 起点和终点是同一个，则不执行移动
         if 'gridmove_start' not in actor._toggle: actor._toggle['gridmove_start'] = False
         if not actor._toggle['gridmove_start']:
-            actor._toggle['gridmove_start'] = True
-            _x, _y, w, h = actor.rect
-            for curr_pxpy, new_pxpy in zip(trace[:-1], trace[1:]):
-                (cpx, cpy), (npx, npy) = curr_pxpy, new_pxpy
-                cx = int(self.gridw * cpx + self.gridw / 2 - w / 2)
-                cy = int(self.gridh * cpy + self.gridh / 2 - h / 2)
-                nx = int(self.gridw * npx + self.gridw / 2 - w / 2)
-                ny = int(self.gridh * npy + self.gridh / 2 - h / 2)
-                curr_xy, new_xy = (cx, cy), (nx, ny)
-                actor.mover.gridmove(actor, curr_xy, new_xy, speed)
+                actor._toggle['gridmove_start'] = True
+                _x, _y, w, h = actor.rect
+                for curr_pxpy, new_pxpy in zip(trace[:-1], trace[1:]):
+                    (cpx, cpy), (npx, npy) = curr_pxpy, new_pxpy
+
+                    # 这里处理角色方向自动改变，让人在使用的时候只需要配置好方向资源，自动变化
+                    # 当你在 actor.status['direction'] 里面配置好变化方向的自己的状态
+                    dr = self._judge_direct((cpx, cpy), (npx, npy))
+                    self._change_direct(actor, dr)
+
+                    cx = int(self.gridw * cpx + self.gridw / 2 - w / 2)
+                    cy = int(self.gridh * cpy + self.gridh / 2 - h / 2)
+                    nx = int(self.gridw * npx + self.gridw / 2 - w / 2)
+                    ny = int(self.gridh * npy + self.gridh / 2 - h / 2)
+                    curr_xy, new_xy = (cx, cy), (nx, ny)
+                    actor.mover.gridmove(actor, curr_xy, new_xy, speed)
+                # 直接计算移动后的结果，这里可能需要一个快照功能，用于计算临时的结果
+                # 因为类似 SRPG 那样，需要提供撤回操作，不过这里先实现结果，后续再考虑预测的处理
+                # 以下处理为移动到位后再进行改变
+                def func(trace):
+                    self.local(actor, trace[-1])
+                    self.nobody(trace[0])
+                actor._chain['gridmove'].append([func, (trace,)])
 
         if actor._toggle['gridmove_start'] and not len(actor._chain['gridmove']):
             actor._toggle['gridmove_start'] = False
@@ -122,6 +136,17 @@ class Map:
 
     def nobody(self, axis):
         self.map2d._local_set(axis, 0)
+
+    def _change_direct(self, actor, dr):
+        def func(actor, dr):
+            if dr == 2: drname = 'down'
+            if dr == 8: drname = 'up'
+            if dr == 4: drname = 'left'
+            if dr == 6: drname = 'right'
+            curr_image = actor.status['direction'].get(drname)
+            if curr_image:
+                actor.aload_image(curr_image)
+        actor._chain['gridmove'].append([func, (actor, dr,)])
 
     def _judge_direct(self, axis_a, axis_b):
         # 判断是否为相邻的某个方向，用数字表示 [1-9]
@@ -142,18 +167,6 @@ class Map:
             if yb == ya   : return 4
             if yb-ya == -1: return 7
         return 0
-
-    def _change_one2two(id):
-        if id == 3 : return (1, 1)
-        if id == 6 : return (1, 0)
-        if id == 9 : return (1, -1)
-        if id == 2 : return (0, 1)
-        if id == 5 : return (0, 0)
-        if id == 8 : return (0, -1)
-        if id == 1 : return (-1, 1)
-        if id == 4 : return (-1, 0)
-        if id == 7 : return (-1, -1)
-        return None
 
     def _draw_debug_grid(self, image):
         # 用于对背景栅格的调试，绘制显示栅格

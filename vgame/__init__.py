@@ -30,7 +30,7 @@ class Artist:
         self.ticks       = ticks
         self.theaters    = {}
         self.framerate   = pygame.time.Clock()
-        self.currrent    = None
+        self.current    = None
 
     def update(self):
         self.framerate.tick(self.ticks)
@@ -42,10 +42,10 @@ class Artist:
         # 这里就需要对指定的剧场进行更新，就是场景切换的扩展就都放在这里
         # 修改场景就只需要改场景的名字自动就修改掉了场景，方便切换。
         if self.theaters:
-            self.theaters[self.currrent].group.update(ticks)
-            _camera = self.theaters[self.currrent].camera
+            self.theaters[self.current].group.update(ticks)
+            _camera = self.theaters[self.current].camera
             _camera.update()
-            for sprite in self.theaters[self.currrent].group:
+            for sprite in self.theaters[self.current].group:
                 if sprite.cam_follow:
                     # 镜头跟随，用于基本上全部的游戏元素
                     self.screen.blit(sprite.image, _camera.apply(sprite))
@@ -63,13 +63,13 @@ class Artist:
             pygame.draw.line(self.screen, self.GRID_LINE_COLOR, (0, y), (self.screen_rect.width, y))
 
     def change_theater(self, name):
-        self.currrent = name
+        self.current = name
 
     def regist(self,theater):
         self.theaters[theater.theater_name] = theater
         theater.artist = self
-        if not self.currrent:
-            self.currrent = theater.theater_name # 第一次注册的舞台将默认作为入口舞台
+        if not self.current:
+            self.current = theater.theater_name # 第一次注册的舞台将默认作为入口舞台
 
 
 class Initer:
@@ -111,7 +111,7 @@ class Initer:
             # 后期肯定会删除掉的功能
             def _random_change(self):
                 v = list(self.artist.theaters)
-                i = (v.index(self.artist.currrent)+1)%len(v)
+                i = (v.index(self.artist.current)+1)%len(v)
                 self.artist.change_theater(v[i])
             for event in pygame.event.get():
                 if event.type == QUIT :exit()

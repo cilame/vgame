@@ -36,12 +36,12 @@ class Mover:
     '''
     def _delay_bind(self):
         if not self.has_bind and self.in_entity:
-            cur = self.actor.theater.artist.currrent
+            cur = self.actor.theater.artist.current
             self.actor.RIGID_BODY[cur].append(self.actor)
             self.has_bind = True
 
     def collide(self):
-        cur = self.actor.theater.artist.currrent
+        cur = self.actor.theater.artist.current
         rigid_bodys = []
         for entitys in self.actor.in_entitys or []:
             if entitys in ENTITYS:
@@ -67,11 +67,21 @@ class SmoothMover(Mover):
     ALLDIR = [6, 4, 2, 8]
 
     def __init__(self, in_entity=False):
+        self.actor     = None
         self.speed     = pygame.Vector2(5., 5.) # 初始化有个值，方便看到效果，可以通过对象修改
         self.in_entity = in_entity
 
     def move(self, d):
-        if d: self.smooth_move(d, self.speed)
+        if d:
+            curr = self.actor.status['current']
+            if 4 in d or 6 in d:
+                if 4 in d: targ = self.actor.status['direction'].get('left')
+                if 6 in d: targ = self.actor.status['direction'].get('right')
+            else:
+                if 2 in d: targ = self.actor.status['direction'].get('down')
+                if 8 in d: targ = self.actor.status['direction'].get('up')
+            if targ and curr != targ: self.actor.aload_image(targ)
+            self.smooth_move(d, self.speed)
 
     def move_angle(self, angle):
         self.smooth_move([6], self.speed, angle)
@@ -105,7 +115,6 @@ class SmoothMover(Mover):
 
     def gridmove(self, actor, curr_xy, new_xy, speed):
         # 这里的xy均为 actor 的左上角像素级坐标，所以使用这个函数时请先转换到正确的数据再运行
-        if 'gridmove' not in actor._chain: actor._chain['gridmove'] = []
         _x, _y = curr_xy
         nx, ny = new_xy
         speed = int(1 if speed is None else speed)
@@ -199,7 +208,7 @@ class PhysicsMover(Mover):
             if self.gravity.y:
                 assert abs(self.gravity.y) >= self.speed_inc.y, "gravity must be greater than acceleration"
         except Exception as e:
-            print(('err actor id: {}\n    currrent gravity: {}\n    currrent speed_max: {}\n    currrent speed_inc: {}\n')
+            print(('err actor id: {}\n    current gravity: {}\n    current speed_max: {}\n    current speed_inc: {}\n')
                         .format(id(self.actor), self.gravity, self.speed_max, self.speed_inc))
             raise e
 
@@ -507,7 +516,10 @@ class Actor(pygame.sprite.Sprite):
         self.imager     = None
         self.image      = None
         self.mask       = None
-        self.aload_image(img)
+        self.status     = {}
+        self.status['current']   = None
+        self.status['default']   = self.aload_image(img)
+        self.status['direction'] = {}
 
         self.axis       = None # 用于栅格类游戏，角色可以在 theater.map 中的函数处理运动，最短路径计算等
 
@@ -518,6 +530,7 @@ class Actor(pygame.sprite.Sprite):
         self.idler      = self.regist(Idler())
         self._idler     = self.regist(Idler())
         self._chain     = {}
+        self._chain['gridmove'] = []
         self._toggle    = {}
         self.physics    = self.regist(PhysicsMover(in_entity))
         self.pmover     = self.physics # 简化使用名
@@ -537,6 +550,7 @@ class Actor(pygame.sprite.Sprite):
         self.image  = self.imager.image
         self.mask   = self.imager.mask
         self.imager.actor = self
+        self.status['current'] = self.imager
         return self.imager
 
     def regist(self, reg):
@@ -559,30 +573,20 @@ class Actor(pygame.sprite.Sprite):
         # 但是有时候传入自身可能会对新手造成一定困惑，我也不想一定要传入自身，下面的代码可以兼容两者
 
         # 鼠标操作
-        if self.mouse.__code__.co_argcount == 1:
-            self.mouse(m)
-        elif self.mouse.__code__.co_argcount == 2: 
-            self.mouse(self, m)
+        if   self.mouse.__code__.co_argcount == 1: self.mouse(m)
+        elif self.mouse.__code__.co_argcount == 2: self.mouse(self, m)
         # 控制键操作
-        if self.control.__code__.co_argcount == 1:
-            self.control(c)    
-        elif self.control.__code__.co_argcount == 2: 
-            self.control(self, c)
+        if   self.control.__code__.co_argcount == 1: self.control(c)    
+        elif self.control.__code__.co_argcount == 2: self.control(self, c)
         # 方向键操作
-        if self.direction.__code__.co_argcount == 1:
-            self.direction(d)
-        elif self.direction.__code__.co_argcount == 2:
-            self.direction(self, d)
-        elif self.direction.__code__.co_argcount == 3:
-            self.direction(self, d, c) # 2d卷轴游戏可能需要别的键作为跳跃功能，所以需要处理更多消息
+        if   self.direction.__code__.co_argcount == 1: self.direction(d)
+        elif self.direction.__code__.co_argcount == 2: self.direction(self, d)
+        elif self.direction.__code__.co_argcount == 3: self.direction(self, d, c) # 2d卷轴游戏可能需要别的键作为跳跃功能，所以需要处理更多消息
         # 空闲状态的持续执行的函数
         if self.idler.update(ticks):
-            if self.idle.__code__.co_argcount == 0:
-                self.idle()
-            elif self.idle.__code__.co_argcount == 1:
-                self.idle(self)
-            elif self.idle.__code__.co_argcount == 2:
-                self.idle(self, {'mouse':m, 'direction':d, 'control':c})
+            if   self.idle.__code__.co_argcount == 0: self.idle()
+            elif self.idle.__code__.co_argcount == 1: self.idle(self)
+            elif self.idle.__code__.co_argcount == 2: self.idle(self, {'mouse':m, 'direction':d, 'control':c})
         # 不对外暴露的循环，用于处理某些需要延时操作的动作
         if self._idler.update(ticks):
             for ch in self._chain:
@@ -608,7 +612,7 @@ class Actor(pygame.sprite.Sprite):
         return math.atan2((ty - sy), (tx - sx)) * 57.2958
 
     def kill(self):
-        cur = self.theater.artist.currrent
+        cur = self.theater.artist.current
         if self in self.RIGID_BODY[cur]:
             self.RIGID_BODY[cur].remove(self)
         super().kill()

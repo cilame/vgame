@@ -26,19 +26,23 @@ if __name__ == "__main__":
     # 资源加载
     i_bg0 = Image(bg0)
     i_ims = Image(ims, showsize=(40,40), rate=80)
-    i_fsd = Image(fsd, showsize=(30,30), rate=60)
-    i_fsu = Image(fsu, showsize=(30,30), rate=60)
-    i_fsr = Image(fsr, showsize=(30,30), rate=60)
-    i_fsl = Image(fsr, showsize=(30,30), rate=60, flip='x')
-    i_fra = Image(fra, showsize=(30,30), rate=60)
+    i_fsd = Image(fsd, showsize=(40,40), rate=60)
+    i_fsu = Image(fsu, showsize=(40,40), rate=60)
+    i_fsr = Image(fsr, showsize=(40,40), rate=60)
+    i_fsl = Image(fsr, showsize=(40,40), rate=60, flip='x')
+    i_fra = Image(fra, showsize=(40,40), rate=60)
 
     theater_1 = Theater('sea', i_bg0, gridsize=(40, 40))
     actor2 = vgame.Player(i_fsd)
-    actor2.mover.speed.x = 4.
-    actor2.mover.speed.y = 4.
-    actor2.status['dirct'] = { 'u': i_fsu,'d': i_fsd,'r': i_fsr,'l': i_fsl,'a': i_fra,'dict': { 0: i_fsd },}
+    actor2.status['direction'] = { 
+        'up':    i_fsu,
+        'down':  i_fsd,
+        'right': i_fsr,
+        'left':  i_fsl,
+    }
     theater_1.regist(actor2)
     theater_1.map.local(actor2, (3, 3))
+
 
     actor4 = vgame.Enemy(i_fsl)
     theater_1.regist(actor4)
@@ -48,35 +52,25 @@ if __name__ == "__main__":
         ac = vgame.Wall(showsize=(40, 40))
         theater_1.regist(ac)
         theater_1.map.local(ac, (5, i), float('inf')) # map.local 的第三个参数为阻力
-
     for i in range(5, 12):
         ac = vgame.Wall(showsize=(40, 40))
         theater_1.regist(ac)
         theater_1.map.local(ac, (8, i), float('inf'))
 
-    def _my_move(self, d):
-        dr = d.get('p1')
-        if dr:
-            if 4 in dr or 6 in dr:
-                if 4 in dr: self.status['dirct']['dict'][0] = self.status['dirct']['l']
-                if 6 in dr: self.status['dirct']['dict'][0] = self.status['dirct']['r']
-            else:
-                if 2 in dr: self.status['dirct']['dict'][0] = self.status['dirct']['d']
-                if 8 in dr: self.status['dirct']['dict'][0] = self.status['dirct']['u']
-            self.aload_image(self.status['dirct']['dict'][0])
-            self.mover.move(dr)
-
     # 按下J键自动寻路
     def _my_ctl(self, c):
         if c and c.get('p1')[0]:
             trs = theater_1.map.trace(self, actor4) # 计算路径 actor2 到 actor4 的坐标
-            theater_1.map.move(self, trs, 10)
+            theater_1.map.move(self, trs, 3)
 
     print(actor2.axis)
     print(actor4.axis)
-
-    actor2.direction = _my_move
+    def _my_move(self, d):
+        dr = d.get('p1')
+        if dr:
+            self.mover.move(dr)
     actor2.control = _my_ctl
+    actor2.direction = _my_move
 
     main.regist(theater_1)
     main.run() # 启动一切
