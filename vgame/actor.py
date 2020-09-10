@@ -88,7 +88,7 @@ class SmoothMover(Mover):
                 if obstruct:
                     actor.theater.map.map2d._local_add_del(caxis, naxis, obstruct)
         except:
-            print('out of bounds. {}'.format(self.actor))
+            print('Actor out of bounds. {}'.format(self.actor.axis))
 
     def auto_change_direct(self, d):
         curr = self.actor.status['current']
@@ -173,11 +173,13 @@ class SmoothMover(Mover):
         if len(yline) > len(xline):
             for i in range(len(yline)-len(xline)):
                 xline.append(xline[-1])
+        chain = []
         for x, y in zip(xline, yline):
             def func(x, y):
                 actor.rect.x = x
                 actor.rect.y = y
-            actor._chain['gridmove'].append([func, (x, y), False])
+            chain.append([func, (x, y), False])
+        return chain
 
 
 class PhysicsMover(Mover):
@@ -539,7 +541,7 @@ class Actor(pygame.sprite.Sprite):
         self.status['direction'] = {}
 
         self.axis       = None # 用于栅格类游戏，角色可以在 theater.map 中的函数处理运动，最短路径计算等
-        self.obstruct   = None
+        self.obstruct   = None # 用于栅格类游戏，用于寻路算法，使用
 
         self.debug      = debug # 如果 DEBUG 为 False，这里为 True 则仅仅让该 Actor 这个对象用 debug 模式
         self.rect       = self.image.get_rect()
@@ -662,8 +664,15 @@ class Actor(pygame.sprite.Sprite):
     def map(self):
         class _map:
             @staticmethod
-            def move(trace, speed=4., delay=True):
-                self.theater.map.move(self, trace, speed, delay)
+            def move(trace, speed=4.):
+                self.theater.map.move(self, trace, speed)
+            @staticmethod
+            def local(axis, obstruct=0, theater=None):
+                if theater:
+                    theater.regist(self)
+                    theater.map.local(self, axis, obstruct)
+                else:
+                    self.theater.map.local(self, axis, obstruct)
         return _map
 
 
