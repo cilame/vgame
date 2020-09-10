@@ -71,13 +71,14 @@ class Map:
         def _local_del(self, axis, val): self.world['obs2d'][axis[1]][axis[0]] -= val; self._local_calc_graph(axis)
         def _local_add(self, axis, val): self.world['obs2d'][axis[1]][axis[0]] += val; self._local_calc_graph(axis)
         def _local_add_del(self, caxis, naxis, val):
-            if caxis[1] >= 0 and caxis[1] < self.maph and\
-               caxis[0] >= 0 and caxis[0] < self.mapw and\
-               naxis[1] >= 0 and naxis[1] < self.maph and\
-               naxis[0] >= 0 and naxis[0] < self.mapw:
+            a = caxis[1] >= 0 and caxis[1] < self.maph and caxis[0] >= 0 and caxis[0] < self.mapw
+            b = naxis[1] >= 0 and naxis[1] < self.maph and naxis[0] >= 0 and naxis[0] < self.mapw
+            if a and b:
                 self._local_del(caxis, val)
                 self._local_add(naxis, val)
             else:
+                if a: self._local_del(caxis, val)
+                if b: self._local_add(naxis, val)
                 raise
         def _local_calc_graph(self, axis):
             _val = self.world['_obs2d'][axis[1]][axis[0]] + self.world['obs2d'][axis[1]][axis[0]]
@@ -178,30 +179,31 @@ class Map:
     def change_obstruct(self, actor, caxis, naxis):
         def func(actor, caxis, naxis):
             if caxis != naxis:
-                self.map2d._local_del(caxis, actor.obstruct)
-                self.map2d._local_add(naxis, actor.obstruct)
+                # self.map2d._local_del(caxis, actor.obstruct)
+                # self.map2d._local_add(naxis, actor.obstruct)
+                self.map2d._local_add_del(caxis, naxis, actor.obstruct)
             actor.axis = naxis
-        actor._chain['gridmove'].append([func, (actor, caxis, naxis,)])
+        actor._chain['gridmove'].append([func, (actor, caxis, naxis,), True])
 
     def gridmove_stop_toggle(self, actor):
         def func(actor):
-            if actor._toggle['gridmove_start'] and not len(actor._chain['gridmove']):
+            if actor._toggle['gridmove_start']:
                 actor._toggle['gridmove_start'] = False
-        actor._chain['gridmove'].append([func, (actor,)])
+        actor._chain['gridmove'].append([func, (actor,), True])
 
     def nobody(self, axis):
         self.map2d._local_set(axis, 0)
 
     def _change_direct(self, actor, dr):
         def func(actor, dr):
+            curr = actor.status['current']
             if dr == 2: drname = 'down'
             if dr == 8: drname = 'up'
             if dr == 4: drname = 'left'
             if dr == 6: drname = 'right'
-            curr_image = actor.status['direction'].get(drname)
-            if curr_image:
-                actor.aload_image(curr_image)
-        actor._chain['gridmove'].append([func, (actor, dr,)])
+            targ = actor.status['direction'].get(drname)
+            if curr != targ: actor.aload_image(targ)
+        actor._chain['gridmove'].append([func, (actor, dr,), True])
 
     def _calc_center_by_rect(self, actor):
         # 计算对象的像素中心点与哪个栅格最近，用于一些非强栅格类型的游戏处理上面

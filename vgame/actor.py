@@ -80,10 +80,10 @@ class SmoothMover(Mover):
     def auto_change_local(self):
         try:
             actor = self.actor
+            caxis = actor.axis
             naxis = actor.theater.map._calc_center_by_rect(actor)
             obstruct = actor.obstruct or 0
-            if actor.axis != naxis:
-                caxis = actor.axis
+            if caxis != naxis:
                 actor.axis = naxis
                 if obstruct:
                     actor.theater.map.map2d._local_add_del(caxis, naxis, obstruct)
@@ -177,7 +177,7 @@ class SmoothMover(Mover):
             def func(x, y):
                 actor.rect.x = x
                 actor.rect.y = y
-            actor._chain['gridmove'].append([func, (x, y)])
+            actor._chain['gridmove'].append([func, (x, y), False])
 
 
 class PhysicsMover(Mover):
@@ -609,8 +609,13 @@ class Actor(pygame.sprite.Sprite):
         if self._idler.update(ticks):
             for ch in self._chain:
                 if self._chain[ch]:
-                    func, a = self._chain[ch].pop(0)
+                    # immediate 为是否立即执行，用于在有序执行中插入无耗时函数的方式
+                    # 这样这个操作就不会消耗一个时间片来执行无耗时函数而产生顿挫感
+                    func, a, immediate = self._chain[ch].pop(0)
                     func(*a)
+                    while immediate and self._chain[ch]:
+                        func, a, immediate = self._chain[ch].pop(0)
+                        func(*a)
 
         # 惯性，重力处理相关的内容
         self.physics._delay_bind()
@@ -649,6 +654,18 @@ class Actor(pygame.sprite.Sprite):
 
     @staticmethod
     def idle(): pass
+
+    def trace(self, actor_or_point):
+        return self.theater.map.trace(self, actor_or_point)
+
+    @property
+    def map(self):
+        class _map:
+            @staticmethod
+            def move(trace, speed=4., delay=True):
+                self.theater.map.move(self, trace, speed, delay)
+        return _map
+
 
 
 
