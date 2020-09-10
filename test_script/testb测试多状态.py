@@ -34,7 +34,7 @@ if __name__ == "__main__":
     actor2 = Actor(i_fsd, in_control=True)
     # actor2.mover.speed.x = 1.
     # actor2.mover.speed.y = 1.
-    actor2.status = {
+    actor2.status['dirct'] = {
         'u': i_fsu,
         'd': i_fsd,
         'r': i_fsr,
@@ -64,11 +64,11 @@ if __name__ == "__main__":
         dr = d.get('p1')
         if dr:
             if 4 in dr or 6 in dr:
-                if 4 in dr: self.status['dict'][0] = self.status['l']
-                if 6 in dr: self.status['dict'][0] = self.status['r']
+                if 4 in dr: self.status['dirct']['dict'][0] = self.status['dirct']['l']
+                if 6 in dr: self.status['dirct']['dict'][0] = self.status['dirct']['r']
             else:
-                if 2 in dr: self.status['dict'][0] = self.status['d']
-                if 8 in dr: self.status['dict'][0] = self.status['u']
+                if 2 in dr: self.status['dirct']['dict'][0] = self.status['dirct']['d']
+                if 8 in dr: self.status['dirct']['dict'][0] = self.status['dirct']['u']
             self.mover.move(dr)
 
     def _my_ctl(self, c):
@@ -76,18 +76,18 @@ if __name__ == "__main__":
         close = False
         if ct:
             if ct[0]:
-                if not self.status['dict'][1]:
-                    self.status['dict'][1] = self.status['a']
+                if not self.status['dirct']['dict'][1]:
+                    self.status['dirct']['dict'][1] = self.status['dirct']['a']
             else: close = True
         else: close = True
         if close:
-            if self.status['dict'][1]: self.status['dict'][1] = None
+            if self.status['dirct']['dict'][1]: self.status['dirct']['dict'][1] = None
 
     def _my_idle(self):
-        if self.status['dict'][1]:
-            self.aload_image(self.status['dict'][1])
-        elif self.status['dict'][0]:
-            self.aload_image(self.status['dict'][0])
+        if self.status['dirct']['dict'][1]:
+            self.aload_image(self.status['dirct']['dict'][1])
+        elif self.status['dirct']['dict'][0]:
+            self.aload_image(self.status['dirct']['dict'][0])
 
     actor2.direction = _my_move
     actor2.control = _my_ctl

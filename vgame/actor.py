@@ -81,13 +81,15 @@ class SmoothMover(Mover):
         try:
             actor = self.actor
             caxis = actor.axis
-            naxis = actor.theater.map._calc_center_by_rect(actor)
-            obstruct = actor.obstruct or 0
-            if caxis != naxis:
-                actor.axis = naxis
-                if obstruct:
-                    actor.theater.map.map2d._local_add_del(caxis, naxis, obstruct)
+            if caxis:
+                naxis = actor.theater.map._calc_center_by_rect(actor)
+                obstruct = actor.obstruct or 0
+                if caxis != naxis:
+                    actor.axis = naxis
+                    if obstruct:
+                        actor.theater.map.map2d._local_add_del(caxis, naxis, obstruct)
         except:
+            traceback.print_exc()
             print('Actor out of bounds. {}'.format(self.actor.axis))
 
     def auto_change_direct(self, d):
