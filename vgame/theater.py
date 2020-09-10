@@ -58,16 +58,29 @@ class Map:
             if dy < self.maph: p[(dx, dy)] = self.world['_obs2d'][dy][dx] # Map.Map2D.DEFAULT_OBSTRUCT
             return p
         def _shortest_path(self, actor_a, actor_b):
-            axis_a = actor_a.axis
-            axis_b = actor_b.axis
-            return shortest_path(self.graph, axis_a, axis_b)
-        def _local(self, actor, obstruct):
-            val = obstruct
-            axis = actor.axis
-            self._local_set(axis, val)
-        def _local_set(self, axis, val):
-            self.world['obs2d'][axis[1]][axis[0]] = val
-            _val = self.world['_obs2d'][axis[1]][axis[0]] + val
+            # axis or actor
+            axis_a = getattr(actor_a, 'axis', actor_a)
+            axis_b = getattr(actor_b, 'axis', actor_b)
+            try:
+                return shortest_path(self.graph, axis_a, axis_b)
+            except Exception as e:
+                print('dijkstra error:{}, the destination address cannot reach or exceed the boundary.'.format(e))
+                return []
+        def _local(self, actor, obstruct): self._local_set(actor.axis, obstruct)
+        def _local_set(self, axis, val): self.world['obs2d'][axis[1]][axis[0]]  = val; self._local_calc_graph(axis)
+        def _local_del(self, axis, val): self.world['obs2d'][axis[1]][axis[0]] -= val; self._local_calc_graph(axis)
+        def _local_add(self, axis, val): self.world['obs2d'][axis[1]][axis[0]] += val; self._local_calc_graph(axis)
+        def _local_add_del(self, caxis, naxis, val):
+            if caxis[1] >= 0 and caxis[1] < self.maph and\
+               caxis[0] >= 0 and caxis[0] < self.mapw and\
+               naxis[1] >= 0 and naxis[1] < self.maph and\
+               naxis[0] >= 0 and naxis[0] < self.mapw:
+                self._local_del(caxis, val)
+                self._local_add(naxis, val)
+            else:
+                raise
+        def _local_calc_graph(self, axis):
+            _val = self.world['_obs2d'][axis[1]][axis[0]] + self.world['obs2d'][axis[1]][axis[0]]
             for i in self.graph[axis]:
                 if axis in self.graph[i]: self.graph[i][axis] = _val
         def __str__(self):
@@ -95,44 +108,86 @@ class Map:
         actor.rect.x = rx
         actor.rect.y = ry
         actor.axis = axis     # 让 actor 绑定一个坐标地址
+        actor.obstruct = obstruct
         self.map2d._local(actor, obstruct)
 
     def move(self, actor, trace, speed=4., delay=True):
         # 处理部分“平滑移动”以及部分“状态转移”以及部分“操作延时”以及最重要的“坐标记录”
         # 操作延时：即让处于正在移动中的角色暂时不再接收控制信息
         # 坐标记录：即让路径算法能够快速算出最短路
+        if not trace: return       # trace 为空列表则可能寻路函数出现异常
         if len(trace) <= 1: return # trace 起点和终点是同一个，则不执行移动
-        if 'gridmove_start' not in actor._toggle: actor._toggle['gridmove_start'] = False
         if not actor._toggle['gridmove_start']:
-                actor._toggle['gridmove_start'] = True
-                _x, _y, w, h = actor.rect
-                for curr_pxpy, new_pxpy in zip(trace[:-1], trace[1:]):
-                    (cpx, cpy), (npx, npy) = curr_pxpy, new_pxpy
+            actor._toggle['gridmove_start'] = True
+            _x, _y, w, h = actor.rect
+            tracep = []
+            trace2 = []
+            startx = 0
+            for idx, (curr_pxpy, new_pxpy) in enumerate(zip(trace[:-1], trace[1:])):
+                (cpx, cpy), (npx, npy) = curr_pxpy, new_pxpy
+                cx = int(self.gridw * cpx + self.gridw / 2 - w / 2)
+                cy = int(self.gridh * cpy + self.gridh / 2 - h / 2)
+                nx = int(self.gridw * npx + self.gridw / 2 - w / 2)
+                ny = int(self.gridh * npy + self.gridh / 2 - h / 2)
+                dr = self._judge_direct((cpx, cpy), (npx, npy))
+                if idx == 0:
+                    # 这里的处理是为了一些单位原本不是强制栅格的单位更加平滑的适应自动寻路处理的方式
+                    if abs(cx - _x) > 2 or abs(cy - _y) > 2:
+                        npx, npy = trace[1]
+                        x2 = int(self.gridw * npx + self.gridw / 2 - w / 2)
+                        y2 = int(self.gridh * npy + self.gridh / 2 - h / 2)
+                        t1len = ((_x-x2)**2 + (_y-y2)**2)**0.5
+                        t2len = ((cx-x2)**2 + (cy-y2)**2)**0.5
+                        if t1len < t2len:
+                            startx = 1
+                            startr = [(_x, _y), (x2, y2), curr_pxpy, (npx, npy), dr]
+                        if t1len > t2len:
+                            startx = 0
+                            startr = [(_x, _y), (cx, cy), curr_pxpy, (npx, npy), dr]
+                        if len(trace) > 2:
+                            npx, npy = trace[2]
+                            x3 = int(self.gridw * npx + self.gridw / 2 - w / 2)
+                            y3 = int(self.gridh * npy + self.gridh / 2 - h / 2)
+                            t3len = ((_x-x3)**2 + (_y-y3)**2)**0.5
+                            t4len = ((x2-x3)**2 + (y2-y3)**2)**0.5
+                            if t3len < t2len:
+                                startx = 2
+                                startr = [(_x, _y), (x3, y3), curr_pxpy, (npx, npy), dr]
+                        if startr:
+                            tracep.append(startr)
+                trace2.append([(cx, cy), (nx, ny), curr_pxpy, new_pxpy, dr])
 
-                    # 这里处理角色方向自动改变，让人在使用的时候只需要配置好方向资源，自动变化
-                    # 当你在 actor.status['direction'] 里面配置好变化方向的自己的状态
-                    dr = self._judge_direct((cpx, cpy), (npx, npy))
-                    self._change_direct(actor, dr)
+            for (cx, cy), (nx, ny), (cpx, cpy), (npx, npy), dr in tracep:
+                self._change_direct(actor, dr)
+                actor.mover.gridmove(actor, (cx, cy), (nx, ny), speed)
 
-                    cx = int(self.gridw * cpx + self.gridw / 2 - w / 2)
-                    cy = int(self.gridh * cpy + self.gridh / 2 - h / 2)
-                    nx = int(self.gridw * npx + self.gridw / 2 - w / 2)
-                    ny = int(self.gridh * npy + self.gridh / 2 - h / 2)
-                    curr_xy, new_xy = (cx, cy), (nx, ny)
-                    actor.mover.gridmove(actor, curr_xy, new_xy, speed)
+            for idx, ((cx, cy), (nx, ny), (cpx, cpy), (npx, npy), dr) in enumerate(trace2):
+                # 这里处理角色方向自动改变，让人在使用的时候只需要配置好方向资源，自动变化
+                # 当你在 actor.status['direction'] 里面配置好变化方向的自己的状态
                 # 直接计算移动后的结果，这里可能需要一个快照功能，用于计算临时的结果
-                # 因为类似 SRPG 那样，需要提供撤回操作，不过这里先实现结果，后续再考虑预测的处理
-                # 以下处理为移动到位后再进行改变
-                def func(trace):
-                    self.local(actor, trace[-1])
-                    self.nobody(trace[0])
-                actor._chain['gridmove'].append([func, (trace,)])
+                if idx >= startx:
+                    self._change_direct(actor, dr)
+                    actor.mover.gridmove(actor, (cx, cy), (nx, ny), speed)
+                self.change_obstruct(actor, (cpx, cpy), (npx, npy))
 
-        if actor._toggle['gridmove_start'] and not len(actor._chain['gridmove']):
-            actor._toggle['gridmove_start'] = False
+            self.gridmove_stop_toggle(actor)
 
     def trace(self, actor_a, actor_b):
         return self.map2d._shortest_path(actor_a, actor_b)
+
+    def change_obstruct(self, actor, caxis, naxis):
+        def func(actor, caxis, naxis):
+            if caxis != naxis:
+                self.map2d._local_del(caxis, actor.obstruct)
+                self.map2d._local_add(naxis, actor.obstruct)
+            actor.axis = naxis
+        actor._chain['gridmove'].append([func, (actor, caxis, naxis,)])
+
+    def gridmove_stop_toggle(self, actor):
+        def func(actor):
+            if actor._toggle['gridmove_start'] and not len(actor._chain['gridmove']):
+                actor._toggle['gridmove_start'] = False
+        actor._chain['gridmove'].append([func, (actor,)])
 
     def nobody(self, axis):
         self.map2d._local_set(axis, 0)
@@ -147,6 +202,16 @@ class Map:
             if curr_image:
                 actor.aload_image(curr_image)
         actor._chain['gridmove'].append([func, (actor, dr,)])
+
+    def _calc_center_by_rect(self, actor):
+        # 计算对象的像素中心点与哪个栅格最近，用于一些非强栅格类型的游戏处理上面
+        _x, _y, w, h = actor.rect
+        px, py = actor.axis
+        tx = int(_x + w / 2)
+        ty = int(_y + h / 2)
+        ux = int(round((tx + self.gridw / 2) / self.gridw, 0) - 1)
+        uy = int(round((ty + self.gridh / 2) / self.gridh, 0) - 1)
+        return ux, uy
 
     def _judge_direct(self, axis_a, axis_b):
         # 判断是否为相邻的某个方向，用数字表示 [1-9]
@@ -178,6 +243,7 @@ class Map:
                 pygame.draw.line(image, vgame.Artist.GRID_LINE_COLOR_MAP_DEBUG, (0, y), (w, y))
 
     def __str__(self):
+        # 默认绘制阻力图
         return str(self.map2d)
 
 class Camera:

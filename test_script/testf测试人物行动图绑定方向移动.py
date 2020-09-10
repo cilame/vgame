@@ -60,7 +60,7 @@ if __name__ == "__main__":
     # 按下J键自动寻路
     def _my_ctl(self, c):
         if c and c.get('p1')[0]:
-            trs = theater_1.map.trace(self, actor4) # 计算路径 actor2 到 actor4 的坐标
+            trs = theater_1.map.trace(self, actor4) # 计算路径 actor2 到 actor4 的坐标路径
             theater_1.map.move(self, trs, 3)
 
     print(actor2.axis)

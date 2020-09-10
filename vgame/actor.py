@@ -72,16 +72,33 @@ class SmoothMover(Mover):
         self.in_entity = in_entity
 
     def move(self, d):
-        if d:
-            curr = self.actor.status['current']
-            if 4 in d or 6 in d:
-                if 4 in d: targ = self.actor.status['direction'].get('left')
-                if 6 in d: targ = self.actor.status['direction'].get('right')
-            else:
-                if 2 in d: targ = self.actor.status['direction'].get('down')
-                if 8 in d: targ = self.actor.status['direction'].get('up')
-            if targ and curr != targ: self.actor.aload_image(targ)
+        if d and not self.actor._toggle['gridmove_start']:
+            self.auto_change_local()
+            self.auto_change_direct(d)
             self.smooth_move(d, self.speed)
+
+    def auto_change_local(self):
+        try:
+            actor = self.actor
+            naxis = actor.theater.map._calc_center_by_rect(actor)
+            obstruct = actor.obstruct or 0
+            if actor.axis != naxis:
+                caxis = actor.axis
+                actor.axis = naxis
+                if obstruct:
+                    actor.theater.map.map2d._local_add_del(caxis, naxis, obstruct)
+        except:
+            print('out of bounds. {}'.format(self.actor))
+
+    def auto_change_direct(self, d):
+        curr = self.actor.status['current']
+        if 4 in d or 6 in d:
+            if 4 in d: targ = self.actor.status['direction'].get('left')
+            if 6 in d: targ = self.actor.status['direction'].get('right')
+        else:
+            if 2 in d: targ = self.actor.status['direction'].get('down')
+            if 8 in d: targ = self.actor.status['direction'].get('up')
+        if targ and curr != targ: self.actor.aload_image(targ)
 
     def move_angle(self, angle):
         self.smooth_move([6], self.speed, angle)
@@ -522,6 +539,7 @@ class Actor(pygame.sprite.Sprite):
         self.status['direction'] = {}
 
         self.axis       = None # 用于栅格类游戏，角色可以在 theater.map 中的函数处理运动，最短路径计算等
+        self.obstruct   = None
 
         self.debug      = debug # 如果 DEBUG 为 False，这里为 True 则仅仅让该 Actor 这个对象用 debug 模式
         self.rect       = self.image.get_rect()
@@ -531,7 +549,7 @@ class Actor(pygame.sprite.Sprite):
         self._idler     = self.regist(Idler())
         self._chain     = {}
         self._chain['gridmove'] = []
-        self._toggle    = {}
+        self._toggle    = {'gridmove_start': False}
         self.physics    = self.regist(PhysicsMover(in_entity))
         self.pmover     = self.physics # 简化使用名
         self.mover      = self.regist(SmoothMover(in_entity))
