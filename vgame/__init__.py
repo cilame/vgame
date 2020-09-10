@@ -24,6 +24,8 @@ class Artist:
     GRID_LINE_COLOR = (100, 100, 100)
     GRID_LINE_COLOR_MAP_DEBUG = (255, 0, 0)
 
+    ARTIST = None # 想了想，既然 artist 是唯一的，那么就让 theater 实例化时候自动注册进来即可
+
     def __init__(self, screen, ticks):
         self.screen      = screen
         self.screen_rect = self.screen.get_rect()
@@ -65,12 +67,12 @@ class Artist:
     def change_theater(self, name):
         self.current = name
 
-    def regist(self,theater):
-        self.theaters[theater.theater_name] = theater
-        theater.artist = self
-        if not self.current:
-            self.current = theater.theater_name # 第一次注册的舞台将默认作为入口舞台
-
+    def regist(self, theater):
+        if theater.theater_name not in self.theaters:
+            self.theaters[theater.theater_name] = theater
+            theater.artist = self
+            if not self.current:
+                self.current = theater.theater_name # 第一次注册的舞台将默认作为入口舞台
 
 class Initer:
     def __init__(self,
@@ -87,6 +89,7 @@ class Initer:
         self.size   = size
         self.screen = pygame.display.set_mode(size, flag, depth)
         self.artist = Artist(self.screen, self.ticks)
+        Artist.ARTIST = self.artist
         pygame.display.set_caption(title)
 
     def regist(self,*theaters):

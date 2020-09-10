@@ -265,8 +265,7 @@ class Map:
                 pygame.draw.line(image, vgame.Artist.GRID_LINE_COLOR_MAP_DEBUG, (0, y), (w, y))
 
     def __str__(self):
-        # 默认绘制阻力图
-        return str(self.map2d)
+        return str(self.map2d) # 默认绘制阻力图
 
 class Camera:
     '''
@@ -335,7 +334,7 @@ class Theater:
                  ):
 
         game_screen = pygame.display.get_surface() # 游戏屏幕(镜头)显示的大小
-        if game_screen is None:
+        if game_screen is None or not vgame.Artist.ARTIST:
             raise 'pls use vgame.Initer() to init game first.'
 
         self.screen       = game_screen
@@ -345,7 +344,7 @@ class Theater:
         self.gridsize    = gridsize
         self.group        = pygame.sprite.Group()
         self.background   = None
-        self.artist       = None
+        self.artist       = vgame.Artist.ARTIST
         self.camera       = self.regist_camera(Camera(*self.screen_size))
         self.map          = self.regist_map(Map(*self.gridsize, *self.screen_size))
 
@@ -366,6 +365,7 @@ class Theater:
         # 初始化时可以传一张图片作为背景，也可以为空，透明的区域，用于限定游戏的范围，增加更多的可配置的空间
         # 主要用于限定镜头跟随的范围
         self._add_background(background if background else (0,0,0,0)) 
+        self.artist.regist(self)
 
     def regist(self,*actors):
         for actor in actors:
