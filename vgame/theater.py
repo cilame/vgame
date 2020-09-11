@@ -86,7 +86,6 @@ class Map:
             else:
                 if a: self._local_del(caxis, val)
                 if b: self._local_add(naxis, val)
-                raise
         def _local_calc_graph(self, axis):
             _val = self.world['_obs2d'][axis[1]][axis[0]] + self.world['obs2d'][axis[1]][axis[0]]
             for i in self.graph[axis]:

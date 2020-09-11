@@ -3,7 +3,7 @@ import pygame.font as font
 from pygame import Rect
 from pygame.locals import *
 
-from .theater import Theater
+from .theater import Theater, Map
 from .actor import Actor, Image
 from .actor import Player, Wall, Bullet, Enemy, NPC, Menu, Background # 比较高一层的封装
 

@@ -71,11 +71,11 @@ class SmoothMover(Mover):
         self.speed     = pygame.Vector2(5., 5.) # 初始化有个值，方便看到效果，可以通过对象修改
         self.in_entity = in_entity
 
-    def move(self, d):
+    def move(self, d, speed=None):
         if d and not self.actor._toggle['gridmove_start']:
             self.auto_change_local()
             self.auto_change_direct(d)
-            self.smooth_move(d, self.speed)
+            self.smooth_move(d, self.speed if speed is None else pygame.Vector2(speed, speed))
 
     def auto_change_local(self):
         try:
