@@ -659,23 +659,22 @@ class Actor(pygame.sprite.Sprite):
     @staticmethod
     def idle(): pass
 
-    def trace(self, actor_or_point):
-        return self.theater.map.trace(self, actor_or_point)
-
     @property
     def map(self):
         class _map:
-            @staticmethod
-            def move(trace, speed=4.):
+            def move(s, trace, speed=4.):
                 self.theater.map.move(self, trace, speed)
-            @staticmethod
-            def local(axis, obstruct=0, theater=None):
+            def local(s, axis, obstruct=0, theater=None):
                 if theater:
                     theater.regist(self)
                     theater.map.local(self, axis, obstruct)
                 else:
                     self.theater.map.local(self, axis, obstruct)
-        return _map
+            def trace(s, actor_or_point):
+                return self.theater.map.trace(self, actor_or_point)
+            def __str__(s):
+                return str(self.theater.map)
+        return _map()
 
 
 

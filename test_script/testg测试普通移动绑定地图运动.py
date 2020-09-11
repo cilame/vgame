@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
             # 与上面的方式同样的，但是更 pythonic 的方法，让 actor 内绑定自身去执行 theater 方法
             # self.map.local((13, 7), 1)
-            trs = self.trace(actor4)
+            trs = self.map.trace(actor4)
             self.map.move(trs[:-1], 3) # 速度为 0或者 inf则立即到达
 
         # 显示阻力图的功能

@@ -36,7 +36,7 @@ if __name__ == "__main__":
     actor2 = vgame.Player(i_fsd)
     actor2.mover.speed.x = 4.
     actor2.mover.speed.y = 4.
-    actor2.status = { 'u': i_fsu,'d': i_fsd,'r': i_fsr,'l': i_fsl,'a': i_fra,'dict': { 0: i_fsd },}
+    actor2.status['dirct'] = { 'u': i_fsu,'d': i_fsd,'r': i_fsr,'l': i_fsl,'a': i_fra,'dict': { 0: i_fsd },}
     theater_1.regist(actor2)
     theater_1.map.local(actor2, (3, 3))
 
@@ -69,12 +69,12 @@ if __name__ == "__main__":
         dr = d.get('p1')
         if dr:
             if 4 in dr or 6 in dr:
-                if 4 in dr: self.status['dict'][0] = self.status['l']
-                if 6 in dr: self.status['dict'][0] = self.status['r']
+                if 4 in dr: self.status['dirct']['dict'][0] = self.status['dirct']['l']
+                if 6 in dr: self.status['dirct']['dict'][0] = self.status['dirct']['r']
             else:
-                if 2 in dr: self.status['dict'][0] = self.status['d']
-                if 8 in dr: self.status['dict'][0] = self.status['u']
-            self.aload_image(self.status['dict'][0])
+                if 2 in dr: self.status['dirct']['dict'][0] = self.status['dirct']['d']
+                if 8 in dr: self.status['dirct']['dict'][0] = self.status['dirct']['u']
+            self.aload_image(self.status['dirct']['dict'][0])
             self.mover.move(dr)
 
     actor2.direction = _my_move
