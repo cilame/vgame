@@ -33,7 +33,7 @@ if __name__ == "__main__":
     i_fra = Image(fra, showsize=(40,40), rate=60)
 
     theater_1 = Theater('sea', i_bg0, gridsize=(40, 40))
-    actor2 = vgame.Player(i_fsd, in_bounds=False)
+    actor2 = vgame.Player(i_fsd)
     actor2.status['direction'] = { 
         'up':    i_fsu,
         'down':  i_fsd,
@@ -74,7 +74,7 @@ if __name__ == "__main__":
             # 与上面的方式同样的，但是更 pythonic 的方法，让 actor 内绑定自身去执行 theater 方法
             # self.map.local((13, 7), 1)
             trs = self.map.trace(actor4)
-            self.map.move(trs[:-1], 3) # 速度为 0或者 inf则立即到达
+            self.map.move(trs[:-1], 10) # 速度小于 0或者 inf则报错，需要即刻到达的处理请直接使用 local 函数
 
         # 显示阻力图的功能
         global START
