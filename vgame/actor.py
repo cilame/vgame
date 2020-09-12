@@ -1,4 +1,5 @@
 import os, re, time, math
+import inspect
 import traceback
 from itertools import cycle, product
 
@@ -29,8 +30,6 @@ class Delayer:
         if ticks - self._tick > self.delay:
             self._tick = ticks
             return True
-
-    run = update
 
 class Mover:
     '''
@@ -562,6 +561,7 @@ class Actor(pygame.sprite.Sprite):
         self.theater    = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
         self.controller = self.regist(Controller(in_control))
         self.idler      = self.regist(Delayer())
+        self.delayers   = {}
         self._idler     = self.regist(Delayer())
         self._chain     = {}
         self._chain['gridmove'] = []
@@ -692,7 +692,23 @@ class Actor(pygame.sprite.Sprite):
                 return str(self.theater.map)
         return _map()
 
+    def _delay(self, time, delayer, deep=2):
+        try:
+            # 这里的 delay 函数事实上是运行在 Actor.update 函数里面的"函数的内部"，
+            # 调用的深度固定，所以用指定调用栈可以准确的用如下方式找到 ticks ，这样就避免了让开发者直接接触到 ticks 的处理
+            #
+            if delayer not in self.delayers:
+                self.delayers[delayer] = self.regist(Delayer())
+            self.delayers[delayer].delay = time # 毫秒
+            return self.delayers[delayer].update(inspect.stack()[deep][0].f_locals['ticks'])
+        except:
+            raise 'delay function must work in (Actor.mouse, Actor.control, Actor.direction, Actor.idle).'
 
+    def delay(self, time=200, delayer='default'):
+        return self._delay(time, delayer)
+
+    def delayrun(self, judge, time=200, delayer='default'):
+        return judge and self._delay(time, delayer)
 
 
 
