@@ -6,6 +6,7 @@ from pygame.locals import *
 from .theater import Theater, Map
 from .actor import Actor, Image
 from .actor import Player, Wall, Bullet, Enemy, NPC, Menu, Background # 比较高一层的封装
+from .actor import Delayer
 
 DEBUG = False
 
@@ -43,18 +44,24 @@ class Artist:
 
         # 这里就需要对指定的剧场进行更新，就是场景切换的扩展就都放在这里
         # 修改场景就只需要改场景的名字自动就修改掉了场景，方便切换。
+        # cam_follow 用于是否镜头跟随，一般菜单不需要跟随地图变化进行移动
         if self.theaters:
+
+            # 游戏内容
             self.theaters[self.current].group.update(ticks)
             _camera = self.theaters[self.current].camera
             _camera.update()
             for sprite in self.theaters[self.current].group:
                 if sprite.cam_follow:
-                    # 镜头跟随，用于基本上全部的游戏元素
                     self.screen.blit(sprite.image, _camera.apply(sprite))
                 else:
-                    # 不使用镜头跟随，一般用于菜单类的处理。
                     self.screen.blit(sprite.image, sprite.rect)
             _camera.debug_padding()
+
+            # 菜单，最后更新即为置顶
+            self.theaters[self.current].group_menu.update(ticks)
+            for menu in self.theaters[self.current].group_menu:
+                self.screen.blit(menu.image, menu.rect)
 
         pygame.display.flip()
 

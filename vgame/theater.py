@@ -340,7 +340,8 @@ class Theater:
         self.screen_size  = self.screen.get_size()
         self.theater_name = theater_name
         self.size         = size if size else self.screen_size
-        self.gridsize    = gridsize
+        self.gridsize     = gridsize
+        self.group_menu   = pygame.sprite.Group()
         self.group        = pygame.sprite.Group()
         self.background   = None
         self.artist       = vgame.Artist.ARTIST
@@ -379,6 +380,12 @@ class Theater:
     def regist_map(self, camera):
         camera.theater = self
         return camera
+
+    def regist_menu(self, menu):
+        menu.theater = self
+        if isinstance(menu, Actor) and not self.group_menu.has(menu):
+            self.group_menu.add(menu)
+        return menu
 
     def _add_background(self, background):
         self.background = Background(background, showsize=self.size)

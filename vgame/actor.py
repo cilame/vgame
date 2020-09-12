@@ -8,7 +8,7 @@ from pygame.locals import *
 from .image import Image
 from .controller import Controller
 
-class Idler:
+class Delayer:
     '''
     主要负责 actor 的一些持续行为，想要实现一些敌反馈机制
     目前开发的方向主要是想要能够通过 Actor 对象内直接调用到
@@ -29,6 +29,8 @@ class Idler:
         if ticks - self._tick > self.delay:
             self._tick = ticks
             return True
+
+    run = update
 
 class Mover:
     '''
@@ -559,8 +561,8 @@ class Actor(pygame.sprite.Sprite):
         self.rect       = self.image.get_rect()
         self.theater    = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
         self.controller = self.regist(Controller(in_control))
-        self.idler      = self.regist(Idler())
-        self._idler     = self.regist(Idler())
+        self.idler      = self.regist(Delayer())
+        self._idler     = self.regist(Delayer())
         self._chain     = {}
         self._chain['gridmove'] = []
         self._toggle    = {'gridmove_start': False}
@@ -607,18 +609,22 @@ class Actor(pygame.sprite.Sprite):
         # 鼠标操作
         if   self.mouse.__code__.co_argcount == 1: self.mouse(m)
         elif self.mouse.__code__.co_argcount == 2: self.mouse(self, m)
+        elif self.mouse.__code__.co_argcount == 3: self.mouse(self, m, ticks)
         # 控制键操作
         if   self.control.__code__.co_argcount == 1: self.control(c)    
         elif self.control.__code__.co_argcount == 2: self.control(self, c)
+        elif self.control.__code__.co_argcount == 3: self.control(self, c, ticks)
         # 方向键操作
         if   self.direction.__code__.co_argcount == 1: self.direction(d)
         elif self.direction.__code__.co_argcount == 2: self.direction(self, d)
-        elif self.direction.__code__.co_argcount == 3: self.direction(self, d, c) # 2d卷轴游戏可能需要别的键作为跳跃功能，所以需要处理更多消息
+        elif self.direction.__code__.co_argcount == 3: self.direction(self, d, c)
+        elif self.direction.__code__.co_argcount == 4: self.direction(self, d, c, ticks) # 2d卷轴游戏可能需要别的键作为跳跃功能，所以需要处理更多消息
         # 空闲状态的持续执行的函数
         if self.idler.update(ticks):
             if   self.idle.__code__.co_argcount == 0: self.idle()
             elif self.idle.__code__.co_argcount == 1: self.idle(self)
             elif self.idle.__code__.co_argcount == 2: self.idle(self, {'mouse':m, 'direction':d, 'control':c})
+            elif self.idle.__code__.co_argcount == 2: self.idle(self, {'mouse':m, 'direction':d, 'control':c}, ticks)
         # 不对外暴露的循环，用于处理某些需要延时操作的动作
         if self._idler.update(ticks):
             for ch in self._chain:
@@ -742,6 +748,10 @@ ENTITYS_DEFAULT = [Wall]
 # 后续会最终在 Artist 类里面统一更新画面。
 # 这里的菜单肯定需要增加一些更加像是菜单的菜单处理，预计会包含一些点击事件的 HOOK 之类的。
 # 目前先就抽象出这样一个类来。
+
+# 后来发现一个场景一个 sprite.group 可能不够，要更加方便的管理应该是 一个大类元素使用一个 sprite.group
+# 因为这样分层管理起来会更加容易的实现前景，背景之类谁先谁后渲染顺序的处理，例如“菜单”必须要置顶于游戏之上
+# 否则菜单就没有意义。
 class Menu(Actor):
     RIGID_BODY = {}
     def __init__(self, *a, **kw):
