@@ -33,7 +33,7 @@ if __name__ == "__main__":
     i_fra = Image(fra, showsize=(40,40), rate=60)
 
     theater_1 = Theater('sea', i_bg0, gridsize=(40, 40))
-    actor2 = vgame.Player(i_fsd)
+    actor2 = vgame.Player(i_fsd, in_bounds=False)
     actor2.status['direction'] = { 
         'up':    i_fsu,
         'down':  i_fsd,

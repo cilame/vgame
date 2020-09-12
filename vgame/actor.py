@@ -66,10 +66,11 @@ class SmoothMover(Mover):
 
     ALLDIR = [6, 4, 2, 8]
 
-    def __init__(self, in_entity=False):
+    def __init__(self, in_entity=False, in_bounds=True):
         self.actor     = None
         self.speed     = pygame.Vector2(5., 5.) # 初始化有个值，方便看到效果，可以通过对象修改
         self.in_entity = in_entity
+        self.in_bounds = in_bounds
 
     def move(self, d, speed=None):
         if d and not self.actor._toggle['gridmove_start']:
@@ -131,6 +132,14 @@ class SmoothMover(Mover):
                 for w in aw:
                     if speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height
                     if speed.y < 0: self.actor.rect.y = w.rect.bottom
+        if self.in_bounds:
+            w, h = self.actor.theater.size
+            w = w - self.actor.rect.width
+            h = h - self.actor.rect.height
+            if self.actor.rect.x < 0: self.actor.rect.x = 0
+            if self.actor.rect.x > w: self.actor.rect.x = w
+            if self.actor.rect.y < 0: self.actor.rect.y = 0
+            if self.actor.rect.y > h: self.actor.rect.y = h
 
     def gridmove(self, actor, curr_xy, new_xy, speed):
         # 这里的xy均为 actor 的左上角像素级坐标，所以使用这个函数时请先转换到正确的数据再运行
@@ -522,6 +531,7 @@ class Actor(pygame.sprite.Sprite):
                   showpoint  = None,  # 图片初始位置
                   in_control = False, # 是否接收操作信息
                   in_entity  = True,  # 是否拥有实体
+                  in_bounds  = True,  # 是否允许地图边界约束，# 默认True，即为物体移动不会超出边界
                   in_entitys = None,  # 需要互斥的实体列表，可以传入Actor对象也可以传入类对
                   rate       = 0,     # 动态图循环的速率
                   cam_follow = True,  # 镜头跟随，默认开启
@@ -556,7 +566,7 @@ class Actor(pygame.sprite.Sprite):
         self._toggle    = {'gridmove_start': False}
         self.physics    = self.regist(PhysicsMover(in_entity))
         self.pmover     = self.physics # 简化使用名
-        self.mover      = self.regist(SmoothMover(in_entity))
+        self.mover      = self.regist(SmoothMover(in_entity, in_bounds))
         self.clicker    = self.regist(Clicker())
         self.in_entitys = in_entitys if in_entitys is not None else ENTITYS_DEFAULT.copy()
         self.ticks      = None
