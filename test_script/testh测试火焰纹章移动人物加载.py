@@ -14,7 +14,7 @@ vgame.DEBUG = True
 vgame.Map.DEBUG = True
 
 # hywz = '../test_data/hywz/hywz.gif'
-hywz = '../test_data/hywz/1.png'
+hywz = '../test_data/hywz/2.png'
 
 init = vgame.Initer()
 imake = vgame.ImageMaker(hywz)
@@ -50,6 +50,10 @@ def ctl(self, c):
 
     if self.delay(c and c.get('p1')[1], time=150, delayer='B'):
         print(self.map, end='\n\n')
+
+enemy = vgame.Enemy(playerimg_d, rectsize=(64, 64))
+enemy.map.local((8,6), 3, main)
+
 
 player.direction = direct
 player.control = ctl
