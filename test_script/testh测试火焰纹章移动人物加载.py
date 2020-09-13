@@ -24,13 +24,13 @@ for i in range(int(len(s)/3)):
     v = s[i*3:(i+1)*3]
     p.append(v)
 
-main = vgame.Theater('main', gridsize=(32, 32))
-playerimg_u = vgame.Image(p[1], rate=200, showsize=(60,60))
-playerimg_r = vgame.Image(p[2], rate=200, showsize=(60,60))
-playerimg_d = vgame.Image(p[3], rate=200, showsize=(60,60))
-playerimg_l = vgame.Image(p[4], rate=200, showsize=(60,60))
+main = vgame.Theater('main', gridsize=(64, 64))
+playerimg_u = vgame.Image(p[1], rate=200, showsize=(120,120))
+playerimg_r = vgame.Image(p[2], rate=200, showsize=(120,120))
+playerimg_d = vgame.Image(p[3], rate=200, showsize=(120,120))
+playerimg_l = vgame.Image(p[4], rate=200, showsize=(120,120))
 
-player = vgame.Player(playerimg_d, rectsize=(32, 32))
+player = vgame.Player(playerimg_d, rectsize=(64, 64))
 player.status['direction'] = { 
     'up':    playerimg_u,
     'down':  playerimg_d,
@@ -44,7 +44,7 @@ def direct(self, d):
 
 def ctl(self, c):
     if self.delay(c and c.get('p1')[0], time=150, delayer='A'):
-        trs = self.map.trace((15, 12))
+        trs = self.map.trace((8, 6))
         self.map.move(trs, 10)
         print(trs)
 
@@ -55,7 +55,7 @@ player.direction = direct
 player.control = ctl
 player.map.local((1,1), 10)
 
-b = vgame.Wall(showsize=(500,10),showpoint=(20,300))
-main.regist(b)
+for i in range(0, 5): vgame.Wall(showsize=(64, 64)).map.local((3, i), float('inf'), main) 
+for i in range(3, 7): vgame.Wall(showsize=(64, 64)).map.local((6, i), float('inf'), main) 
 
 init.run()
