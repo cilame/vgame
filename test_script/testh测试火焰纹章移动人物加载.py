@@ -37,7 +37,6 @@ player.status['direction'] = {
     'right': playerimg_r,
     'left':  playerimg_l,
 }
-main.regist(player)
 def direct(self, d):
     if d: 
         self.mover.move(d.get('p1'))
@@ -57,7 +56,7 @@ enemy.map.local((8,6), 3, main)
 
 player.direction = direct
 player.control = ctl
-player.map.local((1,1), 10)
+player.map.local((1,1), 10, main)
 
 for i in range(0, 5): vgame.Wall(showsize=(64, 64)).map.local((3, i), float('inf'), main) 
 for i in range(3, 7): vgame.Wall(showsize=(64, 64)).map.local((6, i), float('inf'), main) 

@@ -721,7 +721,12 @@ class Actor(pygame.sprite.Sprite):
                     theater.regist(self)
                     theater.map.local(self, axis, obstruct)
                 else:
-                    self.theater.map.local(self, axis, obstruct)
+                    try:
+                        self.theater.map.local(self, axis, obstruct)
+                    except AttributeError as e:
+                        if 'map' in str(e) and 'NoneType' in str(e):
+                            raise Exception('Before that, please use theater.regist to register the object in theater, '
+                                            'or use the third parameter of map.local to register automatically.')
             def trace(s, actor_or_point):
                 return self.theater.map.trace(self, actor_or_point)
             def __str__(s):
