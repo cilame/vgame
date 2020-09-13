@@ -6,7 +6,7 @@ from itertools import cycle, product
 import pygame
 from pygame.locals import *
 
-from .image import Image
+from .image import Image, ImageMaker
 from .controller import Controller
 
 class Delayer:
@@ -35,6 +35,9 @@ class Mover:
     '''
     用于处理碰撞检测的原始函数部分，一般的mover直接继承使用
     '''
+    def __init__(self):
+        self.has_bind = False
+
     def _delay_bind(self):
         if not self.has_bind and self.in_entity:
             cur = self.actor.theater.artist.current
@@ -227,6 +230,7 @@ class PhysicsMover(Mover):
         self._update_tick        = 0
         self._gravity_tick_delay = 45 # 重力状态更新时间
         self._gravity_tick       = 0
+        super().__init__()
 
     def check_parameter_bug(self):
         # 最大速度必须大于重力速度，否则跳不起来
@@ -520,8 +524,9 @@ class Actor(pygame.sprite.Sprite):
     如果主动传入了 img(Image类的对象)，那么传入 Image 的 showsize 即可。
     '''
     DEBUG = False # 方便让全部的 Actor 对象都使用 debug 模式，方便开发
-    DEBUG_MASK_LINE_CORLOR = (0, 200, 0, 200) # debug 模式将显示 actor 的 mask 边框线颜色
-    DEBUG_RECT_LINE_CORLOR = (200, 0, 0, 200)
+    DEBUG_RECT_LINE_CORLOR = (0, 200, 0, 200) # debug 模式将显示 actor 的 mask 边框线颜色
+    DEBUG_MASK_LINE_CORLOR = (200, 0, 0, 200)
+    DEBUG_REALIMAGE_CORLOR = (200, 200, 200, 200)
 
     RIGID_BODY = {}
 
@@ -529,6 +534,7 @@ class Actor(pygame.sprite.Sprite):
                   img        = None,  # 图片信息
                   showsize   = None,  # 图片展示大小
                   masksize   = None,  # 实体方框大小
+                  rectsize   = None,
                   showpoint  = None,  # 图片初始位置
                   in_control = False, # 是否接收操作信息
                   in_entity  = True,  # 是否拥有实体
@@ -544,6 +550,7 @@ class Actor(pygame.sprite.Sprite):
         # 所以后续要考虑怎么更加合理的添加角色状态动画的处理
         self.rate       = rate
         self.showsize   = showsize # showsize 用于墙体检测，所以比较常用，尽量主动设置
+        self.rectsize   = rectsize # 默认情况下直接使用 showsize 作为墙体检测
         self.masksize   = masksize # masksize 用于碰撞检测，使用默认的从图片中读取即可
         self.imager     = None
         self.image      = None
@@ -557,11 +564,14 @@ class Actor(pygame.sprite.Sprite):
         self.obstruct   = None # 用于栅格类游戏，用于寻路算法，使用
 
         self.debug      = debug # 如果 DEBUG 为 False，这里为 True 则仅仅让该 Actor 这个对象用 debug 模式
-        self.rect       = self.image.get_rect()
+        self.rect       = self.getrect()
+        self.offsets    = self.getoffset()
         self.theater    = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
         self.controller = self.regist(Controller(in_control))
         self.idler      = self.regist(Delayer())
         self.delayers   = {}
+        self.repeaters  = {}
+        self._regist    = None
         self._idler     = self.regist(Delayer())
         self._chain     = {}
         self._chain['gridmove'] = []
@@ -586,6 +596,32 @@ class Actor(pygame.sprite.Sprite):
         self.imager.actor = self
         self.status['current'] = self.imager
         return self.imager
+
+    def getrect(self):
+        if not self.rectsize:
+            return self.image.get_rect()
+        else:
+            rect = self.image.get_rect()
+            sx, sy, sw, sh = rect
+            rw, rh = self.rectsize
+            rx = int(sx + sw/2 - rw/2)
+            ry = int(sy + sh/2 - rh/2)
+            rect.x = rx
+            rect.y = ry
+            rect.w = rw
+            rect.h = rh
+            return rect
+
+    def getoffset(self):
+        if not self.rectsize:
+            return (0, 0)
+        else:
+            rect = self.image.get_rect()
+            sx, sy, sw, sh = rect
+            rw, rh = self.rectsize
+            ox = int(sx + sw/2 - rw/2)
+            oy = int(sy + sh/2 - rh/2)
+            return (ox, oy)
 
     def regist(self, reg):
         reg.actor = self # 逆向绑定
@@ -692,11 +728,10 @@ class Actor(pygame.sprite.Sprite):
                 return str(self.theater.map)
         return _map()
 
-    def _delay(self, time, delayer, deep=2):
+    def _delay(self, time, delayer, deep=3):
         try:
             # 这里的 delay 函数事实上是运行在 Actor.update 函数里面的"函数的内部"，
             # 调用的深度固定，所以用指定调用栈可以准确的用如下方式找到 ticks ，这样就避免了让开发者直接接触到 ticks 的处理
-            #
             if delayer not in self.delayers:
                 self.delayers[delayer] = self.regist(Delayer())
             self.delayers[delayer].delay = time # 毫秒
@@ -704,12 +739,36 @@ class Actor(pygame.sprite.Sprite):
         except:
             raise 'delay function must work in (Actor.mouse, Actor.control, Actor.direction, Actor.idle).'
 
-    def delay(self, time=200, delayer='default'):
-        return self._delay(time, delayer)
+    def _repeat(self, judge, delayer):
+        if delayer not in self.repeaters:
+            self.repeaters[delayer] = False
+        pjudge = self.repeaters[delayer]
+        self.repeaters[delayer] = judge
+        return bool(judge) != bool(pjudge)
 
-    def delayrun(self, judge, time=200, delayer='default'):
-        return judge and self._delay(time, delayer)
+    def delay(self, judge, time=150, delayer='default', repeat=False):
+        if repeat or self._repeat(judge, delayer):
+            return judge and self._delay(time, delayer)
 
+    def toggle(self):
+        alive = self.alive()
+        if alive:
+            self.kill()
+        else:
+            self._regist(self)
+            # 恢复碰撞检测
+            cur = self.theater.artist.current
+            if self not in self.RIGID_BODY[cur]:
+                self.RIGID_BODY[cur].append(self)
+        if self.axis:
+            # 清理/恢复栅格游戏类型中的阻值
+            if alive:
+                if self.obstruct == float('inf'):
+                    self.theater.map.map2d._local_set(self.axis, 0)
+                else:
+                    self.theater.map.map2d._local_del(self.axis, self.obstruct)
+            else:
+                self.theater.map.map2d._local_add(self.axis, self.obstruct)
 
 
 # 后面基于 Actor 封装出几种游戏元素的对象

@@ -4,7 +4,7 @@ from pygame import Rect
 from pygame.locals import *
 
 from .theater import Theater, Map
-from .actor import Actor, Image
+from .actor import Actor, Image, ImageMaker
 from .actor import Player, Wall, Bullet, Enemy, NPC, Menu, Background # 比较高一层的封装
 from .actor import Delayer
 
@@ -53,7 +53,8 @@ class Artist:
             _camera.update()
             for sprite in self.theaters[self.current].group:
                 if sprite.cam_follow:
-                    self.screen.blit(sprite.image, _camera.apply(sprite))
+                    (x, y, w, h), (ox, oy) = _camera.apply(sprite), sprite.offsets
+                    self.screen.blit(sprite.image, (x-ox, y-ox, w, h))
                 else:
                     self.screen.blit(sprite.image, sprite.rect)
             _camera.debug_padding()

@@ -370,6 +370,7 @@ class Theater:
     def regist(self,*actors):
         for actor in actors:
             actor.theater = self
+            actor._regist = self.regist
             if isinstance(actor, Actor) and not self.group.has(actor):
                 self.group.add(actor)
 
@@ -383,6 +384,7 @@ class Theater:
 
     def regist_menu(self, menu):
         menu.theater = self
+        menu._regist = self.regist_menu
         if isinstance(menu, Actor) and not self.group_menu.has(menu):
             self.group_menu.add(menu)
         return menu

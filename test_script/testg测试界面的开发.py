@@ -64,26 +64,29 @@ if __name__ == "__main__":
 
     # 按下J键自动寻路
     # 按下K键显示阻力图
-    def _my_ctl(self, c, ticks):
-        if self.delayrun(c and c.get('p1')[0], delayer='A'):
+    def _my_ctl(self, c):
+        if self.delay(c and c.get('p1')[0], delayer='A'):
             self.map.move(self.map.trace(actor4)[:-1], 10) # 速度小于 0或者 inf则报错，需要即刻到达的处理请直接使用 local 函数
 
         # # 显示阻力图的功能
         # if c and c.get('p1')[1]:
-        #     # delay 的默认值是 200(毫秒), 这个值比较适合一般人的操作延迟
+        #     # delay 的默认值是 150(毫秒), 这个值比较适合一般人的操作延迟
         #     # 另外这个延迟判断函数一定要写在接收到控制信息后再使用，否则有可能在按下的瞬间无效（虽然长按时间隔仍旧一样，但是非常影响操作体验）。
-        #     # 还有另一种更pythonic 的写法就是用 delayrun 方法
+        #     # 还有另一种更pythonic 的写法就是用 delay 方法
         #     if self.delay():
         #         print(theater_1.map, end='\n\n')
 
         # 显示阻力图的功能，和上面注释部分相同功能
-        if self.delayrun(c and c.get('p1')[1], delayer='B'):
+        if self.delay(c and c.get('p1')[1], delayer='B', time=0, repeat=False):
             print(theater_1.map, end='\n\n')
 
+            m.toggle() # 元素显示或隐藏
 
-        # 另外这个 delay 函数和 delayrun 函数使用的都是 Actor 内部自带的一个延迟器，所以
-        # 如果你想在一个Actor里面使用多个延迟器则只需要在这两个函数里面多设置一个延迟器的名字即可
+
+        # 另外这个 delay 函数使用的都是 Actor 内部自带的一个延迟器，所以
+        # 如果你想在一个Actor里面使用多个延迟器则只需要在这两个函数里面多设置一个延迟器 delayer 的名字，而且是一定要设置，否则就会有奇怪的问题
         # Actor会根据名字自动创建延迟器并使用它
+        # 另外对于一些功能而言需要连发，将 repeat 设置成True即可按照time(毫秒)参数进行连发设置，而默认情况下时并不连发的
 
     def _my_move(self, d):
         dr = d.get('p1')
@@ -95,6 +98,8 @@ if __name__ == "__main__":
 
     m = Menu(showsize=(80,80))
     theater_1.regist_menu(m)
+
+    # print(main.size/2)
 
 
     main.regist(theater_1)
