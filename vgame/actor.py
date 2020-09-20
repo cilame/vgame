@@ -9,6 +9,8 @@ from pygame.locals import *
 from .image import Image, ImageMaker
 from .controller import Controller
 
+import vgame
+
 class Delayer:
     '''
     主要负责 actor 的一些持续行为，想要实现一些敌反馈机制
@@ -548,10 +550,12 @@ class Actor(pygame.sprite.Sprite):
 
         # 后续这两行需要修改，因为角色的状态资源应该可以有多个，并且由于每个 Image 都要逆向绑定 Actor
         # 所以后续要考虑怎么更加合理的添加角色状态动画的处理
+        self.img        = img
         self.rate       = rate
         self.showsize   = showsize # showsize 用于墙体检测，所以比较常用，尽量主动设置
         self.rectsize   = rectsize # 默认情况下直接使用 showsize 作为墙体检测
         self.masksize   = masksize # masksize 用于碰撞检测，使用默认的从图片中读取即可
+        self.in_control = in_control
         self.imager     = None
         self.image      = None
         self.mask       = None
@@ -584,8 +588,18 @@ class Actor(pygame.sprite.Sprite):
         self.ticks      = None
         self.cam_follow = cam_follow
 
-        if showpoint: self.rect[:2] = showpoint
+        self.showpoint  = showpoint
         self.bug_check  = None
+
+    def _get_showpoint(self):
+        return self._showpoint
+
+    def _set_showpoint(self, value):
+        self._showpoint = value
+        if self._showpoint:
+            self.rect[:2] = self._showpoint
+
+    showpoint = property(_get_showpoint, _set_showpoint)
 
     def aload_image(self, img):
         if not (img is None or isinstance(img, (str, tuple, pygame.Surface))):
@@ -727,8 +741,11 @@ class Actor(pygame.sprite.Sprite):
                         if 'map' in str(e) and 'NoneType' in str(e):
                             raise Exception('Before that, please use theater.regist to register the object in theater, '
                                             'or use the third parameter of map.local to register automatically.')
+                return self
             def trace(s, actor_or_point):
                 return self.theater.map.trace(self, actor_or_point)
+            def direct(s, side, speed=4.):
+                return self.theater.map.direct(self, side, speed)
             def __str__(s):
                 return str(self.theater.map)
         return _map()
@@ -751,7 +768,7 @@ class Actor(pygame.sprite.Sprite):
         self.repeaters[delayer] = judge
         return bool(judge) != bool(pjudge)
 
-    def delay(self, judge, time=150, delayer='default', repeat=False):
+    def delay(self, judge, time=0, delayer='default', repeat=False):
         if repeat or self._repeat(judge, delayer):
             return judge and self._delay(time, delayer)
 
@@ -774,6 +791,14 @@ class Actor(pygame.sprite.Sprite):
                     self.theater.map.map2d._local_del(self.axis, self.obstruct)
             else:
                 self.theater.map.map2d._local_add(self.axis, self.obstruct)
+
+    def __setattr__(self, key, value):
+        if 'in_control' in self.__dict__ \
+            and not self.in_control \
+            and key in ('mouse', 'direction', 'control'):
+            raise Exception('If {}(in_control=False) mode is used, the set '
+                            .format(self.__class__.__name__)+ '(mouse,direction,control) will be invalid.')
+        self.__dict__[key] = value
 
 
 # 后面基于 Actor 封装出几种游戏元素的对象
@@ -838,7 +863,25 @@ class Menu(Actor):
         kw['in_entity'] = False
         kw['in_entitys'] = []
         kw['cam_follow'] = False # 菜单一般都不需要镜头跟随的处理，之所以都使用
+        if not a:
+            kw['img'] = (70, 70, 70, 100)
         super().__init__(*a, **kw)
+
+    def pack(self, theater, side, screen=1):
+        theater.regist(self)
+        if side == 'd' or side == 'u':
+            self.rect.w = theater.size[0]
+            self.rect.h = theater.size[1]*screen
+        if side == 'r' or side == 'l':
+            self.rect.w = theater.size[0]*screen
+            self.rect.h = theater.size[1]
+
+        w, h = theater.size
+        if side == 'd': self.rect.y = h - self.rect.h
+        if side == 'r': self.rect.x = w - self.rect.w
+        self.showsize = int(self.rect.w), int(self.rect.h)
+        self.aload_image(self.img)
+        return self
 
 # 该处的背景类仅用于规范游戏的范围使用的
 class Background(Actor):

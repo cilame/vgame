@@ -136,6 +136,24 @@ class Map:
         chain = self._get_move_chain(actor, trace, speed)
         self._run_move_chain(actor, chain)
 
+    def direct(self, actor, side, speed=4.):
+        x, y = actor.axis
+        w, h = self.mapw, self.maph
+        if isinstance(side, int):
+            if side == 8: y -= 1; y = 0 if y < 0 else y
+            if side == 2: y += 1; y = h if y > h else y
+            if side == 4: x -= 1; x = 0 if x < 0 else x
+            if side == 6: x += 1; x = w if x > w else x
+        elif isinstance(side, list):
+            if 8 in side: y -= 1; y = 0 if y < 0 else y
+            if 2 in side: y += 1; y = h if y > h else y
+            if 4 in side: x -= 1; x = 0 if x < 0 else x
+            if 6 in side: x += 1; x = w if x > w else x
+        curr = actor.axis
+        targ = (x, y)
+        self.move(actor, [curr, targ], speed=speed)
+        return actor
+
     def _run_move_chain(self, actor, chain):
         if not actor._toggle['gridmove_start']:
             actor._toggle['gridmove_start'] = True
@@ -163,7 +181,7 @@ class Map:
                     y2 = int(self.gridh * npy + self.gridh / 2 - h / 2)
                     t1len = ((_x-x2)**2 + (_y-y2)**2)**0.5
                     t2len = ((cx-x2)**2 + (cy-y2)**2)**0.5
-                    if t1len < t2len:
+                    if t1len <= t2len:
                         startx = 1
                         startr = [(_x, _y), (x2, y2), curr_pxpy, (npx, npy), dr]
                     if t1len > t2len:
@@ -395,3 +413,8 @@ class Theater:
         if self.background.image:
             self.group.add(self.background)
             self.map._draw_debug_grid(self.background.image)
+
+    @property
+    def name(self):
+        return self.theater_name
+    

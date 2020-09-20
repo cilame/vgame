@@ -127,7 +127,6 @@ class Image:
     def update_image(self, ticks):
         if self.active and self._time_update(ticks):
             self.image = self.src_image.subsurface(next(self.rects)) if self.src_image else next(self.rects)
-            # self.image = next(self.rects)
             if self.showsize: 
                 self.image = pygame.transform.scale(self.image, self.showsize)
             self.mask  = self._mk_mask()

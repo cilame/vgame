@@ -30,7 +30,7 @@ playerimg_r = vgame.Image(p[2], rate=200, showsize=(120,120))
 playerimg_d = vgame.Image(p[3], rate=200, showsize=(120,120))
 playerimg_l = vgame.Image(p[4], rate=200, showsize=(120,120))
 
-player = vgame.Player(playerimg_d, rectsize=(64, 64))
+player = vgame.Player(playerimg_d, rectsize=(64, 64)).map.local((1,1), 10, main)
 player.status['direction'] = { 
     'up':    playerimg_u,
     'down':  playerimg_d,
@@ -48,15 +48,13 @@ def ctl(self, c):
         print(trs)
 
     if self.delay(c and c.get('p1')[1], time=150, delayer='B'):
-        print(self.map, end='\n\n')
+        print(self.theater.name)
+        print(self.map)
 
-enemy = vgame.Enemy(playerimg_d, rectsize=(64, 64))
-enemy.map.local((8,6), 3, main)
-
+enemy = vgame.Enemy(playerimg_d, rectsize=(64, 64)).map.local((8,6), 3, main)
 
 player.direction = direct
 player.control = ctl
-player.map.local((1,1), 10, main)
 
 for i in range(0, 5): vgame.Wall(showsize=(64, 64)).map.local((3, i), float('inf'), main) 
 for i in range(3, 7): vgame.Wall(showsize=(64, 64)).map.local((6, i), float('inf'), main) 
