@@ -588,16 +588,14 @@ class Actor(pygame.sprite.Sprite):
         self.ticks      = None
         self.cam_follow = cam_follow
 
-        self.showpoint  = showpoint
+        self._set_showpoint(showpoint)
         self.bug_check  = None
 
     def _get_showpoint(self):
-        return self._showpoint
+        return self.rect[:2]
 
     def _set_showpoint(self, value):
-        self._showpoint = value
-        if self._showpoint:
-            self.rect[:2] = self._showpoint
+        if value: self.rect[:2] = value
 
     showpoint = property(_get_showpoint, _set_showpoint)
 
@@ -605,8 +603,9 @@ class Actor(pygame.sprite.Sprite):
         if not (img is None or isinstance(img, (str, tuple, pygame.Surface))):
               self.imager = img  
         else: self.imager = Image(img, self.showsize, self.rate, self.masksize)
-        self.image  = self.imager.image
-        self.mask   = self.imager.mask
+        self.image    = self.imager.image
+        self.mask     = self.imager.mask
+        self.showsize = self.image.get_size()
         self.imager.actor = self
         self.status['current'] = self.imager
         return self.imager
@@ -739,7 +738,7 @@ class Actor(pygame.sprite.Sprite):
                         self.theater.map.local(self, axis, obstruct)
                     except AttributeError as e:
                         if 'map' in str(e) and 'NoneType' in str(e):
-                            raise Exception('Before that, please use theater.regist to register the object in theater, '
+                            raise Exception('pls use theater.regist to register the object in theater, '
                                             'or use the third parameter of map.local to register automatically.')
                 return self
             def trace(s, actor_or_point):
@@ -772,8 +771,13 @@ class Actor(pygame.sprite.Sprite):
         if repeat or self._repeat(judge, delayer):
             return judge and self._delay(time, delayer)
 
-    def toggle(self):
+    def toggle(self, open_close:bool=None):
+        # 可以将 open_close 设置成 Ture 或 False 来指定变化的开关状态
+        # 这样也会更方便一些
         alive = self.alive()
+        if open_close != None:
+            if bool(open_close) == True  and     alive: return
+            if bool(open_close) == False and not alive: return
         if alive:
             self.kill()
         else:
@@ -866,6 +870,7 @@ class Menu(Actor):
         if not a:
             kw['img'] = (70, 70, 70, 100)
         super().__init__(*a, **kw)
+        self.group = pygame.sprite.Group()
 
     def pack(self, theater, side, screen=1):
         theater.regist(self)
@@ -882,6 +887,14 @@ class Menu(Actor):
         self.showsize = int(self.rect.w), int(self.rect.h)
         self.aload_image(self.img)
         return self
+
+class Button(Actor):
+    RIGID_BODY = {}
+    def __init__(self, *a, **kw):
+        kw['in_entity'] = False
+        kw['in_entitys'] = []
+        kw['cam_follow'] = False # 菜单一般都不需要镜头跟随的处理，之所以都使用
+        super().__init__(*a, **kw)
 
 # 该处的背景类仅用于规范游戏的范围使用的
 class Background(Actor):

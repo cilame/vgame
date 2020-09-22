@@ -46,4 +46,18 @@ player.mouse = mouse
 
 
 menu = vgame.Menu((247,197,198,255)).pack(main, 'd', .4)
+head = vgame.Button('../test_data/1A00.bmp', showsize=(64, 80)).map.local((10,45), 0, main)
+print(head.showsize)
+menu
+print(menu.add)
+print(menu.group)
+
+
+
+
+
+
+
+
+
 init.run()

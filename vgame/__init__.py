@@ -5,7 +5,7 @@ from pygame.locals import *
 
 from .theater import Theater, Map
 from .actor import Actor, Image, ImageMaker
-from .actor import Player, Wall, Bullet, Enemy, NPC, Menu, Background # 比较高一层的封装
+from .actor import Player, Wall, Bullet, Enemy, NPC, Menu, Background, Button # 比较高一层的封装
 from .actor import Delayer
 
 DEBUG = False
