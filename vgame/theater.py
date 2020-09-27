@@ -138,7 +138,7 @@ class Map:
 
     def direct(self, actor, side, speed=4.):
         x, y = actor.axis
-        w, h = self.mapw, self.maph
+        w, h = self.mapw-1, self.maph-1
         if isinstance(side, int):
             if side == 8: y -= 1; y = 0 if y < 0 else y
             if side == 2: y += 1; y = h if y > h else y
@@ -347,7 +347,7 @@ class Theater:
                  background = None,  # 背景图片，可以传很多类型的数据，详细请看 Image 实例化时的参数
                  size = None,        # 游戏背景大小，背景大小如未设定则使用屏幕大小
                  camera_size = None, # 镜头的尺寸，默认情况下镜头尺寸和游戏背景大小一样
-                 gridsize = (40, 40),
+                 gridsize = (32, 32),
                  ):
 
         game_screen = pygame.display.get_surface() # 游戏屏幕(镜头)显示的大小

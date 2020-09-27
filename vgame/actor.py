@@ -627,14 +627,10 @@ class Actor(pygame.sprite.Sprite):
 
     def getoffset(self):
         if not self.rectsize:
-            return (0, 0)
+            return self.imager.offsets
         else:
-            rect = self.image.get_rect()
-            sx, sy, sw, sh = rect
-            rw, rh = self.rectsize
-            ox = int(sx + sw/2 - rw/2)
-            oy = int(sy + sh/2 - rh/2)
-            return (ox, oy)
+            sx, sy, sw, sh = rect = self.getrect()
+            return (sx, sy)
 
     def regist(self, reg):
         reg.actor = self # 逆向绑定

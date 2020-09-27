@@ -37,10 +37,11 @@ class Image:
     dfont = None
     vgame = None
 
-    def __init__(self, img=None, showsize=None, rate=0, flip=None, masksize=None):
+    def __init__(self, img=None, showsize=None, rate=0, flip=None, masksize=None, offsets=(0,0)):
         # 一些默认配置，用于图片动画的刷新率，可以通过图片名字进行配置
         self.showsize   = showsize # 该参数仅用于对象
-        self.rate       = rate # 不同的单位可以使用不同的速率
+        self.rate       = rate     # 不同的单位可以使用不同的速率
+        self.offsets    = offsets  # 图片展示与真实的rect的偏移
         self.actor      = None
         self.active     = None # 会在加载图片的时候根据图片类型自动设置
         self.src_image  = None
@@ -62,6 +63,11 @@ class Image:
             else:
                 Image.dfont = font.SysFont(pygame.font.get_default_font(), 15)
             Image.vgame = __import__('vgame')
+
+    def _get_size(self):
+        return self.image.get_rect()[2:]
+
+    size = property(_get_size)
 
     def load_img(self,img):
         try:
@@ -118,11 +124,10 @@ class Image:
             # if self.flip:
             #     print(self.flipx, self.flipy)
             #     image = pygame.transform.flip(image, self.flipx, self.flipy)
+            return image
         except:
-            print("无法加载图片.",img)
             print(traceback.format_exc())
-            image = None
-        return image
+            raise Exception("无法加载图片. {}".format(img))
 
     def update_image(self, ticks):
         if self.active and self._time_update(ticks):
@@ -162,8 +167,8 @@ class Image:
             # x, y, w, h = ft.get_rect()
             # self.image.blit(ft, (x+ox, y+oy, w, h))
             # 真实碰撞边框
-            ox, oy = self.actor.offsets
-            x, y, w, h = self.actor.rect
+            ox, oy = self.actor.getoffset()
+            x, y, w, h = self.actor.getrect()
             p1 = ox+0,   oy+0
             p2 = ox+w-1, oy+0 
             p3 = ox+w-1, oy+h-1

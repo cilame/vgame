@@ -53,7 +53,7 @@ class Artist:
             _camera.update()
             for sprite in self.theaters[self.current].group:
                 if sprite.cam_follow:
-                    (x, y, w, h), (ox, oy) = _camera.apply(sprite), sprite.offsets
+                    (x, y, w, h), (ox, oy) = _camera.apply(sprite), sprite.getoffset()
                     self.screen.blit(sprite.image, (x-ox, y-ox, w, h))
                 else:
                     self.screen.blit(sprite.image, sprite.rect)
