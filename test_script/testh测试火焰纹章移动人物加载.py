@@ -13,37 +13,42 @@ vgame.DEBUG = True
 # vgame.Player.DEBUG = True
 vgame.Map.DEBUG = True
 
-# hywz = '../test_data/hywz/hywz.gif'
-hywz = '../test_data/hywz/2.png'
-
 init = vgame.Initer()
-imake = vgame.ImageMaker(hywz)
-s = imake.gridcut((64, 64))
-p = []
-for i in range(int(len(s)/3)):
-    v = s[i*3:(i+1)*3]
-    p.append(v)
+main = vgame.Theater('main', gridsize=(32, 32))
 
-main = vgame.Theater('main', gridsize=(64, 64))
-playerimg_u = vgame.Image(p[1], rate=200, showsize=(120,120))
-playerimg_r = vgame.Image(p[2], rate=200, showsize=(120,120))
-playerimg_d = vgame.Image(p[3], rate=200, showsize=(120,120))
-playerimg_l = vgame.Image(p[4], rate=200, showsize=(120,120))
 
-player = vgame.Player(playerimg_d, rectsize=(64, 64)).map.local((1,1), 10, main)
-player.status['direction'] = { 
-    'up':    playerimg_u,
-    'down':  playerimg_d,
-    'right': playerimg_r,
-    'left':  playerimg_l,
-}
+
+hywz1 = '../test_data/hywz/1.png'
+hywz2 = '../test_data/hywz/2.png'
+hywz3 = '../test_data/hywz/3.png'
+
+def load_images(imgpath, Class, theater, local, speed):
+    imake = vgame.ImageMaker(imgpath)
+    s = imake.gridcut((64, 64))
+    p = []
+    for i in range(int(len(s)/3)):
+        v = s[i*3:(i+1)*3]
+        p.append(v)
+    unit_img_u = vgame.Image(p[1], rate=200, showsize=(60,60))
+    unit_img_r = vgame.Image(p[2], rate=200, showsize=(60,60))
+    unit_img_d = vgame.Image(p[3], rate=200, showsize=(60,60))
+    unit_img_l = vgame.Image(p[4], rate=200, showsize=(60,60))
+    unit_ = vgame.Player(unit_img_d, rectsize=(32, 32)).map.local(local, speed, theater)
+    unit_.status['direction'] = { 
+        'up':    unit_img_u,
+        'down':  unit_img_d,
+        'right': unit_img_r,
+        'left':  unit_img_l,
+    }
+    return unit_
+
 def direct(self, d):
     if d: 
         self.mover.move(d.get('p1'))
 
 def ctl(self, c):
     if self.delay(c and c.get('p1')[0], time=150, delayer='A'):
-        trs = self.map.trace((8, 6))
+        trs = self.map.trace(enemy1)
         self.map.move(trs, 10)
         print(trs)
 
@@ -51,12 +56,26 @@ def ctl(self, c):
         print(self.theater.name)
         print(self.map)
 
-enemy = vgame.Enemy(playerimg_d, rectsize=(64, 64)).map.local((8,6), 3, main)
+def e_idle(self, i):
+    import random
+    w, h = main.map.size
+    x = random.randint(0, w-1)
+    y = random.randint(0, h-1)
+    trs = self.map.trace((x, y))
+    self.map.move(trs, 1)
 
+player = load_images(hywz1, vgame.Player, main, (1,1), 10)
 player.direction = direct
 player.control = ctl
 
-for i in range(0, 5): vgame.Wall(showsize=(64, 64)).map.local((3, i), float('inf'), main) 
-for i in range(3, 7): vgame.Wall(showsize=(64, 64)).map.local((6, i), float('inf'), main) 
+enemy1 = load_images(hywz2, vgame.Enemy, main, (8,6), 1)
+enemy2 = load_images(hywz3, vgame.Enemy, main, (6,6), 1)
+enemy1.idle = e_idle
+enemy2.idle = e_idle
+
+print(main.map.size)
+
+for i in range(0, 5): vgame.Wall(showsize=(32, 32)).map.local((3, i), float('inf'), main) 
+for i in range(3, 7): vgame.Wall(showsize=(32, 32)).map.local((6, i), float('inf'), main) 
 
 init.run()
