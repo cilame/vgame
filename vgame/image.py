@@ -82,7 +82,7 @@ class Image:
                 self.active    = True
                 self.src_image = None
                 self.cur_tick  = 0
-                self.rects     = cycle(img)
+                self.rects     = cycle([pygame.transform.flip(image, self.flipx, self.flipy) if self.flip else image for image in img])
                 image = next(self.rects)
             elif isinstance(img, str) and os.path.isdir(img):
                 imgfs, imgfv = {}, []
@@ -168,7 +168,7 @@ class Image:
             # self.image.blit(ft, (x+ox, y+oy, w, h))
             # 真实碰撞边框
             ox, oy = self.actor.getoffset()
-            x, y, w, h = self.actor.getrect()
+            x, y, w, h = self.actor.rect
             p1 = ox+0,   oy+0
             p2 = ox+w-1, oy+0 
             p3 = ox+w-1, oy+h-1

@@ -54,7 +54,7 @@ class Artist:
             for sprite in self.theaters[self.current].group:
                 if sprite.cam_follow:
                     (x, y, w, h), (ox, oy) = _camera.apply(sprite), sprite.getoffset()
-                    self.screen.blit(sprite.image, (x-ox, y-ox, w, h))
+                    self.screen.blit(sprite.image, (x-ox, y-oy, w, h))
                 else:
                     self.screen.blit(sprite.image, sprite.rect)
             _camera.debug_padding()

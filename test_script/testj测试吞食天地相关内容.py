@@ -36,9 +36,9 @@ playerimg_d = vgame.Image(p[0], rate=200, showsize=(32,32))
 playerimg_r = vgame.Image(p[2], rate=200, showsize=(32,32))
 playerimg_l = vgame.Image(p[1], rate=200, showsize=(32,32))
 player = vgame.Player(playerimg_d, rectsize=(32, 32)).map.local((1,1), 10, main)
-# player.status['direction']['up']    = playerimg_u
-# player.status['direction']['down']  = playerimg_d
-# player.status['direction']['right'] = playerimg_r
+player.status['direction']['up']    = playerimg_u
+player.status['direction']['down']  = playerimg_d
+player.status['direction']['right'] = playerimg_r
 player.status['direction']['left']  = playerimg_l
 
 def direct(self, d):
@@ -48,14 +48,15 @@ player.direction = direct
 atk = '../test_data/fc吞食天地素材/战斗_头像图/攻击图1.png'
 imake = vgame.ImageMaker(atk)
 s = imake.gridcut((192, 192))
-playerimg_a = vgame.Image(s[8:10], rate=200, showsize=(192,192))
-player.status['direction']['atk'] = playerimg_a
+playerimg_a_right = vgame.Image(s[8:10], rate=200, showsize=(192,192), offsets=(-80,80))
+playerimg_a_left  = vgame.Image(s[8:10], rate=200, showsize=(192,192), offsets=(80,80), flip='x')
+player.status['direction']['atkr'] = playerimg_a_right
+player.status['direction']['atkl'] = playerimg_a_left
 def ctl(self, c):
     if self.delay(c and c.get('p1')[0], delayer='A'):
-        self.aload_image(self.status['direction']['atk'])
-        print('ok')
+        self.aload_image(self.status['direction']['atkr'])
     if self.delay(c and c.get('p1')[1], delayer='B'):
-        init.quit()
+        self.aload_image(self.status['direction']['atkl'])
 
 player.control = ctl
 
