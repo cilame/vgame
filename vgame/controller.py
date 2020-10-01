@@ -44,21 +44,21 @@ class Controller:
         self.limit_len    = 3.   # 一个阈值，与鼠标按下松开时，两点坐标点距离有关
 
         # 用于键盘方向操作的参数，目前可支持2p（由于处理方向键的延迟处理有点特殊，所以需要这样处理）
-        self.direction_key_tick_p1  = 0  # 后期发现只用 self._delay 函数，如果混合其他操作可能会出现灵敏丢失的情况
-        self.direction_key_delay_p1 = 15 # 所以最后还是把键盘的操作延时也单独出来了
+        self.direction_key_tick_p1  = 0 # 后期发现只用 self._delay 函数，如果混合其他操作可能会出现灵敏丢失的情况
+        self.direction_key_delay_p1 = 1 # 所以最后还是把键盘的操作延时也单独出来了，不过后续发现最好还是在 actor 内实现延迟会更好
         self.direction_keys_p1      = Direction(*[pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d])
         self.un_oblique_p1          = 0  # 如果没有斜角操作的话，处理斜角的操作滞粘操作参数
         self.direction_key_tick_p2  = 0
-        self.direction_key_delay_p2 = 15
+        self.direction_key_delay_p2 = 1
         self.direction_keys_p2      = Direction(*[pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT])
         self.un_oblique_p2          = 0
 
         # 用于键盘控制操作的参数
         self.control_key_tick_p1  = 0
-        self.control_key_delay_p1 = 15
+        self.control_key_delay_p1 = 1
         self.control_keys_p1      = [pygame.K_j, pygame.K_k]
         self.control_key_tick_p2  = 0
-        self.control_key_delay_p2 = 15
+        self.control_key_delay_p2 = 1
         self.control_keys_p2      = [pygame.K_KP1, pygame.K_KP2] # 小键盘数字键
 
         # 用于实现栈效果式的更新函数
