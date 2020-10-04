@@ -51,7 +51,8 @@ class Image:
         if self.flip:
             self.flipx  = 'x' in flip or 'X' in flip
             self.flipy  = 'y' in flip or 'Y' in flip
-        self.image      = self.load_img(img)
+        self.orig_image = self.load_img(img)
+        self.image      = self.orig_image
 
         self.masksize   = masksize # mask 主要用于处理碰撞检测
         self.mask       = self._mk_mask()
@@ -131,10 +132,11 @@ class Image:
 
     def update_image(self, ticks):
         if self.active and self._time_update(ticks):
-            self.image = self.src_image.subsurface(next(self.rects)) if self.src_image else next(self.rects)
+            self.orig_image = self.src_image.subsurface(next(self.rects)) if self.src_image else next(self.rects)
             if self.showsize: 
-                self.image = pygame.transform.scale(self.image, self.showsize)
+                self.orig_image = pygame.transform.scale(self.orig_image, self.showsize)
             self.mask  = self._mk_mask()
+        self.image = self.orig_image.copy()
         self._delay_bind_debug()
 
     def _mk_mask(self):

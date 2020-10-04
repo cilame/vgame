@@ -26,15 +26,10 @@ gy = '../test_data/fc吞食天地素材/行走图/关羽.png'
 vgame.Image(gy)
 imake = vgame.ImageMaker(gy)
 s = imake.gridcut((32, 32))
-p = []
-for i in range(int(len(s)/4)):
-    v = s[i*4:(i+1)*4]
-    p.append(v)
-
-playerimg_u = vgame.Image(p[3], rate=200, showsize=(32,32))
-playerimg_d = vgame.Image(p[0], rate=200, showsize=(32,32))
-playerimg_r = vgame.Image(p[2], rate=200, showsize=(32,32))
-playerimg_l = vgame.Image(p[1], rate=200, showsize=(32,32))
+playerimg_u = vgame.Image(s[12:16], rate=200, showsize=(32,32))
+playerimg_d = vgame.Image(s[ 0: 4], rate=200, showsize=(32,32))
+playerimg_r = vgame.Image(s[ 8:12], rate=200, showsize=(32,32))
+playerimg_l = vgame.Image(s[ 4: 8], rate=200, showsize=(32,32))
 player = vgame.Player(playerimg_d, rectsize=(32, 32)).map.local((1,1), 10, main)
 player.status['direction']['up']    = playerimg_u
 player.status['direction']['down']  = playerimg_d
@@ -53,9 +48,9 @@ playerimg_a_left  = vgame.Image(s[8:10], rate=200, showsize=(192,192), offsets=(
 player.status['direction']['atkr'] = playerimg_a_right
 player.status['direction']['atkl'] = playerimg_a_left
 def ctl(self, c):
-    if self.delay(c and c.get('p1')[0], delayer='A'):
+    if self.delay(c and c.get('p1')[0]):
         self.aload_image(self.status['direction']['atkr'])
-    if self.delay(c and c.get('p1')[1], delayer='B'):
+    if self.delay(c and c.get('p1')[1]):
         self.aload_image(self.status['direction']['atkl'])
 
 player.control = ctl

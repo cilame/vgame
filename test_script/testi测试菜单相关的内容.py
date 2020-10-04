@@ -25,7 +25,6 @@ def mouse(self, m):
         if m[0] == 2 and m[1] == 0:
             menu.toggle()
 
-
 def ctl(self, c):
     # J 键切换显示/隐藏菜单
     if self.delay(c and c.get('p1')[0], time=0):
@@ -43,21 +42,28 @@ player.direction = direct
 player.mouse = mouse
 
 
+vgame.Menu.DEBUG = True
+bgcolor = (247,197,198,255)
+menu = vgame.Menu(bgcolor).init(main, 'd', 1, (7, 3))
+head1 = vgame.Button('../test_data/1A00.bmp', showsize=(64, 80))#.map.local((10,45), 0, main)
+head2 = vgame.Button('../test_data/1A00.bmp', showsize=(64, 80))#.map.local((10,45), 0, main)
+
+menu.local(head1, (1, 1))
+menu.local(head2, (2, 1))
+menu.local(head1, (3, 1))
 
 
-menu = vgame.Menu((247,197,198,255)).pack(main, 'd', .4)
-head = vgame.Button('../test_data/1A00.bmp', showsize=(64, 80)).map.local((10,45), 0, main)
-print(head.showsize)
-menu
-print(menu.add)
-print(menu.group)
+def click(self, m):
+    print(self, m)
 
+# def m_over():
+#     print(123)
+# def m_out():
+#     print(333)
 
-
-
-
-
-
-
+head1.click = click
+head2.click = click
+# head1.mouseover = m_over
+# head1.mouseout = m_out
 
 init.run()

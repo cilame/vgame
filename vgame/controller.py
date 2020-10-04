@@ -19,12 +19,9 @@ class Direction:
 class Controller:
     '''
     控制事件的对象，每个 Actor 都会生成一个属于他们自身的 Controller 对象在类内部，
-    可以通过 in_control 参数进行配置是否需要使用控制处理
     '''
-    def __init__(self, in_control=False):
-        # 
+    def __init__(self):
         self.actor    = None
-        self.cur_tick = 0    # 总延时帧率部分的参数
 
         # 因为之后设计的所有按键操作都将会“放弃”通过 pygame.event.get() 获取事件的方式来获取控制
         # 因为 pygame.event.get() 多次在不同地方使用的时候，会出现各种问题（测试结论）。
@@ -41,7 +38,7 @@ class Controller:
         self.mouse_delay  = 300  # 鼠标按下多久不动后转变成地图拖拽模式
         self.cross_time   = False
         self.cross_status = 0    # 判断状态（0判断，1单击，2框选，3地图拖拽）
-        self.limit_len    = 3.   # 一个阈值，与鼠标按下松开时，两点坐标点距离有关
+        self.limit_len    = 5.   # 一个阈值，与鼠标按下松开时，两点坐标点距离有关
 
         # 用于键盘方向操作的参数，目前可支持2p（由于处理方向键的延迟处理有点特殊，所以需要这样处理）
         self.direction_key_tick_p1  = 0 # 后期发现只用 self._delay 函数，如果混合其他操作可能会出现灵敏丢失的情况
@@ -65,8 +62,7 @@ class Controller:
         self.update_stack = []
 
         # 直接通过 action参数实现对update函数的内置函数的配置
-        if in_control:
-            self.update_stack.append(self.update_select_cursor)
+        self.update_stack.append(self.update_select_cursor)
 
     def update(self,ticks):
         # 这里的处理暂时没有特别的必要，但是一个操作捕捉的栈空间或许后续可以扩充功能

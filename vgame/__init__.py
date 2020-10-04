@@ -62,7 +62,10 @@ class Artist:
             # 菜单，最后更新即为置顶
             self.theaters[self.current].group_menu.update(ticks)
             for menu in self.theaters[self.current].group_menu:
+                menu.group.update(ticks)
                 self.screen.blit(menu.image, menu.rect)
+                for sprite in menu.group:
+                    self.screen.blit(sprite.image, sprite.rect)
 
         pygame.display.flip()
 

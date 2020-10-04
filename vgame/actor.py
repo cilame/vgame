@@ -227,7 +227,8 @@ class Clicker:
                     self.actor.rect[0] = ex - dx
                     self.actor.rect[1] = ey - dy
 
-
+    def collide(self, pos):
+        return self.actor.rect.collidepoint(pos)
 
 class Actor(pygame.sprite.Sprite):
     '''
@@ -273,6 +274,7 @@ class Actor(pygame.sprite.Sprite):
         self.mask       = None
         self.status     = {}
         self.status['current']   = None
+        self.status['before']    = None
         self.status['default']   = self.aload_image(img)
         self.status['direction'] = {}
 
@@ -283,12 +285,12 @@ class Actor(pygame.sprite.Sprite):
         self.rect       = self.getrect()
         self.offsets    = self.getoffset()
         self.theater    = None # 将该对象注册进 theater之后会自动绑定相应的 theater。
-        self.controller = self.regist(Controller(in_control))
-        self.idler      = self.regist(Delayer())
+        self.controller = self.regist(Controller())
         self.delayers   = {}
         self.repeaters  = {}
         self._regist    = None
-        self._idler     = self.regist(Delayer())
+        self._inner_dly = self.regist(Delayer())
+        self._idler_dly = self.regist(Delayer())
         self._mouse_dly = self.regist(Delayer())
         self._dirct_dly = self.regist(Delayer())
         self._contl_dly = self.regist(Delayer())
@@ -300,6 +302,7 @@ class Actor(pygame.sprite.Sprite):
         self.in_entitys = in_entitys if in_entitys is not None else ENTITYS_DEFAULT.copy()
         self.ticks      = None
         self.cam_follow = cam_follow
+        self._tuning    = {}
 
         self._set_showpoint(showpoint)
         self.bug_check  = None
@@ -313,6 +316,7 @@ class Actor(pygame.sprite.Sprite):
     showpoint = property(_get_showpoint, _set_showpoint)
 
     def aload_image(self, img):
+        self.status['before'] = self.imager
         if not (img is None or isinstance(img, (str, tuple, pygame.Surface))):
               self.imager = img  
         else: self.imager = Image(img, self.showsize, self.rate, self.masksize)
@@ -360,7 +364,7 @@ class Actor(pygame.sprite.Sprite):
     def update(self,ticks):
         if not self.bug_check:
             # 这小块的代码用于处理一些参数配置时候的不妥当，在运行时进行一次简单的自检，方便查出问题。
-            # 有什么需要检测的 actor 配置参数异常的可能性，可以在该处预先检查，不过目前暂时已经没用了。
+            # 有什么需要检测的 actor 配置参数异常的可能性，可以在该处预先检查，不过目前暂时没用了。
             self.bug_check = True
 
         self.ticks = ticks
@@ -369,33 +373,14 @@ class Actor(pygame.sprite.Sprite):
         self.mask  = self.imager.mask
         if self.in_control:
             m, d, c = self.controller.update(ticks)
-            # 用小技巧实现重载
-            # 根据函数的参数数量，来决定是否传入 Actor 对象自身。
-            # 但是有时候传入自身可能会对新手造成一定困惑，我也不想一定要传入自身，下面的代码可以兼容两者
-            # 鼠标操作
-            if self._mouse_dly.update(ticks):
-                if   self.mouse.__code__.co_argcount == 1: self.mouse(m)
-                elif self.mouse.__code__.co_argcount == 2: self.mouse(self, m)
-                elif self.mouse.__code__.co_argcount == 3: self.mouse(self, m, ticks)
-            # 控制键操作
-            if self._contl_dly.update(ticks):
-                if   self.control.__code__.co_argcount == 1: self.control(c)    
-                elif self.control.__code__.co_argcount == 2: self.control(self, c)
-                elif self.control.__code__.co_argcount == 3: self.control(self, c, ticks)
-            # 方向键操作
-            if self._dirct_dly.update(ticks):
-                if   self.direction.__code__.co_argcount == 1: self.direction(d)
-                elif self.direction.__code__.co_argcount == 2: self.direction(self, d)
-                elif self.direction.__code__.co_argcount == 3: self.direction(self, d, c)
-                elif self.direction.__code__.co_argcount == 4: self.direction(self, d, c, ticks) # 2d卷轴游戏可能需要别的键作为跳跃功能，所以需要处理更多消息
-        # 空闲状态的持续执行的函数
-        if self.idler.update(ticks):
-            if   self.idle.__code__.co_argcount == 0: self.idle()
-            elif self.idle.__code__.co_argcount == 1: self.idle(self)
-            elif self.idle.__code__.co_argcount == 2: self.idle(self, {'mouse':m, 'direction':d, 'control':c})
-            elif self.idle.__code__.co_argcount == 2: self.idle(self, {'mouse':m, 'direction':d, 'control':c}, ticks)
+            # [鼠标操作/控制键操作/方向键操作]
+            if self._mouse_dly.update(ticks): self._amouse(m, ticks)
+            if self._contl_dly.update(ticks): self._acontrol(c, ticks)
+            if self._dirct_dly.update(ticks): self._adirction(d, c, ticks)
+        # 空闲状态时执行的函数
+        if self._idler_dly.update(ticks): self._aidle(ticks)
         # 不对外暴露的循环，用于处理某些需要延时操作的动作
-        if self._idler.update(ticks):
+        if self._inner_dly.update(ticks):
             for ch in self._chain:
                 if self._chain[ch]:
                     # immediate 为是否立即执行，用于在有序执行中插入无耗时函数的方式
@@ -406,8 +391,8 @@ class Actor(pygame.sprite.Sprite):
                         func, a, immediate = self._chain[ch].pop(0)
                         func(*a)
 
-        # 延迟绑定，让开发者更方便的开发。
         self.mover._delay_bind()
+        self._image_tuning()
 
     def collide(self, *list_sprite):
         scollide = pygame.sprite.spritecollide(self, self.theater.group, False, pygame.sprite.collide_mask)
@@ -433,15 +418,29 @@ class Actor(pygame.sprite.Sprite):
 
     @staticmethod
     def mouse(mouse_info): pass
-
+    def _amouse(self, m, ticks):
+        if   self.mouse.__code__.co_argcount == 1: self.mouse(m)
+        elif self.mouse.__code__.co_argcount == 2: self.mouse(self, m)
+        elif self.mouse.__code__.co_argcount == 3: self.mouse(self, m, ticks)
     @staticmethod
     def direction(direction_info): pass
-
+    def _adirction(self, d, c, ticks):
+        if   self.direction.__code__.co_argcount == 1: self.direction(d)
+        elif self.direction.__code__.co_argcount == 2: self.direction(self, d)
+        elif self.direction.__code__.co_argcount == 3: self.direction(self, d, c)
+        elif self.direction.__code__.co_argcount == 4: self.direction(self, d, c, ticks) # 2d卷轴游戏可能需要别的键作为跳跃功能，所以需要处理更多消息
     @staticmethod
     def control(control_info): pass
-
+    def _acontrol(self, c, ticks):
+        if   self.control.__code__.co_argcount == 1: self.control(c)    
+        elif self.control.__code__.co_argcount == 2: self.control(self, c)
+        elif self.control.__code__.co_argcount == 3: self.control(self, c, ticks)
     @staticmethod
     def idle(): pass
+    def _aidle(self, ticks):
+        if   self.idle.__code__.co_argcount == 0: self.idle()
+        elif self.idle.__code__.co_argcount == 1: self.idle(self)
+        elif self.idle.__code__.co_argcount == 2: self.idle(self, ticks)
 
     @property
     def map(self):
@@ -486,7 +485,10 @@ class Actor(pygame.sprite.Sprite):
         self.repeaters[delayer] = judge
         return bool(judge) != bool(pjudge)
 
-    def delay(self, judge, time=0, delayer='default', repeat=False):
+    def delay(self, judge, time=0, repeat=False, delayer=None):
+        if delayer == None:
+            s = inspect.stack()[1]
+            delayer = '{}:{}'.format(id(s.frame), s.lineno) # 让 delay 函数调用在不同的位置使用不同的 delayer 的魔法
         if repeat or self._repeat(judge, delayer):
             return judge and self._delay(time, delayer)
 
@@ -500,8 +502,8 @@ class Actor(pygame.sprite.Sprite):
         if alive:
             self.kill()
         else:
-            self._regist(self)
             # 恢复碰撞检测
+            self._regist(self)
             cur = self.theater.artist.current
             if self not in self.RIGID_BODY[cur]:
                 self.RIGID_BODY[cur].append(self)
@@ -514,6 +516,10 @@ class Actor(pygame.sprite.Sprite):
                     self.theater.map.map2d._local_del(self.axis, self.obstruct)
             else:
                 self.theater.map.map2d._local_add(self.axis, self.obstruct)
+
+    def _image_tuning(self):
+        for k in sorted(self._tuning):
+            self.image = self._tuning[k](self.image)
 
     def __setattr__(self, key, value):
         if 'in_control' in self.__dict__ \
@@ -581,7 +587,18 @@ ENTITYS_DEFAULT = [Wall]
 # 因为这样分层管理起来会更加容易的实现前景，背景之类谁先谁后渲染顺序的处理，例如“菜单”必须要置顶于游戏之上
 # 否则菜单就没有意义。
 class Menu(Actor):
+    DEBUG = False
     RIGID_BODY = {}
+
+    # Hover
+    class HoverImage(Actor):
+        RIGID_BODY = {}
+        def __init__(self, *a, **kw):
+            kw['in_entity'] = False
+            kw['in_entitys'] = []
+            kw['cam_follow'] = False # 背景需要镜头跟随的处理，之所以都使用
+            super().__init__(*a, **kw)
+
     def __init__(self, *a, **kw):
         kw['in_entity'] = False
         kw['in_entitys'] = []
@@ -590,22 +607,70 @@ class Menu(Actor):
             kw['img'] = (70, 70, 70, 100)
         super().__init__(*a, **kw)
         self.group = pygame.sprite.Group()
+        self.grid = (1, 1)
 
-    def pack(self, theater, side, screen=1):
-        theater.regist(self)
-        if side == 'd' or side == 'u':
-            self.rect.w = theater.size[0]
-            self.rect.h = theater.size[1]*screen
-        if side == 'r' or side == 'l':
-            self.rect.w = theater.size[0]*screen
-            self.rect.h = theater.size[1]
-
+    def init(self, theater, side, ratio=1, grid=None):
+        theater.regist_menu(self)
+        if isinstance(ratio, (int, float)):
+            kw = kh = ratio
+        if isinstance(ratio, (tuple, list)):
+            kw, kh = ratio
+        ta = 'd' in side or 'u' in side
+        tb = 'r' in side or 'l' in side
+        if ta and tb:
+            self.rect.h = theater.size[1]*kh
+            self.rect.w = theater.size[0]*kw
+        else:
+            if ta:
+                self.rect.h = theater.size[1]*kh
+                self.rect.w = theater.size[0]
+            if tb:
+                self.rect.w = theater.size[0]*kw
+                self.rect.h = theater.size[1]
         w, h = theater.size
-        if side == 'd': self.rect.y = h - self.rect.h
-        if side == 'r': self.rect.x = w - self.rect.w
+        if 'd' in side: self.rect.y = h - self.rect.h
+        if 'r' in side: self.rect.x = w - self.rect.w
         self.showsize = int(self.rect.w), int(self.rect.h)
-        self.aload_image(self.img)
+        img = self.aload_image(self.img)
+        if self.DEBUG:
+            self.aload_image(self._griddraw(img.image, grid))
+
+        # self._get_gridcenter(theater, img.image, grid)
+        self.grid    = grid    if grid    else self.grid
+        self.theater = theater if theater else self.theater
         return self
+
+    def local(self, actor, axis):
+        center_map = self._get_gridcenter(self.theater, self.grid)
+        cx, cy = center_map[tuple(axis)]
+        _, _, iw, ih = actor.rect
+        actor.rect.x = int(cx-iw/2)
+        actor.rect.y = int(cy-ih/2)
+        actor.axis = axis
+        self.group.add(actor)
+
+    def _griddraw(self, image, grid):
+        x, y, w, h = image.get_rect()
+        xw, xh = grid
+        gw, gh = int(w/xw), int(h/xh)
+        for x in range(0, w, gw):
+            pygame.draw.line(image, vgame.Artist.GRID_LINE_COLOR_MAP_DEBUG, (x, 0), (x, h))
+        for y in range(0, h, gh):
+            pygame.draw.line(image, vgame.Artist.GRID_LINE_COLOR_MAP_DEBUG, (0, y), (w, y))
+        return image
+
+    def _get_gridcenter(self, theater, grid):
+        ox, oy, w, h = self.rect
+        ww, wh = theater.size
+        xw, xh = grid
+        gw, gh = int(w/xw), int(h/xh)
+        center_map = {}
+        for ix, x in enumerate(range(0, w, gw)):
+            for iy, y in enumerate(range(0, h, gh)):
+                _x, _y = int(x+gw/2+ox), int(y+gh/2+oy)
+                if _x <= ww and _y <= wh:
+                    center_map[(ix, iy)] = _x, _y
+        return center_map
 
 class Button(Actor):
     RIGID_BODY = {}
@@ -613,7 +678,93 @@ class Button(Actor):
         kw['in_entity'] = False
         kw['in_entitys'] = []
         kw['cam_follow'] = False # 菜单一般都不需要镜头跟随的处理，之所以都使用
-        super().__init__(*a, **kw)
+        kw['in_control'] = True
+        supe = super()
+        supe.__init__(*a, **kw)
+        self.mouse_pos = pygame.mouse.get_pos()
+        self.mouse_stat = self._get_mouse_stat()
+        self._hover_dly = self.regist(Delayer(30))
+        self._init_hover_color()
+
+    @staticmethod
+    def mouse(self, m):
+        if m:
+            if m[1] == 0:
+                if self.clicker.collide(m[2][0]):
+                    self._click(m)
+
+    @staticmethod
+    def click(): pass
+
+    def _click(self, m):
+        if   self.click.__code__.co_argcount == 0: self.click()
+        elif self.click.__code__.co_argcount == 1: self.click(m)
+        elif self.click.__code__.co_argcount == 2: self.click(self, m)
+
+    @staticmethod
+    def idle(self, ticks):
+        pos = pygame.mouse.get_pos()
+        if self.mouse_pos != pos:
+            self.mouse_pos = pos
+            mstat = self._get_mouse_stat()
+            if mstat != self.mouse_stat:
+                self.mouse_stat = mstat
+                if mstat == 'over':
+                    self._mouseover()
+                    self.hover(True)
+                elif mstat == 'out':
+                    self._mouseout()
+                    self.hover(False)
+        if self._hover_dly.update(ticks):
+            self._hover_aph = next(self._hover_lst)
+
+    def _get_mouse_stat(self):
+        return 'over' if self.clicker.collide(self.mouse_pos) else 'out'
+
+    @staticmethod
+    def mouseover(self): pass
+    def _mouseover(self):
+        if   self.mouseover.__code__.co_argcount == 0: self.mouseover()
+        elif self.mouseover.__code__.co_argcount == 1: self.mouseover(self)
+    @staticmethod
+    def mouseout(self): pass
+    def _mouseout(self):
+        if   self.mouseout.__code__.co_argcount == 0: self.mouseout()
+        elif self.mouseout.__code__.co_argcount == 1: self.mouseout(self)
+
+    def _init_hover_color(self):
+        colors = list(range(20, 200, 20))
+        self._hover_lst = cycle(colors + colors[::-1])
+        self._hover_col = (255, 255, 255)
+        self._hover_aph = next(self._hover_lst)
+
+    def hover(self, toggle=True):
+        def func(image):
+            bg = Menu.HoverImage((*self._hover_col,self._hover_aph), showsize=image.get_rect()[2:])
+            image.blit(bg.image, bg.rect)
+            del bg
+            return image
+        if toggle:
+            self._init_hover_color()
+            self._tuning[0] = func
+        else:
+            del self._tuning[0]
+
+    @property
+    def menu(self):
+        class _menu:
+            def local(s, axis, menu):
+                assert isinstance(menu, Menu), 'menu must be vgame.Menu object.'
+                menu.local(self, axis)
+                return self
+        return _menu()
+
+
+
+
+
+
+
 
 # 该处的背景类仅用于规范游戏的范围使用的
 class Background(Actor):
