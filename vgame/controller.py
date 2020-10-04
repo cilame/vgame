@@ -20,6 +20,7 @@ class Controller:
     '''
     控制事件的对象，每个 Actor 都会生成一个属于他们自身的 Controller 对象在类内部，
     '''
+    roll = 0
     def __init__(self):
         self.actor    = None
 
@@ -89,78 +90,36 @@ class Controller:
     #==============#
     # 一般鼠标操作 #
     #==============#
-    # 鼠标的操作有两个函数，分别表示两种处理方式
-    # model=='a': 这种类型仅含单击和框选两种模式
-    # model=='b': 这种类型包含单击、框选和长按三种模式
-    # 该两个函数的返回参数均如下所示，仅在功能上是否返回3这点区别
-    # 返回的参数为 按键id（0左键，2右键），功能（1单击，2直接框选，3按住后再拖动），起点坐标，终点坐标
-    # 非常建议使用 a 类，这种处理非常顺滑，
+    # 返回的参数为 按键id（0左键，1滚轮，2右键），功能（0单击，2拖动，4滚轮前滚，5滚轮后滚），起点坐标，终点坐标
+    # 注意，滚轮有滚动操作和按下操作两种，
     def general_mouse_key(self,ticks,model='a'):
+        if self.roll:
+            cur_pos = pygame.mouse.get_pos()
+            return (1, self.roll, (cur_pos, cur_pos))
         rem = self._mouse_pressed() 
         # rem 究竟是什么，详细请看 _mouse_pressed 函数注释。
         # 注意：general_mouse_key 函数返回的参数 和 _mouse_pressed 看上去有点像，但实际上不一样。
-        # 注意其中区别，并且 general_mouse_key 将放弃鼠标中间点击的消息返回。
         # 这里的点击模式仅仅包含单击和框选两种处理方式
-        def model_a(rem):
-            if rem and rem[0] in (0, 2):
-                if self.cross_status == 0:
-                    if rem[1] == 1:
-                        if rem[4] >= self.limit_len:
-                            self.cross_status = 2
-                    if rem[1] == 2:
-                        if rem[4] >= self.limit_len:
-                            self.cross_status = 2
-                        else:
-                            self.cross_status = 1
-                # 1单击状态 # 就是鼠标单击
-                if self.cross_status == 1:
+        if rem and rem[0] in (0, 1, 2):
+            if self.cross_status == 0:
+                if rem[1] == 1:
+                    if rem[4] >= self.limit_len:
+                        self.cross_status = 2
+                if rem[1] == 2:
+                    if rem[4] >= self.limit_len:
+                        self.cross_status = 2
+                    else:
+                        self.cross_status = 1
+            # 1单击状态 # 就是鼠标单击
+            if self.cross_status == 1:
+                self.cross_status = 0
+                return rem[0], self.cross_status, rem[2:4]
+            # 2框选状态 # 鼠标快速框选某个区域
+            if self.cross_status == 2:
+                if rem[1] == 2:
                     self.cross_status = 0
+                else:
                     return rem[0], self.cross_status, rem[2:4]
-                # 2框选状态 # 鼠标快速框选某个区域
-                if self.cross_status == 2:
-                    if rem[1] == 2:
-                        self.cross_status = 0
-                    else:
-                        return rem[0], self.cross_status, rem[2:4]
-        # 这里的点击模式包含单击、框选和长按拖动三种模式
-        def model_b(rem):
-            if rem and rem[0] in (0, 2):
-                if self.cross_status == 0:
-                    if rem[1] == 1:
-                        # 随时检查长度和时间
-                        if self._mouse_delay(ticks):
-                            if self.cross_time:
-                                if rem[4] < self.limit_len:
-                                    self.cross_status = 3
-                                if rem[4] >= self.limit_len:
-                                    self.cross_status = 2
-                            self.cross_time = True
-                    if rem[1] == 2:
-                        if rem[4] >= self.limit_len:
-                            self.cross_status = 2
-                        else:
-                            self.cross_status = 1
-                            self.cross_time = False
-                # 1单击状态 # 就是鼠标单击
-                if self.cross_status == 1:
-                    self.cross_status = 0
-                    return rem[0], self.cross_status, rem[2:4]
-                # 2框选状态 # 鼠标快速框选某个区域
-                if self.cross_status == 2:
-                    if rem[1] == 2:
-                        self.cross_status = 0
-                        self.cross_time = False
-                    else:
-                        return rem[0], self.cross_status, rem[2:4]
-                # 3地图状态 # 鼠标长按一点，然后拖动
-                if self.cross_status == 3:
-                    if rem[1] == 2:
-                        self.cross_status = 0
-                        self.cross_time = False
-                    else:
-                        return rem[0], self.cross_status, rem[2:4]
-        if model == 'a': return model_a(rem)
-        if model == 'b': return model_b(rem)
     def _mouse_delay(self,ticks):
         # 鼠标的延迟在这里更类似于一种等待，实现鼠标长按功能
         if ticks - self.mouse_tick > self.mouse_delay:

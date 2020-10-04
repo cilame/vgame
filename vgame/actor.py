@@ -6,7 +6,7 @@ from itertools import cycle, product
 import pygame
 from pygame.locals import *
 
-from .image import Image, ImageMaker
+from .image import Image, ImageMaker, Text
 from .controller import Controller
 
 import vgame
@@ -487,8 +487,9 @@ class Actor(pygame.sprite.Sprite):
 
     def delay(self, judge, time=0, repeat=False, delayer=None):
         if delayer == None:
+            # 让 delay 函数调用在不同的位置使用不同的 delayer 的魔法
             s = inspect.stack()[1]
-            delayer = '{}:{}'.format(id(s.frame), s.lineno) # 让 delay 函数调用在不同的位置使用不同的 delayer 的魔法
+            delayer = '{}:{}'.format(id(s.frame), s.lineno)
         if repeat or self._repeat(judge, delayer):
             return judge and self._delay(time, delayer)
 

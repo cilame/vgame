@@ -180,3 +180,19 @@ class Image:
             outline = self.mask.outline() # 透明图片outline 为空，如为空下面的函数直接执行会报错
             if outline:
                 pygame.draw.polygon(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, self.mask.outline(), 1)
+
+
+class Text(Image):
+    dfont = None
+    def __init__(self, text=None, color=(0,0,0), scale=1):
+        if not Text.dfont:
+            Text.dfont = font.SysFont('simsunnsimsun', 12)
+            Text.vgame = __import__('vgame')
+        img = self.render(text, color, scale).convert_alpha()
+        super().__init__(img=img)
+
+    def render(self, text, color, scale):
+        ft = self.dfont.render(text, False, color)
+        w,h = ft.get_rect()[2:]
+        _ft = pygame.transform.scale(ft, (int(w*scale), int(h*scale))) # 示例：缩放为原尺寸的两倍大小
+        return _ft

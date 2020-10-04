@@ -15,18 +15,17 @@ vgame.Menu.DEBUG = True
 
 
 
-init = vgame.Initer(size=(640, 640))
+init = vgame.Initer(size=(700, 600))
 main = vgame.Theater('main', gridsize=(12, 8))
 
+def mouse(self, m):
+    if m: print(self, m)
 def ctl(self, c):
     if self.delay(c and c.get('p1')[0]): menu1.toggle(True) or menu2.toggle(True)
     if self.delay(c and c.get('p1')[1]): menu1.toggle(False) or menu2.toggle(False)
 player = vgame.Player((0,150,100,0), rectsize=(12, 8)).map.local((5, 5), 1, main)
 player.control = ctl
-player.direction
-player.mouse
-player.idle
-
+# player.mouse = mouse
 
 bgcolor = (247,197,198,255)
 menu1 = vgame.Menu(bgcolor).init(main, 'd', .35, (16, 3))
@@ -40,6 +39,8 @@ head1.click = click
 head2.click = click
 
 bgcolor = (247,197,198,255)
-menu2 = vgame.Menu(bgcolor).init(main, 'ul', (.3, .65), (3, 16))
+menu2 = vgame.Menu(bgcolor).init(main, 'ul', (.5, .65), (5, 12))
+vgame.Button(vgame.Text('北京欢迎你', (0,0,0), 2.5)).menu.local((1, 2), menu2)
+vgame.Button(vgame.Text('时间有点长', (0,0,0), 2.5)).menu.local((1, 3), menu2)
 
 init.run()

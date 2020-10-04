@@ -4,9 +4,9 @@ from pygame import Rect
 from pygame.locals import *
 
 from .theater import Theater, Map
-from .actor import Actor, Image, ImageMaker
+from .actor import Actor, Image, ImageMaker, Text
 from .actor import Player, Wall, Bullet, Enemy, NPC, Menu, Background, Button # 比较高一层的封装
-from .actor import Delayer
+from .actor import Delayer, Controller
 
 DEBUG = False
 
@@ -59,13 +59,17 @@ class Artist:
                     self.screen.blit(sprite.image, sprite.rect)
             _camera.debug_padding()
 
-            # 菜单，最后更新即为置顶
+            # 菜单,总是置顶
             self.theaters[self.current].group_menu.update(ticks)
             for menu in self.theaters[self.current].group_menu:
                 menu.group.update(ticks)
                 self.screen.blit(menu.image, menu.rect)
                 for sprite in menu.group:
                     self.screen.blit(sprite.image, sprite.rect)
+
+            # 由于 pygame 缺陷，并发鼠标消息处理函数 pygame.mouse.get_pressed() 没有鼠标滚轮消息，
+            # 所以用其他方式实现并发滚轮消息的接收处理，这里是收尾工作
+            Controller.roll = 0
 
         pygame.display.flip()
 
@@ -130,7 +134,15 @@ class Initer:
             for event in pygame.event.get():
                 if event.type == QUIT :exit()
                 if event.type == KEYDOWN:
-                    if event.key == K_TAB :_random_change(self) # 键盘C测试切换触发随机场景的变化
+                    if event.key == K_TAB :_random_change(self)
+
+                # 因为 pygame.event.get() 的处理方式类似于管道消息，不适合作为并行消息处理，
+                # 所以在 controler.py 内使用的是 pygame.mouse.get_pressed() 处理多个并行消息。
+                # 但是由于 pygame.mouse.get_pressed() 无法接收鼠标滚轮消息，所以，只有在这里处理滚轮消息了。
+                # 这里处理的滚轮消息将会并入 actor.mouse 处理的消息当中。
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 4: Controller.roll = 4
+                    if event.button == 5: Controller.roll = 5
 
     def change_theater(self, name):
         self.artist.change_theater(name)
