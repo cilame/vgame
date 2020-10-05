@@ -17,7 +17,7 @@ init = vgame.Initer()
 main = vgame.Theater('main', gridsize=(12, 8))
 
 
-city = vgame.Enemy(showsize=(12, 8)).map.local((3, 3), 1, main)
+city = vgame.Enemy(showsize=(12, 8)).map.local(main, (3,3), 1)
 
 def mouse(self, m):
     if m:
@@ -36,7 +36,7 @@ def direct(self, d):
         # 方向键进行栅格化的移动
         self.map.direct(d.get('p1'), 10)
 
-player = vgame.Player((10,10,10,100), rectsize=(12, 8)).map.local((5,5), 1, main)
+player = vgame.Player((10,10,10,100), rectsize=(12, 8)).map.local(main, (5,5), 1)
 player.control = ctl
 player.direction = direct
 player.mouse = mouse
@@ -44,7 +44,7 @@ player.mouse = mouse
 
 vgame.Menu.DEBUG = True
 bgcolor = (247,197,198,255)
-menu = vgame.Menu(bgcolor).init(main, 'd', 1, (7, 3))
+menu = vgame.Menu(bgcolor).init(main, (7, 3), 'd', 1)
 head1 = vgame.Button('../test_data/1A00.bmp', showsize=(64, 80))#.map.local((10,45), 0, main)
 head2 = vgame.Button('../test_data/1A00.bmp', showsize=(64, 80))#.map.local((10,45), 0, main)
 

@@ -30,7 +30,7 @@ playerimg_u = vgame.Image(s[12:16], rate=200, showsize=(32,32))
 playerimg_d = vgame.Image(s[ 0: 4], rate=200, showsize=(32,32))
 playerimg_r = vgame.Image(s[ 8:12], rate=200, showsize=(32,32))
 playerimg_l = vgame.Image(s[ 4: 8], rate=200, showsize=(32,32))
-player = vgame.Player(playerimg_d, rectsize=(32, 32)).map.local((1,1), 10, main)
+player = vgame.Player(playerimg_d, rectsize=(32, 32)).map.local(main, (1,1), 10)
 player.status['direction']['up']    = playerimg_u
 player.status['direction']['down']  = playerimg_d
 player.status['direction']['right'] = playerimg_r

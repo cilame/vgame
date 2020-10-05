@@ -33,7 +33,7 @@ def load_images(imgpath, Class, theater, local, speed):
     unit_img_r = vgame.Image(p[2], rate=200, showsize=(60,60))
     unit_img_d = vgame.Image(p[3], rate=200, showsize=(60,60))
     unit_img_l = vgame.Image(p[4], rate=200, showsize=(60,60))
-    unit_ = vgame.Player(unit_img_d, rectsize=(32, 32)).map.local(local, speed, theater)
+    unit_ = vgame.Player(unit_img_d, rectsize=(32, 32)).map.local(theater, local, speed)
     unit_.status['direction'] = { 
         'up':    unit_img_u,
         'down':  unit_img_d,
@@ -75,7 +75,7 @@ enemy2.idle = e_idle
 
 print(main.map.size)
 
-for i in range(0, 5): vgame.Wall(showsize=(32, 32)).map.local((3, i), float('inf'), main) 
-for i in range(3, 7): vgame.Wall(showsize=(32, 32)).map.local((6, i), float('inf'), main) 
+for i in range(0, 5): vgame.Wall(showsize=(32, 32)).map.local(main, (3, i), float('inf')) 
+for i in range(3, 7): vgame.Wall(showsize=(32, 32)).map.local(main, (6, i), float('inf')) 
 
 init.run()

@@ -55,14 +55,14 @@ if __name__ == "__main__":
         theater_1.map.local(ac, (5, i), 999) # map.local 的第三个参数为阻力
     # 第二排墙
     for i in range(5, 12):
-        vgame.Wall(showsize=(40, 40)).map.local((8, i), float('inf'), theater_1) 
+        vgame.Wall(showsize=(40, 40)).map.local(theater_1, (8, i), float('inf'))
         # 这个 actor 有特殊的绑定了自身的 local 方法，是一种很 pythonic 的写作优化
         # 并且这个 local 函数如果你传入 theater ，那么函数内部还包含了 theater.regist 自动注册进场景
         # 所以这里非常简便，上面第一排墙初始化需要写三行固定顺序的代码，第二排墙初始化只需要一行就可以了
         # 注意 Player, NPC, Enemy, Wall 均继承于 Actor ，所以 Actor 能用的这些都能用
         # 所以在 Player 控制里面也能用同样的方式轻易调用转换
 
-    actor2.map.local((13, 7), 1)
+    actor2.map.local(theater_1, (13, 7), 1)
     # 按下J键自动寻路
     # 按下K键显示阻力图
     def _my_ctl(self, c):
