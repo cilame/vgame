@@ -447,7 +447,7 @@ class Actor(pygame.sprite.Sprite):
         class _map:
             def move(s, trace, speed=4.):
                 self.theater.map.move(self, trace, speed)
-            def local(s, axis, obstruct=0, theater=None):
+            def local(s, theater, axis, obstruct=0):
                 if theater:
                     theater.regist(self)
                     theater.map.local(self, axis, obstruct)
@@ -610,27 +610,30 @@ class Menu(Actor):
         self.group = pygame.sprite.Group()
         self.grid = (1, 1)
 
-    def init(self, theater, side, ratio=1, grid=None):
+    def init(self, theater, grid=None, side=None, ratio=(1, 1), offsets=(0, 0)):
+        '''
+        grid    --> 用于划分格子，后续用格子坐标来整理/展示图文。
+        ratio   --> 如果 ratio 只有一个数字，则 side 所用的方向均使用这个比例，两个数字则分别为宽/高比例
+        side    --> udlr:up,down,left,right，只能用最大两个(合法角落)字母，即为不能同时上下，不能同时左右
+        offsets --> 初始化整块图片时的坐标偏移，和 ratio 一样以宽/高比例做偏移。
+        '''
         theater.regist_menu(self)
-        if isinstance(ratio, (int, float)):
-            kw = kh = ratio
-        if isinstance(ratio, (tuple, list)):
-            kw, kh = ratio
+        if isinstance(ratio, (int, float)): kw = kh = ratio
+        if isinstance(ratio, (tuple, list)): kw, kh = ratio
+        if isinstance(offsets, (int, float)): kx = ky = offsets
+        if isinstance(offsets, (tuple, list)): kx, ky = offsets
+        side = 'd' if side is None else side
         ta = 'd' in side or 'u' in side
         tb = 'r' in side or 'l' in side
-        if ta and tb:
-            self.rect.h = theater.size[1]*kh
-            self.rect.w = theater.size[0]*kw
+        if ta and tb: self.rect.h, self.rect.w = theater.size[1]*kh, theater.size[0]*kw
         else:
-            if ta:
-                self.rect.h = theater.size[1]*kh
-                self.rect.w = theater.size[0]
-            if tb:
-                self.rect.w = theater.size[0]*kw
-                self.rect.h = theater.size[1]
+            if ta: self.rect.h, self.rect.w = theater.size[1]*kh, theater.size[0]
+            if tb: self.rect.w, self.rect.h = theater.size[0]*kw, theater.size[1]
         w, h = theater.size
         if 'd' in side: self.rect.y = h - self.rect.h
         if 'r' in side: self.rect.x = w - self.rect.w
+        self.rect.x += theater.size[0] * kx
+        self.rect.y += theater.size[1] * ky
         self.showsize = int(self.rect.w), int(self.rect.h)
         img = self.aload_image(self.img)
         if self.DEBUG:
