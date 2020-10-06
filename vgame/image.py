@@ -184,15 +184,54 @@ class Image:
 
 class Text(Image):
     dfont = None
-    def __init__(self, text=None, color=(0,0,0), scale=1):
+    def __init__(self, text=None, textcolor=(0,0,0), textscale=1, textwidth=None, textside=None):
         if not Text.dfont:
             Text.dfont = font.SysFont('simsunnsimsun', 12)
             Text.vgame = __import__('vgame')
-        img = self.render(text, color, scale).convert_alpha()
+        self.has_start = False
+        self.text      = text
+        self.textcolor = textcolor
+        self.textscale = textscale
+        self.textside  = textside
+        self.textwidth = textwidth
+        img = self.render(text, self.textcolor, self.textscale).convert_alpha()
+        img = self.shift(img, textside, textwidth)
         super().__init__(img=img)
+        self.has_start = True
 
-    def render(self, text, color, scale):
-        ft = self.dfont.render(text, False, color)
+    def shift(self, img, textside, textwidth):
+        if textwidth:
+            w,h = img.get_rect()[2:]
+            _temp = pygame.Surface((textwidth,h)).convert_alpha()
+            _temp.fill((0,0,0,0))
+            x,y,w,h = img.get_rect()
+            if textside == 'r': 
+                _temp.blit(img, (textwidth-w,y,w,h))
+            else:
+                _temp.blit(img, (x,y,w,h))
+            img = _temp
+        return img
+
+    def render(self, text, textcolor, textscale):
+        ft = self.dfont.render(text, False, textcolor)
         w,h = ft.get_rect()[2:]
-        _ft = pygame.transform.scale(ft, (int(w*scale), int(h*scale))) # 示例：缩放为原尺寸的两倍大小
+        _ft = pygame.transform.scale(ft, (int(w*textscale), int(h*textscale))) # 示例：缩放为原尺寸的两倍大小
         return _ft
+
+    def _get_text(self): return self._text
+    def _set_text(self, value): self._text = str(value); self._flash()
+    text = property(_get_text, _set_text)
+    def _get_textcolor(self): return self._textcolor
+    def _set_textcolor(self, value): self._textcolor = value; self._flash()
+    textcolor = property(_get_textcolor, _set_textcolor)
+    def _get_textscale(self): return self._textscale
+    def _set_textscale(self, value): self._textscale = value; self._flash()
+    textscale = property(_get_textscale, _set_textscale)
+    def _get_textside(self): return self._textside
+    def _set_textside(self, value): self._textside = value; self._flash()
+    textside = property(_get_textside, _set_textside)
+    def _flash(self):
+        if self.has_start:
+            img = self.render(self.text, self.textcolor, self.textscale).convert_alpha()
+            img = self.shift(img, self.textside, self.textwidth)
+            self.orig_image = img

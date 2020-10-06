@@ -318,11 +318,11 @@ class Actor(pygame.sprite.Sprite):
     def aload_image(self, img):
         self.status['before'] = self.imager
         if not (img is None or isinstance(img, (str, tuple, pygame.Surface))):
-              self.imager = img  
+              self.imager = img
         else: self.imager = Image(img, self.showsize, self.rate, self.masksize)
-        self.image    = self.imager.image
-        self.mask     = self.imager.mask
-        self.showsize = self.image.get_size()
+        self.image        = self.imager.image
+        self.mask         = self.imager.mask
+        self.showsize     = self.image.get_size()
         self.imager.actor = self
         self.status['current'] = self.imager
         return self.imager
@@ -529,6 +529,29 @@ class Actor(pygame.sprite.Sprite):
             raise Exception('If {}(in_control=False) mode is used, the set '
                             .format(self.__class__.__name__)+ '(mouse,direction,control) will be invalid.')
         self.__dict__[key] = value
+        if isinstance(self.__class__, Text) and key == 'text':      self._set_btn_text(value)
+        if isinstance(self.__class__, Text) and key == 'textcolor': self._set_btn_textcolor(value)
+        if isinstance(self.__class__, Text) and key == 'textscale': self._set_btn_textscale(value)
+        if isinstance(self.__class__, Text) and key == 'textside':  self._set_btn_textside(value)
+
+    # 处理文字类的自动状态修改，让使用了 vgame.Text 作为 Actor 类中的图片属性时
+    # 可以通过 Actor 对象的属性直接动态修改里面的数字内容
+    def _get_btn_text(self): return self.imager.text
+    def _set_btn_text(self, value): self.imager.text = value
+    text = property(_get_btn_text, _set_btn_text)
+    def _get_btn_textcolor(self): return self.imager.textcolor
+    def _set_btn_textcolor(self, value): self.imager.textcolor = value
+    textcolor = property(_get_btn_textcolor, _set_btn_textcolor)
+    def _get_btn_textscale(self): return self.imager.textscale
+    def _set_btn_textscale(self, value): self.imager.textscale = value
+    textscale = property(_get_btn_textscale, _set_btn_textscale)
+    def _get_btn_textside(self): return self.imager.textside
+    def _set_btn_textside(self, value): self.imager.textside = value
+    textside = property(_get_btn_textside, _set_btn_textside)
+    def __setattr__(self, key, value):
+        super().__setattr__(key, value)
+
+
 
 
 # 后面基于 Actor 封装出几种游戏元素的对象
@@ -590,7 +613,6 @@ ENTITYS_DEFAULT = [Wall]
 class Menu(Actor):
     DEBUG = False
     RIGID_BODY = {}
-
     # Hover
     class HoverImage(Actor):
         RIGID_BODY = {}
@@ -683,8 +705,7 @@ class Button(Actor):
         kw['in_entitys'] = []
         kw['cam_follow'] = False # 菜单一般都不需要镜头跟随的处理，之所以都使用
         kw['in_control'] = True
-        supe = super()
-        supe.__init__(*a, **kw)
+        super().__init__(*a, **kw)
         self.mouse_pos = pygame.mouse.get_pos()
         self.mouse_stat = self._get_mouse_stat()
         self._hover_dly = self.regist(Delayer(30))
@@ -757,13 +778,11 @@ class Button(Actor):
     @property
     def menu(self):
         class _menu:
-            def local(s, axis, menu):
+            def local(s, menu, axis):
                 assert isinstance(menu, Menu), 'menu must be vgame.Menu object.'
                 menu.local(self, axis)
                 return self
         return _menu()
-
-
 
 
 

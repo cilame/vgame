@@ -132,7 +132,7 @@ class Initer:
                 i = (v.index(self.artist.current)+1)%len(v)
                 self.artist.change_theater(v[i])
             for event in pygame.event.get():
-                if event.type == QUIT :exit()
+                if event.type == QUIT:exit()
                 if event.type == KEYDOWN:
                     if event.key == K_TAB :_random_change(self)
 
