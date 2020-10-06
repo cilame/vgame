@@ -64,9 +64,14 @@ def e_idle(self, i):
     trs = self.map.trace((x, y))
     self.map.move(trs, 1)
 
+def p_idle(self):
+    s = self.collide(enemy1)
+    print(s)
+
 player = load_images(hywz1, vgame.Player, main, (1,1), 10)
 player.direction = direct
 player.control = ctl
+player.idle = p_idle
 
 enemy1 = load_images(hywz2, vgame.Enemy, main, (8,6), 1)
 enemy2 = load_images(hywz3, vgame.Enemy, main, (6,6), 1)

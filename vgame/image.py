@@ -135,8 +135,8 @@ class Image:
             self.orig_image = self.src_image.subsurface(next(self.rects)) if self.src_image else next(self.rects)
             if self.showsize: 
                 self.orig_image = pygame.transform.scale(self.orig_image, self.showsize)
+            self.image = self.orig_image.copy()
             self.mask  = self._mk_mask()
-        self.image = self.orig_image.copy()
         self._delay_bind_debug()
 
     def _mk_mask(self):
@@ -148,7 +148,7 @@ class Image:
             else:
                 mask = self.mskdefault
         else:
-            mask = pygame.mask.from_surface(self.image)
+            mask = pygame.mask.from_surface(self.image, 127)
         return mask
 
     def _time_update(self, ticks):
@@ -177,10 +177,6 @@ class Image:
             p4 = ox+0,   oy+h-1
             pygame.draw.polygon(self.image, self.actor.DEBUG_RECT_LINE_CORLOR, [p1,p2,p3,p4], 1)
             # 碰撞检测边框线条绘制
-            # outline = self.mask.outline() # 透明图片outline 为空，如为空下面的函数直接执行会报错
-            # if outline:
-            #     pygame.draw.polygon(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, outline, 1)
-
             outline = self.mask.outline() # 透明图片outline 为空，如为空下面的函数直接执行会报错
             if self.masksize:
                 dx, dy = self._get_mask_dxy()
