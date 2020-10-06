@@ -79,7 +79,7 @@ enemy2 = load_images(hywz3, vgame.Enemy, main, (6,6), 1)
 enemy1.idle = e_idle
 enemy2.idle = e_idle
 
-print(main.map.size)
+print(main.map)
 
 for i in range(0, 5): vgame.Wall(showsize=(32, 32)).map.local(main, (3, i), float('inf')) 
 for i in range(3, 7): vgame.Wall(showsize=(32, 32)).map.local(main, (6, i), float('inf')) 
