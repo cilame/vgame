@@ -420,8 +420,6 @@ class Actor(pygame.sprite.Sprite):
                 left_recty = left.rect[1]
             xoffset = right_rectx - left_rectx
             yoffset = right_recty - left_recty
-            # xoffset = right.rect[0] - left.rect[0]
-            # yoffset = right.rect[1] - left.rect[1]
             try:
                 leftmask = left.mask
             except AttributeError:

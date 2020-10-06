@@ -11,7 +11,7 @@ import sys;print(sys.stdout.encoding)
 import random
 import vgame
 
-vgame.DEBUG = True
+# vgame.DEBUG = True
 # vgame.Map.DEBUG = True
 
 init = vgame.Initer()
@@ -24,19 +24,25 @@ txt = vgame.Text(str(score), textcolor=(255,0,0), textscale=2)
 label = vgame.Enemy(txt).map.local(main, (17, 0), )
 
 
-enemys = []
+bullets = []
 def enemycreater(self):
-    global enemys
     if self.delay(True, time=1000, repeat=True):
         x = random.randint(4,16)
         e = vgame.Enemy((0,255,5), showsize=(32,32), in_bounds=False).map.local(main, (x, 0))
         def idle(self):
+            global score, bullets
             self.mover.move([2], 1)
             if self.collide(player):
                 player.kill()
+            bts = self.collide(*bullets)
+            if bts:
+                for i in bts:
+                    i.kill()
+                    self.kill()
+                    score += 1
+                    label.text = score
         e.idle = idle
         main.regist(e)
-        enemys.append(e)
 
 label.idle = enemycreater
 
@@ -45,19 +51,14 @@ def direct(self, d):
         self.mover.move(d.get('p1'))
 
 def ctl(self, c):
-    if self.delay(c and c.get('p1'),):
+    if self.delay(c and c.get('p1'),repeat=True,time=0):
         def idle(self):
-            global score, enemys
             self.mover.move([8], 7)
-            ces = self.collide(*enemys)
-            if ces:
-                for i in ces:
-                    i.kill()
-                    self.kill()
-                    score += 1
-                    label.text = score
+            if self.rect.x < 0:
+                self.kill()
         b = vgame.Bullet(showsize=(10, 10), showpoint=self.rect.center, in_bounds=False)
         b.idle = idle
+        bullets.append(b)
         main.regist(b)
 
 player.direction = direct
