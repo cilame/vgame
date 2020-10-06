@@ -52,7 +52,7 @@ class Image:
             self.flipx  = 'x' in flip or 'X' in flip
             self.flipy  = 'y' in flip or 'Y' in flip
         self.orig_image = self.load_img(img)
-        self.image      = self.orig_image
+        self.image      = self.orig_image.copy()
 
         self.masksize   = masksize # mask 主要用于处理碰撞检测
         self.mask       = self._mk_mask()
@@ -177,14 +177,30 @@ class Image:
             p4 = ox+0,   oy+h-1
             pygame.draw.polygon(self.image, self.actor.DEBUG_RECT_LINE_CORLOR, [p1,p2,p3,p4], 1)
             # 碰撞检测边框线条绘制
+            # outline = self.mask.outline() # 透明图片outline 为空，如为空下面的函数直接执行会报错
+            # if outline:
+            #     pygame.draw.polygon(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, outline, 1)
+
             outline = self.mask.outline() # 透明图片outline 为空，如为空下面的函数直接执行会报错
+            if self.masksize:
+                dx, dy = self._get_mask_dxy()
+                outline = [(_x+dx, _y+dy) for _x, _y in outline]
             if outline:
-                pygame.draw.polygon(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, self.mask.outline(), 1)
+                pygame.draw.polygon(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, outline, 1)
+
+    def _get_mask_dxy(self):
+        if not getattr(self, 'maskdx', None):
+            x, y, w, h = self.actor.rect
+            xx = int(x + self.masksize[0]/2 - self.showsize[0]/2)
+            yy = int(y + self.masksize[1]/2 - self.showsize[1]/2)
+            self.maskdx = x-xx
+            self.maskdy = y-yy
+        return self.maskdx, self.maskdy
 
 
 class Text(Image):
     dfont = None
-    def __init__(self, text=None, textcolor=(0,0,0), textscale=1, textwidth=None, textside=None):
+    def __init__(self, text=None, textcolor=(0,0,0), textscale=2, textwidth=None, textside=None):
         if not Text.dfont:
             Text.dfont = font.SysFont('simsunnsimsun', 12)
             Text.vgame = __import__('vgame')

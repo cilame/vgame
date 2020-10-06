@@ -5,6 +5,7 @@ from itertools import cycle, product
 
 import pygame
 from pygame.locals import *
+from pygame.mask import from_surface
 
 from .image import Image, ImageMaker, Text
 from .controller import Controller
@@ -256,6 +257,7 @@ class Actor(pygame.sprite.Sprite):
                   in_bounds  = True,  # 是否允许地图边界约束，# 默认True，即为物体移动不会超出边界
                   in_entitys = None,  # 需要互斥的实体列表，可以传入Actor对象也可以传入类对
                   rate       = 0,     # 动态图循环的速率
+                  offsets    = (0,0), # 图片的偏移位置
                   cam_follow = True,  # 镜头跟随，默认开启
                   debug      = False  # 是否开启单个 Actor 对象的 Debug 模式
             ):
@@ -268,6 +270,7 @@ class Actor(pygame.sprite.Sprite):
         self.showsize   = showsize # showsize 用于墙体检测，所以比较常用，尽量主动设置
         self.rectsize   = rectsize # 默认情况下直接使用 showsize 作为墙体检测
         self.masksize   = masksize # masksize 用于碰撞检测，使用默认的从图片中读取即可
+        self.offsets    = offsets
         self.in_control = in_control
         self.imager     = None
         self.image      = None
@@ -319,7 +322,8 @@ class Actor(pygame.sprite.Sprite):
         self.status['before'] = self.imager
         if not (img is None or isinstance(img, (str, tuple, pygame.Surface))):
               self.imager = img
-        else: self.imager = Image(img, self.showsize, self.rate, self.masksize)
+        else: self.imager = Image(img, showsize=self.showsize, rate=self.rate, 
+                                       masksize=self.masksize, offsets=self.offsets)
         self.image        = self.imager.image
         self.mask         = self.imager.mask
         self.showsize     = self.image.get_size()
@@ -395,7 +399,40 @@ class Actor(pygame.sprite.Sprite):
         self._image_tuning()
 
     def collide(self, *list_sprite):
-        scollide = pygame.sprite.spritecollide(self, self.theater.group, False, pygame.sprite.collide_mask)
+        def collide_mask(left, right):
+            # 不能直接使用 pygame.sprite.collide_mask
+            # 因为我所处理的 rect 和实际的图片可能存在一定程度上的偏移
+            if getattr(right, 'rectsize', None):
+                ox, oy = right.imager.offsets
+                dx, dy = (right.imager.maskdx, right.imager.maskdy) if getattr(right.imager, 'maskdx', None) else (0, 0)
+                right_rectx = int(right.rect[0] + right.rect[2]/2 - right.showsize[0]/2 - ox + dx)
+                right_recty = int(right.rect[1] + right.rect[3]/2 - right.showsize[1]/2 - oy + dy)
+            else:
+                right_rectx = right.rect[0]
+                right_recty = right.rect[1]
+            if getattr(left, 'rectsize', None):
+                ox, oy = left.imager.offsets
+                dx, dy = (left.imager.maskdx, left.imager.maskdy) if getattr(left.imager, 'maskdx', None) else (0, 0)
+                left_rectx = int(left.rect[0] + left.rect[2]/2 - left.showsize[0]/2 - ox)
+                left_recty = int(left.rect[1] + left.rect[3]/2 - left.showsize[1]/2 - oy)
+            else:
+                left_rectx = left.rect[0]
+                left_recty = left.rect[1]
+            xoffset = right_rectx - left_rectx
+            yoffset = right_recty - left_recty
+            # xoffset = right.rect[0] - left.rect[0]
+            # yoffset = right.rect[1] - left.rect[1]
+            try:
+                leftmask = left.mask
+            except AttributeError:
+                leftmask = from_surface(left.image)
+            try:
+                rightmask = right.mask
+            except AttributeError:
+                rightmask = from_surface(right.image)
+            return leftmask.overlap(rightmask, (xoffset, yoffset))
+
+        scollide = pygame.sprite.spritecollide(self, self.theater.group, False, collide_mask)
         rcollide = []
         for sprite in list_sprite:
             if sprite in scollide:
