@@ -75,7 +75,7 @@ class Image:
             if not img:
                 image = pygame.Surface((60, 60)).convert_alpha()
                 image.fill((255,255,255,255))
-            elif isinstance(img, (tuple, list)) and not isinstance(img[0], pygame.Surface):
+            elif isinstance(img, (tuple, list)) and isinstance(img[0], int):
                 image = pygame.Surface((60, 60)).convert_alpha()
                 # image = pygame.transform.flip(image, self.flipx, self.flipy)
                 image.fill(img)
@@ -84,6 +84,16 @@ class Image:
                 self.src_image = None
                 self.cur_tick  = 0
                 self.rects     = cycle([pygame.transform.flip(image, self.flipx, self.flipy) if self.flip else image for image in img])
+                image = next(self.rects)
+            elif isinstance(img, (tuple, list)) and isinstance(img[0], str):
+                def _load_img(i):
+                    image = pygame.image.load(i).convert_alpha()
+                    if self.flip: image = pygame.transform.flip(image, self.flipx, self.flipy)
+                    return image
+                self.active    = True
+                self.src_image = None
+                self.cur_tick  = 0
+                self.rects     = cycle([_load_img(i) for i in img])
                 image = next(self.rects)
             elif isinstance(img, str) and os.path.isdir(img):
                 imgfs, imgfv = {}, []

@@ -320,7 +320,7 @@ class Actor(pygame.sprite.Sprite):
 
     def aload_image(self, img):
         self.status['before'] = self.imager
-        if not (img is None or isinstance(img, (str, tuple, pygame.Surface))):
+        if not (img is None or isinstance(img, (str, tuple, list, pygame.Surface))):
               self.imager = img
         else: self.imager = Image(img, showsize=self.showsize, rate=self.rate, 
                                        masksize=self.masksize, offsets=self.offsets)
