@@ -29,4 +29,4 @@ def ctl(self, c):
 player.control = ctl
 
 
-s.run()
+# s.run()

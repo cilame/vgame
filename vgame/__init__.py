@@ -99,19 +99,22 @@ class Initer:
                  ):
 
         pygame.init()
-        self.ticks  = fps
-        self.title  = title
-        self.size   = size
-        self.screen = pygame.display.set_mode(size, flag, depth)
-        self.artist = Artist(self.screen, self.ticks)
+        self.ticks   = fps
+        self.title   = title
+        self.size    = size
+        self.screen  = pygame.display.set_mode(size, flag, depth)
+        self.artist  = Artist(self.screen, self.ticks)
+        self.running = False
         Artist.ARTIST = self.artist
         pygame.display.set_caption(title)
+        self.hook_main_thread_end()
 
     def regist(self,*theaters):
         for theater in theaters:
             self.artist.regist(theater)
 
     def run(self):
+        self.running = True
         while True:
             self.artist.update()
 
@@ -150,6 +153,25 @@ class Initer:
     def quit(self):
         pygame.quit()
         exit()
+
+    def hook_main_thread_end(self):
+        from threading import current_thread, main_thread
+        def _stop(s):
+            if not self.running:
+                try:
+                    self.run()
+                except SystemExit:
+                    pass
+            lock = s._tstate_lock
+            if lock is not None:
+                assert not lock.locked()
+            s._is_stopped = True
+            s._tstate_lock = None
+        if current_thread() == main_thread():
+            mt = main_thread()
+            mt._stop = lambda: _stop(mt)
+        else:
+            raise Exception('If vgame.Initer is not in the main thread, it is likely to cause program exceptions')
 
 
 __author__ = 'cilame'
