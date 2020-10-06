@@ -137,6 +137,8 @@ class Image:
                 self.orig_image = pygame.transform.scale(self.orig_image, self.showsize)
             self.image = self.orig_image.copy()
             self.mask  = self._mk_mask()
+        else:
+            self.image = self.orig_image.copy() # 该处用于处理按钮闪烁相关的操作
         self._delay_bind_debug()
 
     def _mk_mask(self):
@@ -148,7 +150,7 @@ class Image:
             else:
                 mask = self.mskdefault
         else:
-            mask = pygame.mask.from_surface(self.image, 127)
+            mask = pygame.mask.from_surface(self.image)
         return mask
 
     def _time_update(self, ticks):

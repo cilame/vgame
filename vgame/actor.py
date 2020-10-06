@@ -797,16 +797,16 @@ class Button(Actor):
         self._hover_lst = cycle(colors + colors[::-1])
         self._hover_col = (255, 255, 255)
         self._hover_aph = next(self._hover_lst)
-
-    def hover(self, toggle=True):
         def func(image):
             bg = Menu.HoverImage((*self._hover_col,self._hover_aph), showsize=image.get_rect()[2:])
             image.blit(bg.image, bg.rect)
             del bg
             return image
+        return func
+
+    def hover(self, toggle=True):
         if toggle:
-            self._init_hover_color()
-            self._tuning[0] = func
+            self._tuning[0] = self._init_hover_color()
         else:
             del self._tuning[0]
 
