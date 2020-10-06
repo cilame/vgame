@@ -287,7 +287,7 @@ class Map:
                 pygame.draw.line(image, vgame.Artist.GRID_LINE_COLOR_MAP_DEBUG, (0, y), (w, y))
 
     def __str__(self):
-        return str(self.map2d) # 默认绘制阻力图
+        return 'map.size:{}\n{}'.format(self.size, str(self.map2d)) # 默认绘制阻力图
 
 class Camera:
     '''
@@ -418,7 +418,7 @@ class Theater:
         self.background.theater = self
         if self.background.image:
             self.group.add(self.background)
-            self.map._draw_debug_grid(self.background.image)
+            self.map._draw_debug_grid(self.background.imager.orig_image)
 
     @property
     def name(self):
