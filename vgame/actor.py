@@ -704,9 +704,8 @@ class Menu(Actor):
     def local(self, actor, axis):
         center_map = self._get_gridcenter(self.theater, self.grid)
         cx, cy = center_map[tuple(axis)]
-        _, _, iw, ih = actor.rect
-        actor.rect.x = int(cx-iw/2)
-        actor.rect.y = int(cy-ih/2)
+        actor.rect.x = int(cx-actor.showsize[0]/2)
+        actor.rect.y = int(cy-actor.showsize[1]/2)
         actor.axis = axis
         self.group.add(actor)
 
@@ -779,7 +778,10 @@ class Button(Actor):
             self._hover_aph = next(self._hover_lst)
 
     def _get_mouse_stat(self):
-        return 'over' if self.clicker.collide(self.mouse_pos) else 'out'
+        dx, dy = self.mouse_pos
+        dx = int(dx + self.rect[2]/2 - self.showsize[0]/2)
+        dy = int(dy + self.rect[3]/2 - self.showsize[1]/2)
+        return 'over' if self.clicker.collide((dx, dy)) else 'out'
 
     @staticmethod
     def mouseover(self): pass

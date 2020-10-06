@@ -33,7 +33,7 @@ def load_images(imgpath, Class, theater, local, speed):
     unit_img_r = vgame.Image(p[2], rate=200, showsize=(60,60))
     unit_img_d = vgame.Image(p[3], rate=200, showsize=(60,60))
     unit_img_l = vgame.Image(p[4], rate=200, showsize=(60,60))
-    unit_ = vgame.Player(unit_img_d, rectsize=(32, 32)).map.local(theater, local, speed)
+    unit_ = Class(unit_img_d, rectsize=(32, 32)).map.local(theater, local, speed)
     unit_.status['direction'] = { 
         'up':    unit_img_u,
         'down':  unit_img_d,
@@ -66,7 +66,8 @@ def e_idle(self, i):
 
 def p_idle(self):
     s = self.collide(enemy1)
-    print(s)
+    if s:
+        print(s)
 
 player = load_images(hywz1, vgame.Player, main, (1,1), 10)
 player.direction = direct
