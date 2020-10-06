@@ -155,13 +155,15 @@ class Initer:
         exit()
 
     def hook_main_thread_end(self):
+        # 让你在执行脚本的时候 vgame.Initer 实例不用再在最后执行 run() 函数。少写一行是一行。
+        # 不过需要注意的是，这里处理的逻辑是：用钩子钩住主线程的线程收尾函数，
+        # 所以，如果主线程里面有个什么循环啥卡住，这里是不会执行的，了解执行逻辑即可。
+        # 当然你也可以直接用原来的 vgame.Initer() 实例在最末尾直接执行也行。
         from threading import current_thread, main_thread
         def _stop(s):
             if not self.running:
-                try:
-                    self.run()
-                except SystemExit:
-                    pass
+                try: self.run()
+                except SystemExit: pass
             lock = s._tstate_lock
             if lock is not None:
                 assert not lock.locked()
