@@ -1,6 +1,24 @@
 import os, re, time
 import traceback
-from itertools import cycle, product
+from itertools import product
+
+class cycle:
+    def __init__(self, items):
+        self.items = items
+        self.len = len(self.items)
+        self.idx = 0
+    def __next__(self):
+        nx = self.items[self.idx % self.len]
+        self.idx += 1
+        return nx
+    def __iter__(self):
+        return self
+    def get_cycle_number(self):
+        return int(self.idx / self.len)
+
+
+
+
 
 import pygame
 import pygame.font as font
@@ -193,7 +211,7 @@ class Image:
             if self.masksize:
                 dx, dy = self._get_mask_dxy()
                 outline = [(_x+dx, _y+dy) for _x, _y in outline]
-            if outline:
+            if len(outline) > 1:
                 pygame.draw.polygon(self.image, self.actor.DEBUG_MASK_LINE_CORLOR, outline, 1)
 
     def _get_mask_dxy(self):
@@ -208,17 +226,18 @@ class Image:
 
 class Text(Image):
     dfont = None
-    def __init__(self, text=None, textcolor=(0,0,0), textscale=2, textwidth=None, textside=None):
+    def __init__(self, text=None, textcolor=(0,0,0), textscale=2, textwidth=None, textside=None, textformat='{}'):
         if not Text.dfont:
-            Text.dfont = font.SysFont('simsunnsimsun', 12)
-            Text.vgame = __import__('vgame')
-        self.has_start = False
-        self.text      = text
-        self.textcolor = textcolor
-        self.textscale = textscale
-        self.textside  = textside
-        self.textwidth = textwidth
-        img = self.render(text, self.textcolor, self.textscale).convert_alpha()
+            Text.dfont  = font.SysFont('simsunnsimsun', 12)
+            Text.vgame  = __import__('vgame')
+        self.has_start  = False
+        self.text       = text
+        self.textcolor  = textcolor
+        self.textscale  = textscale
+        self.textside   = textside
+        self.textwidth  = textwidth
+        self.textformat = textformat
+        img = self.render(self.text, self.textcolor, self.textscale).convert_alpha()
         img = self.shift(img, textside, textwidth)
         super().__init__(img=img)
         self.has_start = True
@@ -237,13 +256,13 @@ class Text(Image):
         return img
 
     def render(self, text, textcolor, textscale):
-        ft = self.dfont.render(text, False, textcolor)
+        ft = self.dfont.render(self.textformat.format(text), False, textcolor)
         w,h = ft.get_rect()[2:]
         _ft = pygame.transform.scale(ft, (int(w*textscale), int(h*textscale))) # 示例：缩放为原尺寸的两倍大小
         return _ft
 
     def _get_text(self): return self._text
-    def _set_text(self, value): self._text = str(value); self._flash()
+    def _set_text(self, value): self._text = value; self._flash()
     text = property(_get_text, _set_text)
     def _get_textcolor(self): return self._textcolor
     def _set_textcolor(self, value): self._textcolor = value; self._flash()
@@ -254,6 +273,9 @@ class Text(Image):
     def _get_textside(self): return self._textside
     def _set_textside(self, value): self._textside = value; self._flash()
     textside = property(_get_textside, _set_textside)
+    def _get_textformat(self): return self._textformat
+    def _set_textformat(self, value): self._textformat = value; self._flash()
+    textformat = property(_get_textformat, _set_textformat)
     def _flash(self):
         if self.has_start:
             img = self.render(self.text, self.textcolor, self.textscale).convert_alpha()

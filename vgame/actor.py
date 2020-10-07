@@ -34,7 +34,7 @@ class Delayer:
             self._tick = ticks
             return True
 
-class Mover:
+class _Mover:
     '''
     用于处理碰撞检测的原始函数部分，一般的mover直接继承使用
     '''
@@ -42,9 +42,10 @@ class Mover:
         self.has_bind = False
 
     def _delay_bind(self):
-        if not self.has_bind and self.in_entity:
+        if not self.has_bind:
             cur = self.actor.theater.artist.current
-            self.actor.RIGID_BODY[cur].append(self.actor)
+            if self.actor.in_entity:  self.actor.RIGID_BODY[cur].append(self.actor)
+            if self.actor.in_collide:  self.actor.SHOW_BODY[cur].append(self.actor)
             self.has_bind = True
 
     def collide(self):
@@ -66,17 +67,15 @@ class Mover:
         return pygame.Rect.colliderect(one.rect, two.rect)
 
 
-class SmoothMover(Mover):
+class SmoothMover(_Mover):
     '''
     平滑移动的处理
     '''
     ALLDIR = [6, 4, 2, 8]
 
-    def __init__(self, in_entity=False, in_bounds=True):
+    def __init__(self):
         self.actor     = None
         self.speed     = pygame.Vector2(5., 5.) # 初始化有个值，方便看到效果，可以通过对象修改
-        self.in_entity = in_entity
-        self.in_bounds = in_bounds
         super().__init__()
 
     def move(self, d, speed=None):
@@ -126,20 +125,20 @@ class SmoothMover(Mover):
         if rotate:
             speed = speed.rotate(rotate)
         self.actor.rect[0] = self.actor.rect[0] + speed.x
-        if self.in_entity:
+        if self.actor.in_entity:
             aw = self.collide()
             if aw:
                 for w in aw:
                     if speed.x > 0: self.actor.rect.x = w.rect.left - self.actor.rect.width
                     if speed.x < 0: self.actor.rect.x = w.rect.right
         self.actor.rect[1] = self.actor.rect[1] + speed.y
-        if self.in_entity:
+        if self.actor.in_entity:
             aw = self.collide()
             if aw:
                 for w in aw:
                     if speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height
                     if speed.y < 0: self.actor.rect.y = w.rect.bottom
-        if self.in_bounds:
+        if self.actor.in_bounds:
             w, h = self.actor.theater.size
             w = w - self.actor.rect.width
             h = h - self.actor.rect.height
@@ -245,6 +244,7 @@ class Actor(pygame.sprite.Sprite):
     DEBUG_REALIMAGE_CORLOR = (200, 200, 200, 200)
 
     RIGID_BODY = {}
+    SHOW_BODY = {}
 
     def __init__( self, 
                   img        = None,  # 图片信息
@@ -256,6 +256,7 @@ class Actor(pygame.sprite.Sprite):
                   in_entity  = True,  # 是否拥有实体
                   in_bounds  = True,  # 是否允许地图边界约束，# 默认True，即为物体移动不会超出边界
                   in_entitys = None,  # 需要互斥的实体列表，可以传入Actor对象也可以传入类对
+                  in_collide = None,  # 需要自动添加进碰撞检测列表的对象
                   rate       = 0,     # 动态图循环的速率
                   offsets    = (0,0), # 图片的偏移位置
                   cam_follow = True,  # 镜头跟随，默认开启
@@ -271,10 +272,14 @@ class Actor(pygame.sprite.Sprite):
         self.rectsize   = rectsize # 默认情况下直接使用 showsize 作为墙体检测
         self.masksize   = masksize # masksize 用于碰撞检测，使用默认的从图片中读取即可
         self.offsets    = offsets
+        self.in_entity  = in_entity
+        self.in_bounds  = in_bounds
+        self.in_collide = in_collide
         self.in_control = in_control
         self.imager     = None
         self.image      = None
         self.mask       = None
+        self._status    = None
         self.status     = {}
         self.status['current']   = None
         self.status['before']    = None
@@ -300,7 +305,7 @@ class Actor(pygame.sprite.Sprite):
         self._chain     = {}
         self._chain['gridmove'] = []
         self._toggle    = {'gridmove_start': False}
-        self.mover      = self.regist(SmoothMover(in_entity, in_bounds))
+        self.mover      = self.regist(SmoothMover())
         self.clicker    = self.regist(Clicker())
         self.in_entitys = in_entitys if in_entitys is not None else ENTITYS_DEFAULT.copy()
         self.ticks      = None
@@ -310,13 +315,18 @@ class Actor(pygame.sprite.Sprite):
         self._set_showpoint(showpoint)
         self.bug_check  = None
 
-    def _get_showpoint(self):
-        return self.rect[:2]
-
-    def _set_showpoint(self, value):
+    def _get_showpoint(self): return self.rect[:2]
+    def _set_showpoint(self, value): 
         if value: self.rect[:2] = value
-
     showpoint = property(_get_showpoint, _set_showpoint)
+
+    def _get_status(self): return self._status
+    def _set_status(self, value): 
+        if self._status is None:
+            self._status = value
+        else:
+            raise Exception('Actor.status cannot be overwrite. pls use Actor.status[key] change inner data.')
+    status = property(_get_status, _set_status)
 
     def aload_image(self, img):
         self.status['before'] = self.imager
@@ -430,11 +440,16 @@ class Actor(pygame.sprite.Sprite):
                 rightmask = from_surface(right.image)
             return leftmask.overlap(rightmask, (xoffset, yoffset))
 
+        if len(list_sprite) == 1 and isinstance(list_sprite[0], (tuple, list)):
+            list_sprite = list_sprite[0]
         scollide = pygame.sprite.spritecollide(self, self.theater.group, False, collide_mask)
         rcollide = []
         for sprite in list_sprite:
             if sprite in scollide:
                 rcollide.append(sprite)
+            if sprite in COLLIDE:
+                extra = [i for i in sprite.SHOW_BODY[self.theater.artist.current] if i.alive()]
+                rcollide.extend(pygame.sprite.spritecollide(self, extra, False, collide_mask))
         return rcollide
 
     def angle(self, sprite):
@@ -444,8 +459,8 @@ class Actor(pygame.sprite.Sprite):
 
     def kill(self):
         cur = self.theater.artist.current
-        if self in self.RIGID_BODY[cur]:
-            self.RIGID_BODY[cur].remove(self)
+        if self in self.RIGID_BODY[cur]: self.RIGID_BODY[cur].remove(self)
+        if self in self.SHOW_BODY[cur]: self.SHOW_BODY[cur].remove(self)
         super().kill()
 
     def change_theater(self, theatername):
@@ -476,6 +491,12 @@ class Actor(pygame.sprite.Sprite):
         if   self.idle.__code__.co_argcount == 0: self.idle()
         elif self.idle.__code__.co_argcount == 1: self.idle(self)
         elif self.idle.__code__.co_argcount == 2: self.idle(self, ticks)
+
+    def local(self, theater, point=None):
+        theater.regist(self)
+        if point:
+            self.rect.center = point
+        return self
 
     @property
     def map(self):
@@ -541,8 +562,10 @@ class Actor(pygame.sprite.Sprite):
             # 恢复碰撞检测
             self._regist(self)
             cur = self.theater.artist.current
-            if self not in self.RIGID_BODY[cur]:
+            if self.in_entity and self not in self.RIGID_BODY[cur]:
                 self.RIGID_BODY[cur].append(self)
+            if self.in_collide and self not in self.SHOW_BODY[cur]:
+                self.SHOW_BODY[cur].append(self)
         if self.axis:
             # 清理/恢复栅格游戏类型中的阻值
             if alive:
@@ -552,6 +575,16 @@ class Actor(pygame.sprite.Sprite):
                     self.theater.map.map2d._local_del(self.axis, self.obstruct)
             else:
                 self.theater.map.map2d._local_add(self.axis, self.obstruct)
+
+    def outbounds(self):
+        # 返回超过边界的方向和长度，这样更方便控制边界
+        ww, wh = self.theater.size
+        aw, ah = self.showsize
+        cx, cy = self.rect.center
+        if cx-aw/2 > ww: return 'r', cx-aw/2-ww
+        if cy-ah/2 > wh: return 'd', cy-ah/2-wh
+        if cx+aw/2 < 0:  return 'l', -(cx+aw/2)
+        if cy+ah/2 < 0:  return 'u', -(cy+ah/2)
 
     def _image_tuning(self):
         for k in sorted(self._tuning):
@@ -607,26 +640,52 @@ class Actor(pygame.sprite.Sprite):
 
 class Player(Actor):
     RIGID_BODY = {}
+    SHOW_BODY = {}
     def __init__(self, *a, player='p1', **kw):
         kw['in_control'] = True
+        kw['in_collide'] = True
         super().__init__(*a, **kw)
 class NPC(Actor):
     RIGID_BODY = {}
+    SHOW_BODY = {}
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
+class Anime(Actor):
+    RIGID_BODY = {}
+    SHOW_BODY = {}
+    def __init__(self, *a, **kw):
+        kw['in_entity'] = False
+        kw['in_bounds'] = False
+        super().__init__(*a, **kw)
+    def update(self,ticks):
+        super().update(ticks)
+        if self.imager.rects is not None:
+            if self.imager.rects.get_cycle_number() == 1:
+                self.kill()
+                self.endanime()
+    @staticmethod
+    def endanime():
+        pass
 class Enemy(Actor):
     RIGID_BODY = {}
+    SHOW_BODY = {}
     def __init__(self, *a, **kw):
+        kw['in_bounds'] = False
+        kw['in_collide'] = True
         super().__init__(*a, **kw)
 class Bullet(Actor):
     RIGID_BODY = {}
+    SHOW_BODY = {}
     def __init__(self, *a, **kw):
         kw['in_entity'] = False
+        kw['in_bounds'] = False
+        kw['in_collide'] = True
         kw['in_entitys'] = [] # 默认情况只检测 ENTITYS_DEFAULT 内的物体，子弹类则无需实体检测
         super().__init__(*a, **kw)
 
 class Wall(Actor):
     RIGID_BODY = {}
+    SHOW_BODY = {}
     def __init__(self, *a, **kw):
         kw['in_entitys'] = ENTITYS # 墙体也要自动对其他类型的数据进行互斥，否则墙体运动时候不会与
         super().__init__(*a, **kw)
@@ -634,13 +693,13 @@ class Wall(Actor):
 
 ENTITYS = [Player, NPC, Enemy, Wall]
 ENTITYS_DEFAULT = [Wall]
+COLLIDE = [Player, NPC, Enemy, Bullet]
 
 
-# 菜单的处理和游戏相关性不大，但是由于我开发的思路是每个场景统一使用一个 sprite.group 来装下所有的元素
-# 所以菜单类仍旧使用继承自 Actor，这些所有的 sprite 后续统一在 Theater 里管理，
-# 后续会最终在 Artist 类里面统一更新画面。
-# 这里的菜单肯定需要增加一些更加像是菜单的菜单处理，预计会包含一些点击事件的 HOOK 之类的。
-# 目前先就抽象出这样一个类来。
+
+
+
+
 
 # 后来发现一个场景一个 sprite.group 可能不够，要更加方便的管理应该是 一个大类元素使用一个 sprite.group
 # 因为这样分层管理起来会更加容易的实现前景，背景之类谁先谁后渲染顺序的处理，例如“菜单”必须要置顶于游戏之上
@@ -648,9 +707,11 @@ ENTITYS_DEFAULT = [Wall]
 class Menu(Actor):
     DEBUG = False
     RIGID_BODY = {}
+    SHOW_BODY = {}
     # Hover
     class HoverImage(Actor):
         RIGID_BODY = {}
+        SHOW_BODY = {}
         def __init__(self, *a, **kw):
             kw['in_entity'] = False
             kw['in_entitys'] = []
@@ -734,6 +795,7 @@ class Menu(Actor):
 
 class Button(Actor):
     RIGID_BODY = {}
+    SHOW_BODY = {}
     def __init__(self, *a, **kw):
         kw['in_entity'] = False
         kw['in_entitys'] = []
@@ -829,6 +891,7 @@ class Button(Actor):
 # 该处的背景类仅用于规范游戏的范围使用的
 class Background(Actor):
     RIGID_BODY = {}
+    SHOW_BODY = {}
     def __init__(self, *a, **kw):
         kw['in_entity'] = False
         kw['in_entitys'] = []

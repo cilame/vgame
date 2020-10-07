@@ -490,3 +490,24 @@ _ft = pygame.transform.scale(ft, (int(w*2), int(h*2))) # 示例：缩放为原�
 另外字体这边还需要考虑做换行的问题，还需要考虑固定长度，靠左/靠右的展示，这种处理便于表格数据的展示。
 还有一种开发需求，就是拖拽调整位置，并且输出坐标信息，这样会非常方便对于 grid 的开发。
 ```
+
+20201007
+
+```
+对于一些音效加载来说有时候会出现奇怪的问题，这里记录一下
+这里很奇怪的是加载一些 mp3 音效的时候
+    使用 pygame.mixer.music.load 加载音乐时候没有问题
+    使用 pygame.mixer.Sound 却会出现 python.error: Unable to open file 的错误
+    怀疑是一些处理音效的位数相关的问题，
+直接使用 pygame.mixer.music.load 不好，因为这个处理的音乐只能同时有一个音乐播放
+但是我这边需要的是能够同时加载多个音效的 pygame.mixer.Sound 的加载播放方式
+所以那些 mp3 的音效音乐我只能通过其他 py 库转换成 wav 格式，至少目前转换后的音乐能使用了
+转换代码如下：
+
+# pip install pydub
+import pydub
+from pydub import AudioSegment
+def mp3_to_wav(mp3_path, wav_path):
+    s = AudioSegment.from_mp3(file=mp3_path)
+    s.export(wav_path, format="wav")
+```

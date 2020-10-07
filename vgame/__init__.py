@@ -5,8 +5,9 @@ from pygame.locals import *
 
 from .theater import Theater, Map
 from .actor import Actor, Image, ImageMaker, Text
-from .actor import Player, Wall, Bullet, Enemy, NPC, Menu, Background, Button # 比较高一层的封装
+from .actor import Player, Wall, Bullet, Enemy, NPC, Anime, Menu, Background, Button # 比较高一层的封装
 from .actor import Delayer, Controller
+from .music import Music
 
 DEBUG = False
 
@@ -80,7 +81,7 @@ class Artist:
             pygame.draw.line(self.screen, self.GRID_LINE_COLOR, (0, y), (self.screen_rect.width, y))
 
     def change_theater(self, name):
-        self.current = name
+        self.current = name.name if isinstance(name, Theater) else name
 
     def regist(self, theater):
         if theater.theater_name not in self.theaters:
@@ -174,6 +175,12 @@ class Initer:
             mt._stop = lambda: _stop(mt)
         else:
             raise Exception('If vgame.Initer is not in the main thread, it is likely to cause program exceptions')
+
+def change_theater(name):
+    try:
+        Artist.ARTIST.change_theater(name)
+    except:
+        pass
 
 
 __author__ = 'cilame'

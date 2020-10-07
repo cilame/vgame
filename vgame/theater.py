@@ -2,7 +2,7 @@ import pygame
 from pygame.locals import *
 
 from .actor import Actor
-from .actor import Player, Wall, Enemy, Bullet, NPC
+from .actor import Player, Wall, Enemy, Bullet, NPC, Anime
 from .actor import Menu, Background, Button
 
 from .dijkstra import shortest_path
@@ -373,13 +373,23 @@ class Theater:
 
         # 用这个初始化不同场景下的物理检测的 Actor 列表
         Actor .RIGID_BODY[self.theater_name] = []
+        Actor .SHOW_BODY [self.theater_name] = []
         Player.RIGID_BODY[self.theater_name] = []
+        Player.SHOW_BODY [self.theater_name] = []
         Wall  .RIGID_BODY[self.theater_name] = []
+        Wall  .SHOW_BODY [self.theater_name] = []
         Enemy .RIGID_BODY[self.theater_name] = []
+        Enemy .SHOW_BODY [self.theater_name] = []
         Bullet.RIGID_BODY[self.theater_name] = []
+        Bullet.SHOW_BODY [self.theater_name] = []
         NPC   .RIGID_BODY[self.theater_name] = []
+        NPC   .SHOW_BODY [self.theater_name] = []
+        Anime .RIGID_BODY[self.theater_name] = []
+        Anime .SHOW_BODY [self.theater_name] = []
         Menu  .RIGID_BODY[self.theater_name] = []
+        Menu  .SHOW_BODY [self.theater_name] = []
         Button.RIGID_BODY[self.theater_name] = []
+        Button.SHOW_BODY [self.theater_name] = []
 
         # *暂未使用的参数，后续要考虑入场和出场的动画表演，否则切换场景会非常僵硬（至少要提供配置接口）
         # *后面可以考虑实现一些可配置的淡入淡出的效果
@@ -424,3 +434,24 @@ class Theater:
     def name(self):
         return self.theater_name
     
+    def change_theater(self, name_or_class):
+        self.artist.change_theater(name_or_class)
+
+    @property
+    def Actor(self):  return iter(Actor.SHOW_BODY[self.name])
+    @property
+    def Player(self): return iter(Player.SHOW_BODY[self.name])
+    @property
+    def Wall(self):   return iter(Wall.SHOW_BODY[self.name])
+    @property
+    def Enemy(self):  return iter(Enemy.SHOW_BODY[self.name])
+    @property
+    def Bullet(self): return iter(Bullet.SHOW_BODY[self.name])
+    @property
+    def NPC(self):    return iter(NPC.SHOW_BODY[self.name])
+    @property
+    def Anime(self):  return iter(Anime.SHOW_BODY[self.name])
+    @property
+    def Menu(self):   return iter(Menu.SHOW_BODY[self.name])
+    @property
+    def Button(self): return iter(Button.SHOW_BODY[self.name])
