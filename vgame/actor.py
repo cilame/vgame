@@ -109,8 +109,8 @@ class SmoothMover(_Mover):
             if 8 in d: targ = self.actor.status['direction'].get('up')
         if targ and curr != targ: self.actor.aload_image(targ)
 
-    def move_angle(self, angle):
-        self.smooth_move([6], self.speed, angle)
+    def move_angle(self, angle, speed=None):
+        self.smooth_move([6], self.speed if speed is None else pygame.Vector2(speed, speed), angle)
 
     def smooth_move(self, d, speed, rotate=None):
         vx, vy = 0, 0

@@ -44,7 +44,7 @@ player_imgs = [
     '../test_data/fjdz/image/hero1.png',
     '../test_data/fjdz/image/hero2.png',
 ]
-player = vgame.Player(player_imgs, rate=100, showsize=(50, 62)).local(main, (120,400))
+player = vgame.Player(player_imgs, rate=200, showsize=(50, 62)).local(main, (120,400))
 player.direction = lambda self, d: self.mover.move(d.get('p1'), 6)
 def control(self, c):
     if self.delay(c and c.get('p1')[0], time=100, repeat=True): create_bullet()
@@ -57,12 +57,12 @@ enemy1_dead = [path+'/enemy1_down1.png',path+'/enemy1_down2.png',path+'/enemy1_d
 enemy2_dead = [path+'/enemy1_down1.png',path+'/enemy1_down2.png',path+'/enemy1_down3.png',path+'/enemy1_down4.png',]
 hero_blowup = [path+'/hero_blowup_n1.png',path+'/hero_blowup_n2.png',path+'/hero_blowup_n3.png',path+'/hero_blowup_n4.png',]
 def enemy_creater(self):
-    if self.delay(True, time=200, repeat=True):
+    if self.delay(True, time=100, repeat=True):
         if random.randint(0, 10) <= 6:
             x, y, speed, enemysize, enemy_dead, score = random.randint(15, 220), 30, random.randint(2, 4), (25,20), enemy0_dead, 100
             enemy = vgame.Enemy('../test_data/fjdz/image/enemy0.png', showsize=enemysize).local(main, (x, y))
-            enemy.status['hp'] = 1
-            enemy.status['maxhp'] = 1
+            enemy.status['hp'] = 3
+            enemy.status['maxhp'] = 3
             enemy.status['bgbar'] = vgame.Anime((0,0,0), showsize=(enemy.showsize[0], 3)).local(main, (x, y-15))
             enemy.status['hpbar'] = vgame.Anime((0,255,0), showsize=(enemy.showsize[0], 3)).local(main, (x, y-15))
         elif random.randint(0, 10) <= 8:
@@ -92,7 +92,7 @@ def enemy_creater(self):
             v = self.collide(vgame.Bullet)
             if v:
                 v[0].kill()
-                self.status['hp'] -= 1
+                self.status['hp'] -= 2
                 if self.status['hp'] <= 0:
                     self.kill()
                     self.status['hpbar'].kill()
@@ -120,12 +120,16 @@ label.idle = enemy_creater
 
 def create_bullet():
     x, y = player.rect.center
-    def one(dx, dy=0):
+    def one(dx, ag=0, dy=0):
         bullet = vgame.Bullet('../test_data/fjdz/image/bullet1.png', showsize=(4, 10)).local(main, (x+dx, y-15))
-        bullet.idle = lambda self:self.mover.move([8], 8) or (self.kill() if self.outbounds() else None)
+        def idle(self):
+            if self.outbounds():
+                self.kill()
+            self.mover.move_angle(ag-90, 10)
+        bullet.idle = idle
         bullet_player.play()
     def two(): one(-10) or one(10)
-    def three(): one(-15) or one(0) or one(15)
-    def five(): one(-20) or one(-10) or one(0) or one(10) or one(20)
+    def three(): one(-15,-15) or one(0) or one(15,15)
+    def five(): one(-20,-20) or one(-10,-10) or one(0,0) or one(10,10) or one(20,20)
     # one(0) # 单发
-    two()
+    five()
