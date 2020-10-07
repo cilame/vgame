@@ -12,11 +12,12 @@ import random
 
 # vgame.DEBUG = True
 # vgame.Map.DEBUG = True
+path = '../test_data/fjdz/image'
 
 vgame.Initer(size=(240, 430))
-main = vgame.Theater('main', '../test_data/fjdz/image/background.png')
-pause = vgame.Theater('pause', '../test_data/fjdz/image/background.png')
-death = vgame.Theater('death', '../test_data/fjdz/image/background.png')
+main = vgame.Theater('main', path+'/background.png')
+pause = vgame.Theater('pause', path+'/background.png')
+death = vgame.Theater('death', path+'/background.png')
 unpause = vgame.Button(vgame.Text('暂停')).local(pause, pause.background.rect.center)
 restart = vgame.Button(vgame.Text('重开')).local(death, death.background.rect.center)
 
@@ -41,8 +42,8 @@ bullet_player = vgame.Music('../test_data/fjdz/music/bullet.wav', .2)
 enemy0_dplayer = vgame.Music('../test_data/fjdz/music/enemy0_down.wav', .3)
 
 player_imgs = [
-    '../test_data/fjdz/image/hero1.png',
-    '../test_data/fjdz/image/hero2.png',
+    path+'/hero1.png',
+    path+'/hero2.png',
 ]
 player = vgame.Player(player_imgs, rate=200, showsize=(50, 62)).local(main, (120,400))
 player.direction = lambda self, d: self.mover.move(d.get('p1'), 6)
@@ -51,7 +52,6 @@ def control(self, c):
     if self.delay(c and c.get('p1')[1]): vgame.change_theater(pause)
 player.control = control
 
-path = '../test_data/fjdz/image'
 enemy0_dead = [path+'/enemy0_down1.png',path+'/enemy0_down2.png',path+'/enemy0_down3.png',path+'/enemy0_down4.png',]
 enemy1_dead = [path+'/enemy1_down1.png',path+'/enemy1_down2.png',path+'/enemy1_down3.png',path+'/enemy1_down4.png',]
 enemy2_dead = [path+'/enemy1_down1.png',path+'/enemy1_down2.png',path+'/enemy1_down3.png',path+'/enemy1_down4.png',]
@@ -60,21 +60,21 @@ def enemy_creater(self):
     if self.delay(True, time=100, repeat=True):
         if random.randint(0, 10) <= 6:
             x, y, speed, enemysize, enemy_dead, score = random.randint(15, 220), 30, random.randint(2, 4), (25,20), enemy0_dead, 100
-            enemy = vgame.Enemy('../test_data/fjdz/image/enemy0.png', showsize=enemysize).local(main, (x, y))
+            enemy = vgame.Enemy(path+'/enemy0.png', showsize=enemysize).local(main, (x, y))
             enemy.status['hp'] = 3
             enemy.status['maxhp'] = 3
             enemy.status['bgbar'] = vgame.Anime((0,0,0), showsize=(enemy.showsize[0], 3)).local(main, (x, y-15))
             enemy.status['hpbar'] = vgame.Anime((0,255,0), showsize=(enemy.showsize[0], 3)).local(main, (x, y-15))
         elif random.randint(0, 10) <= 8:
             x, y, speed, enemysize, enemy_dead, score = random.randint(15, 220), 30, random.randint(2, 3), (35,45), enemy1_dead, 300
-            enemy = vgame.Enemy('../test_data/fjdz/image/enemy1.png', showsize=enemysize).local(main, (x, y))
+            enemy = vgame.Enemy(path+'/enemy1.png', showsize=enemysize).local(main, (x, y))
             enemy.status['hp'] = 7
             enemy.status['maxhp'] = 7
             enemy.status['bgbar'] = vgame.Anime((0,0,0), showsize=(enemy.showsize[0], 3)).local(main, (x, y-25))
             enemy.status['hpbar'] = vgame.Anime((0,255,0), showsize=(enemy.showsize[0], 3)).local(main, (x, y-25))
         elif random.randint(0, 10) <= 10:
             x, y, speed, enemysize, enemy_dead, score = random.randint(15, 220), 30, random.randint(1, 2), (60,100), enemy1_dead, 800
-            enemy = vgame.Enemy('../test_data/fjdz/image/enemy2.png', showsize=enemysize).local(main, (x, y))
+            enemy = vgame.Enemy(path+'/enemy2.png', showsize=enemysize).local(main, (x, y))
             enemy.status['hp'] = 25
             enemy.status['maxhp'] = 25
             enemy.status['bgbar'] = vgame.Anime((0,0,0), showsize=(enemy.showsize[0], 3)).local(main, (x, y-60))
@@ -121,7 +121,7 @@ label.idle = enemy_creater
 def create_bullet():
     x, y = player.rect.center
     def one(dx, ag=0, dy=0):
-        bullet = vgame.Bullet('../test_data/fjdz/image/bullet1.png', showsize=(4, 10)).local(main, (x+dx, y-15))
+        bullet = vgame.Bullet(path+'/bullet1.png', showsize=(4, 10)).local(main, (x+dx, y-15))
         def idle(self):
             if self.outbounds():
                 self.kill()
