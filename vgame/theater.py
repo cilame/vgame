@@ -455,3 +455,6 @@ class Theater:
     def Menu(self):   return iter(Menu.SHOW_BODY[self.name])
     @property
     def Button(self): return iter(Button.SHOW_BODY[self.name])
+
+    @property
+    def rect(self): return self.background.rect

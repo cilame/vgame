@@ -43,9 +43,10 @@ class _Mover:
 
     def _delay_bind(self):
         if not self.has_bind:
-            cur = self.actor.theater.artist.current
-            if self.actor.in_entity:  self.actor.RIGID_BODY[cur].append(self.actor)
-            if self.actor.in_collide:  self.actor.SHOW_BODY[cur].append(self.actor)
+            if self.actor.theater: # 通常来说，未绑定 theater 的对象可能由其他子配件绑定，例如菜单。
+                cur = self.actor.theater.artist.current
+                if self.actor.in_entity:  self.actor.RIGID_BODY[cur].append(self.actor)
+                if self.actor.in_collide:  self.actor.SHOW_BODY[cur].append(self.actor)
             self.has_bind = True
 
     def collide(self):
@@ -493,9 +494,15 @@ class Actor(pygame.sprite.Sprite):
         elif self.idle.__code__.co_argcount == 2: self.idle(self, ticks)
 
     def local(self, theater, point=None):
-        theater.regist(self)
+        if isinstance(theater, vgame.Theater):
+            theater.regist(self)
+        if isinstance(theater, Menu):
+            menu = theater
+            menu.group.add(self)
         if point:
             self.rect.center = point
+        else:
+            self.rect.center = theater.rect.center
         return self
 
     @property
@@ -619,6 +626,21 @@ class Actor(pygame.sprite.Sprite):
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
 
+    @property
+    def draw(self):
+        return vgame.draw(self)
+
+    @property
+    def menu(self):
+        class _menu:
+            def local(s, menu, axis):
+                assert isinstance(menu, Menu), 'menu must be vgame.Menu object.'
+                menu.local(self, axis)
+                return self
+        return _menu()
+
+
+
 
 
 
@@ -708,15 +730,6 @@ class Menu(Actor):
     DEBUG = False
     RIGID_BODY = {}
     SHOW_BODY = {}
-    # Hover
-    class HoverImage(Actor):
-        RIGID_BODY = {}
-        SHOW_BODY = {}
-        def __init__(self, *a, **kw):
-            kw['in_entity'] = False
-            kw['in_entitys'] = []
-            kw['cam_follow'] = False # 背景需要镜头跟随的处理，之所以都使用
-            super().__init__(*a, **kw)
 
     def __init__(self, *a, **kw):
         kw['in_entity'] = False
@@ -796,6 +809,17 @@ class Menu(Actor):
 class Button(Actor):
     RIGID_BODY = {}
     SHOW_BODY = {}
+
+    # Hover
+    class HoverImage(Actor):
+        RIGID_BODY = {}
+        SHOW_BODY = {}
+        def __init__(self, *a, **kw):
+            kw['in_entity'] = False
+            kw['in_entitys'] = []
+            kw['cam_follow'] = False # 背景需要镜头跟随的处理，之所以都使用
+            super().__init__(*a, **kw)
+
     def __init__(self, *a, **kw):
         kw['in_entity'] = False
         kw['in_entitys'] = []
@@ -822,8 +846,7 @@ class Button(Actor):
         elif self.click.__code__.co_argcount == 1: self.click(m)
         elif self.click.__code__.co_argcount == 2: self.click(self, m)
 
-    @staticmethod
-    def idle(self, ticks):
+    def _idle(self, ticks):
         pos = pygame.mouse.get_pos()
         if self.mouse_pos != pos:
             self.mouse_pos = pos
@@ -838,6 +861,10 @@ class Button(Actor):
                     self.hover(False)
         if self._hover_dly.update(ticks):
             self._hover_aph = next(self._hover_lst)
+
+    def _aidle(self, ticks):
+        self._idle(ticks)
+        super()._aidle(ticks)
 
     def _get_mouse_stat(self):
         dx, dy = self.mouse_pos
@@ -862,7 +889,7 @@ class Button(Actor):
         self._hover_col = (255, 255, 255)
         self._hover_aph = next(self._hover_lst)
         def func(image):
-            bg = Menu.HoverImage((*self._hover_col,self._hover_aph), showsize=image.get_rect()[2:])
+            bg = Button.HoverImage((*self._hover_col,self._hover_aph), showsize=image.get_rect()[2:])
             image.blit(bg.image, bg.rect)
             del bg
             return image
@@ -873,15 +900,6 @@ class Button(Actor):
             self._tuning[0] = self._init_hover_color()
         else:
             del self._tuning[0]
-
-    @property
-    def menu(self):
-        class _menu:
-            def local(s, menu, axis):
-                assert isinstance(menu, Menu), 'menu must be vgame.Menu object.'
-                menu.local(self, axis)
-                return self
-        return _menu()
 
 
 

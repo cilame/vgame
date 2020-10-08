@@ -66,7 +66,12 @@ head1.click = click
 # head2.click = click
 
 bgcolor = (247,197,198,255)
-menu2 = vgame.Menu(bgcolor).init(main, (5, 12), 'ul', (.5-.04, .65-.04), offsets=(.02, .02))
+menu2 = vgame.Menu(bgcolor).init(main, (5, 12), 'ul', (.5-.04, .65-.09), offsets=(.02, .08))
+p = 5
+w,h = menu2.rect[2:]
+vgame.draw.rect(menu2, (0,0,0,255), (p,p,w-p*2,h-p*2), 4)
+
+
 b1 = vgame.Button(vgame.Text('J键打开菜单', (0,0,0), 2, textwidth=150, textside='r')).menu.local(menu2, (1, 2))
 b2 = vgame.Button(vgame.Text('K键关闭菜单', (0,0,0), 2, textwidth=150, textside='r')).menu.local(menu2, (1, 4))
 

@@ -1,3 +1,5 @@
+import traceback
+
 import pygame
 import pygame.font as font
 from pygame import Rect
@@ -179,8 +181,155 @@ class Initer:
 def change_theater(name):
     try:
         Artist.ARTIST.change_theater(name)
+    except AttributeError as e:
+        if 'NoneType' in str(e) and 'change_theater' in str(e):
+            raise Exception('Use vgame.Initer to initialize the game before using this function')
     except:
-        pass
+        traceback.print_exc()
+
+
+
+# pygame.draw.rect()
+# 绘制矩形。
+# rect(Surface, color, Rect, width=0) -> Rect
+# 在 Surface  对象上绘制一个矩形。Rect 参数指定矩形的位置和尺寸。width 参数指定边框的宽度，如果设置为 0 则表示填充该矩形。
+# pygame.draw.polygon()
+# 绘制多边形。
+# polygon(Surface, color, pointlist, width=0) -> Rect
+# 在 Surface  对象上绘制一个多边形。pointlist 参数指定多边形的各个顶点。width 参数指定边框的宽度，如果设置为 0 则表示填充该矩形。
+# 绘制一个抗锯齿的多边形，只需要将 aalines() 的 closed 参数设置为 True 即可。
+# pygame.draw.circle()
+# 根据圆心和半径绘制圆形。
+# circle(Surface, color, pos, radius, width=0) -> Rect
+# 在 Surface  对象上绘制一个圆形。pos 参数指定圆心的位置，radius 参数指定圆的半径。width 参数指定边框的宽度，如果设置为 0 则表示填充该矩形。
+# pygame.draw.ellipse()
+# 根据限定矩形绘制一个椭圆形。
+# ellipse(Surface, color, Rect, width=0) -> Rect
+# 在 Surface  对象上绘制一个椭圆形。Rect 参数指定椭圆外围的限定矩形。width 参数指定边框的宽度，如果设置为 0 则表示填充该矩形。
+# pygame.draw.arc()
+# 绘制弧线。
+# arc(Surface, color, Rect, start_angle, stop_angle, width=1) -> Rect
+# 在 Surface  对象上绘制一条弧线。Rect 参数指定弧线所在的椭圆外围的限定矩形。两个 angle 参数指定弧线的开始和结束位置。width 参数指定边框的宽度。
+# pygame.draw.line()
+# 绘制线段。
+# line(Surface, color, start_pos, end_pos, width=1) -> Rect
+# 在 Surface  对象上绘制一条线段。两端以方形结束。
+# pygame.draw.lines()
+# 绘制多条连续的线段。
+# lines(Surface, color, closed, pointlist, width=1) -> Rect
+# 在 Surface  对象上绘制一系列连续的线段。pointlist 参数是一系列短点。如果 closed 参数设置为 True，则绘制首尾相连。
+# pygame.draw.aaline()
+# 绘制抗锯齿的线段。
+# aaline(Surface, color, startpos, endpos, blend=1) -> Rect
+# 在 Surface  对象上绘制一条抗锯齿的线段。blend 参数指定是否通过绘制混合背景的阴影来实现抗锯齿功能。该函数的结束位置允许使用浮点数。
+# pygame.draw.aalines()
+# 绘制多条连续的线段（抗锯齿）。
+# aalines(Surface, color, closed, pointlist, blend=1) -> Rect
+
+class draw:
+    def __init__(self, parent):
+        self.parent = parent
+
+    @staticmethod
+    def rect(Surface, color, Rect, width=0):
+        _Surface = Surface
+        '''
+        将 pygame 的 draw 增强，使其更加适用于 vgame，其中 Rect 如果为数字，自动作为 padding 参数
+        '''
+        imager = getattr(Surface, 'imager', None)
+        if imager:
+            Surface = imager.orig_image
+        if isinstance(Rect, int):
+            pad = Rect
+            w,h = Surface.get_rect()[2:]
+            Rect = (pad,pad,w-pad*2,h-pad*2)
+        pygame.draw.rect(Surface, color, Rect, width)
+        return _Surface
+    @staticmethod
+    def polygon(Surface, color, pointlist, width=0):
+        _Surface = Surface
+        imager = getattr(Surface, 'imager', None)
+        if imager:
+            Surface = imager.orig_image
+        pygame.draw.polygon(Surface, color, pointlist, width)
+        return _Surface
+    @staticmethod
+    def circle(Surface, color, pos, radius, width=0):
+        _Surface = Surface
+        imager = getattr(Surface, 'imager', None)
+        if imager:
+            Surface = imager.orig_image
+        pygame.draw.circle(Surface, color, pos, radius, width)
+        return _Surface
+    @staticmethod
+    def ellipse(Surface, color, Rect, width=0):
+        _Surface = Surface
+        imager = getattr(Surface, 'imager', None)
+        if imager:
+            Surface = imager.orig_image
+        pygame.draw.ellipse(Surface, color, Rect, width)
+        return _Surface
+    @staticmethod
+    def arc(Surface, color, Rect, start_angle, stop_angle, width=1):
+        _Surface = Surface
+        imager = getattr(Surface, 'imager', None)
+        if imager:
+            Surface = imager.orig_image
+        pygame.draw.arc(Surface, color, Rect, start_angle, stop_angle, width)
+        return _Surface
+    @staticmethod
+    def line(Surface, color, start_pos, end_pos, width=1):
+        _Surface = Surface
+        imager = getattr(Surface, 'imager', None)
+        if imager:
+            Surface = imager.orig_image
+        pygame.draw.line(Surface, color, start_pos, end_pos, width)
+        return _Surface
+    @staticmethod
+    def lines(Surface, color, closed, pointlist, width=1):
+        _Surface = Surface
+        imager = getattr(Surface, 'imager', None)
+        if imager:
+            Surface = imager.orig_image
+        pygame.draw.lines(Surface, color, closed, pointlist, width)
+        return _Surface
+    @staticmethod
+    def aaline(Surface, color, startpos, endpos, blend=1):
+        _Surface = Surface
+        imager = getattr(Surface, 'imager', None)
+        if imager:
+            Surface = imager.orig_image
+        pygame.draw.aaline(Surface, color, startpos, endpos, blend)
+        return _Surface
+    @staticmethod
+    def aalines(Surface, color, closed, pointlist, blend=1):
+        _Surface = Surface
+        imager = getattr(Surface, 'imager', None)
+        if imager:
+            Surface = imager.orig_image
+        pygame.draw.aalines(Surface, color, closed, pointlist, blend)
+        return _Surface
+
+    def __getattribute__(self, key):
+        pare = super().__getattribute__('parent')
+        func = super().__getattribute__(key)
+        def _func(*a,**kw):
+            if len(a):
+                a = (pare, *a)
+            else:
+                kw['Surface'] = pare
+            return func(*a,**kw)
+        return _func
+
+
+
+
+
+
+
+
+
+
 
 
 __author__ = 'cilame'
