@@ -511,3 +511,12 @@ def mp3_to_wav(mp3_path, wav_path):
     s = AudioSegment.from_mp3(file=mp3_path)
     s.export(wav_path, format="wav")
 ```
+
+20201008
+
+```
+Anime 对象存在动态(多张图片动画)时是存在问题的，因为会自动在一次循环之后自动调用 self.kill() 方法，
+并调用该对象中的静态方法 endanime 原本该功能开发是由于飞机大战中的机体死亡时播放动画的需要，
+现在考虑扩展可控循环次数，在每播放完一个轮回的时候，自动调用一个类似 endanime 的静态函数（方便后续覆盖）。
+名字大概会时 loopanime？总之先看后续开发情况，如果后续开发游戏有需要就将该功能放进来即可。
+```
