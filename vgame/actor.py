@@ -554,7 +554,9 @@ class Actor(pygame.sprite.Sprite):
         # 原本使用 inspect.stack 来获取函数调用栈的信息，不过这个函数每次都会获取全部的空间信息导致非常耗时
         # 现在直接使用 sys._getframe() 来获取，可以节约大量时间，现在你几乎可以无需主动配置 delayer, ticks 这两个参数
         '''
-        if delayer == None: delayer = '{}'.format(id(sys._getframe()))
+        if delayer == None:
+            frame = sys._getframe().f_back
+            delayer = '{}:{}'.format(id(frame), frame.f_lineno) # (被调用函数所在函数空间的函数id and 被调用时delay函数所在的行数)
         if ticks is None:   ticks = sys._getframe().f_back.f_back.f_locals['ticks']
         if repeat or self._repeat(judge, delayer):
             return judge and self._delay(time, delayer, ticks)
