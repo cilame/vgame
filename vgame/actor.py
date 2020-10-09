@@ -492,16 +492,19 @@ class Actor(pygame.sprite.Sprite):
         elif self.idle.__code__.co_argcount == 1: self.idle(self)
         elif self.idle.__code__.co_argcount == 2: self.idle(self, ticks)
 
-    def local(self, theater, point=None):
+    def local(self, theater, point=None, offsets=(0,0)):
         if isinstance(theater, vgame.Theater):
             theater.regist(self)
         if isinstance(theater, Menu):
             menu = theater
             menu.group.add(self)
         if point:
-            self.rect.center = point
+            rx,ry = point
+            ox,oy = offsets
         else:
-            self.rect.center = theater.rect.center
+            rx,ry = theater.rect.center
+            ox,oy = offsets
+        self.rect.center = (rx+ox, ry+oy)
         return self
 
     @property
