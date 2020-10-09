@@ -1,5 +1,4 @@
-import os, re, time, math
-import inspect
+import os, re, sys, time, math
 import traceback
 from itertools import cycle, product
 
@@ -530,14 +529,13 @@ class Actor(pygame.sprite.Sprite):
                 return str(self.theater.map)
         return _map()
 
-    def _delay(self, time, delayer, deep=3):
+    def _delay(self, time, delayer, ticks):
         try:
             # 这里的 delay 函数事实上是运行在 Actor.update 函数里面的"函数的内部"，
             # 调用的深度固定，所以用指定调用栈可以准确的用如下方式找到 ticks ，这样就避免了让开发者直接接触到 ticks 的处理
             if delayer not in self.delayers:
-                self.delayers[delayer] = self.regist(Delayer())
-            self.delayers[delayer].delay = time # 毫秒
-            return self.delayers[delayer].update(inspect.stack()[deep][0].f_locals['ticks'])
+                self.delayers[delayer] = self.regist(Delayer(time))
+            return self.delayers[delayer].update(ticks)
         except:
             raise 'delay function must work in (Actor.mouse, Actor.control, Actor.direction, Actor.idle).'
 
@@ -548,13 +546,18 @@ class Actor(pygame.sprite.Sprite):
         self.repeaters[delayer] = judge
         return bool(judge) != bool(pjudge)
 
-    def delay(self, judge, time=0, repeat=False, delayer=None):
-        if delayer == None:
-            # 让 delay 函数调用在不同的位置使用不同的 delayer 的魔法
-            s = inspect.stack()[1]
-            delayer = '{}:{}'.format(id(s.frame), s.lineno)
+    def delay(self, judge, time=0, repeat=False, delayer=None, ticks=None):
+        '''
+        delayer -> 标识延迟器的唯一标识符，用数字字符串标识均可
+        ticks   -> 请检查如何在 Actor 对象覆盖 control,direction,mouse,idle 函数怎么传递该参数
+
+        # 原本使用 inspect.stack 来获取函数调用栈的信息，不过这个函数每次都会获取全部的空间信息导致非常耗时
+        # 现在直接使用 sys._getframe() 来获取，可以节约大量时间，现在你几乎可以无需主动配置 delayer, ticks 这两个参数
+        '''
+        if delayer == None: delayer = '{}'.format(id(sys._getframe()))
+        if ticks is None:   ticks = sys._getframe().f_back.f_back.f_locals['ticks']
         if repeat or self._repeat(judge, delayer):
-            return judge and self._delay(time, delayer)
+            return judge and self._delay(time, delayer, ticks)
 
     def toggle(self, open_close:bool=None):
         # 可以将 open_close 设置成 Ture 或 False 来指定变化的开关状态
