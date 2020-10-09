@@ -1,3 +1,4 @@
+import sys
 import traceback
 
 import pygame
@@ -155,7 +156,7 @@ class Initer:
 
     def quit(self):
         pygame.quit()
-        exit()
+        sys.exit()
 
     def hook_main_thread_end(self):
         # 让你在执行脚本的时候 vgame.Initer 实例不用再在最后执行 run() 函数。少写一行是一行。
