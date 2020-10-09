@@ -15,7 +15,10 @@ import vgame
 
 vgame.Initer()
 
-main = vgame.Theater('main', (0,0,0)).draw.rect((255,255,255), 5, 3)
-btn = vgame.Button(vgame.Text('开始游戏', (255,255,255))).local(main, offsets=(0, -15))
-btn = vgame.Button(vgame.Text('保存游戏', (255,255,255))).local(main, offsets=(0, 15))
+main = vgame.Theater((0,0,0)).draw.rect((255,255,255), 5, 3)
+btn1 = vgame.Button(vgame.Text('一号场景', (255,255,255))).local(main, offsets=(0, -15))
+btn1.click = lambda: vgame.change_theater(main2)
 
+main2 = vgame.Theater((0,0,0)).draw.rect((255,255,255), 5, 3)
+btn2 = vgame.Button(vgame.Text('二号场景', (255,255,255))).local(main2, offsets=(0, -15))
+btn2.click = lambda: vgame.change_theater(main)

@@ -15,9 +15,9 @@ import random
 path = '../test_data/fjdz/image'
 
 vgame.Initer(size=(240, 430))
-main = vgame.Theater('main', path+'/background.png')
-pause = vgame.Theater('pause', path+'/background.png')
-death = vgame.Theater('death', path+'/background.png')
+main = vgame.Theater(path+'/background.png')
+pause = vgame.Theater(path+'/background.png')
+death = vgame.Theater(path+'/background.png')
 unpause = vgame.Button(vgame.Text('暂停')).local(pause, pause.background.rect.center)
 restart = vgame.Button(vgame.Text('重开')).local(death, death.background.rect.center)
 

@@ -14,7 +14,7 @@ vgame.DEBUG = True
 vgame.Map.DEBUG = True
 
 init = vgame.Initer()
-main = vgame.Theater('main', gridsize=(32, 32))
+main = vgame.Theater(gridsize=(32, 32))
 
 
 

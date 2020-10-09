@@ -14,7 +14,7 @@ vgame.DEBUG = True
 vgame.Map.DEBUG = True
 
 init = vgame.Initer()
-main = vgame.Theater('main', gridsize=(12, 8))
+main = vgame.Theater(gridsize=(12, 8))
 
 
 city = vgame.Enemy(showsize=(12, 8)).map.local(main, (3,3), 1)
@@ -45,13 +45,11 @@ player.mouse = mouse
 vgame.Menu.DEBUG = True
 bgcolor = (247,197,198,255)
 menu = vgame.Menu(bgcolor).init(main, (7, 3), 'd', 1)
-head1 = vgame.Button('../test_data/1A00.bmp', showsize=(64, 80))#.map.local((10,45), 0, main)
-head2 = vgame.Button('../test_data/1A00.bmp', showsize=(64, 80))#.map.local((10,45), 0, main)
+head1 = vgame.Button('../test_data/1A00.bmp', showsize=(64, 80))
+head2 = vgame.Button('../test_data/1A00.bmp', showsize=(64, 80))
 
-menu.local(head1, (1, 1))
-menu.local(head2, (2, 1))
-menu.local(head1, (3, 1))
-
+head1.menu.local(menu, (1,1))
+head2.menu.local(menu, (2,1))
 
 def click(self, m):
     print(self, m)

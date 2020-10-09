@@ -9,7 +9,7 @@ import sys;print(sys.stdout.encoding)
 
 import vgame
 s = vgame.Initer()
-t = vgame.Theater('main')
+t = vgame.Theater()
 
 a = vgame.Player()
 b = vgame.Wall(showsize=(300,100), showpoint=(100,200))

@@ -30,7 +30,7 @@ if __name__ == "__main__":
     i_fsl = Image(fsr, rate=60, flip='x')
     i_fra = Image(fra, rate=60)
 
-    theater_1 = Theater('sea', i_bg0)
+    theater_1 = Theater(i_bg0)
     actor2 = Actor(i_fsd, in_control=True)
     # actor2.mover.speed.x = 1.
     # actor2.mover.speed.y = 1.

@@ -18,7 +18,7 @@ s = vgame.Initer() # 参数 ticks帧数(默认60), title标题名(默认vgame), 
 # 当是一个 vgame.Image 对象时，showsize 可以在该 Image 对象实例化的时候传入，并且 Actor 中的 showsize 将无效
 
 # 创建场景，第二个参数可以是背景图，也可以不写，不写展示默认的蓝色背景
-t = vgame.Theater('main') # 按键 ESC 关闭
+t = vgame.Theater() # 按键 ESC 关闭
 
 # 增加三个角色，其中a设置 in_control为True 后就能够通过修改 a.direction 函数来接收方向功能
 a = vgame.Actor(in_control=True,showsize=(50,100))
@@ -70,7 +70,7 @@ t.regist(a) # 将角色 a 注入场景
 t.regist(b) # 将角色 b 注入场景
 t.regist(c) # 将角色 c 注入场景
 
-p = vgame.Theater('pause') # 可以用 TAB 测试切换场景
+p = vgame.Theater() # 可以用 TAB 测试切换场景
 
 s.regist(t) # 将场景 t 注入游戏
 s.regist(p) # 将场景 p 注入游戏

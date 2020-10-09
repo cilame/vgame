@@ -16,9 +16,9 @@ import vgame
 
 
 init = vgame.Initer(size=(700, 600))
-start = vgame.Theater('start', (0,0,0,255))
+start = vgame.Theater((0,0,0,255))
 sbtn = vgame.Button(vgame.Text('开始游戏', (255,255,255))).local(start, start.rect.center)
-sbtn.click = lambda: vgame.change_theater('main')
+sbtn.click = lambda: vgame.change_theater(main)
 
 
 
@@ -36,7 +36,7 @@ def strB2Q(ustring):
         rstring += chr(inside_code)
     return rstring
 
-main = vgame.Theater('main', gridsize=(12, 8))
+main = vgame.Theater(gridsize=(12, 8))
 def mouse(self, m):
     if m: print(self, m)
 def ctl(self, c):

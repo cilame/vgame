@@ -16,7 +16,7 @@ vgame.Menu.DEBUG = True
 
 
 init = vgame.Initer(size=(700, 600))
-main = vgame.Theater('main', gridsize=(12, 8))
+main = vgame.Theater(gridsize=(12, 8))
 
 def mouse(self, m):
     if m: print(self, m)

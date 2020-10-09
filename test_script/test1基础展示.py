@@ -41,7 +41,7 @@ if __name__ == "__main__":
     i_fra = Image(fra, rate=60)
 
     # 场景一
-    theater_0 = Theater('sky', i_bg1) # theater(舞台) 必须要指定两个元素，1背景图片资源，2舞台名字
+    theater_0 = Theater(i_bg1) # theater(舞台) 必须要指定两个元素，1背景图片资源，2舞台名字
     actor1 = Actor(i_cur, in_control=True) # in_control 负责接收控制指令，目前控制指令只会打印相关的操作内容
     theater_0.regist(actor1) # actor(演员) 需要注册进场景才能使用
     actor1.direction = lambda info: print('morse_info', info) if info else None # 方向键操作的回调 hook
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     main.regist(theater_0) # threater(舞台) 需要注册进初始对象才能使用
 
     # 场景二
-    theater_1 = Theater('sea', i_bg2) # theater(舞台) 必须要指定两个元素，1背景图片资源，2舞台名字
+    theater_1 = Theater(i_bg2) # theater(舞台) 必须要指定两个元素，1背景图片资源，2舞台名字
     actor2 = Actor(i_fra, in_control=True)
     actor3 = Actor(i_fsd)
     actor4 = Actor(i_fsr)
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     theater_1.regist(actor4)
     main.regist(theater_1)
 
-    main.change_theater('sea') # 可以通过舞台名字直接进行场景切换
+    main.change_theater(theater_1) # 可以通过舞台名字直接进行场景切换
 
     # 一个简单的角色的控制处理的模板
     # 这里的处理可以很方便的使用默认的操作消息，通过修改默认处理消息的函数就能利用这些操作消息

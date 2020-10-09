@@ -32,7 +32,7 @@ if __name__ == "__main__":
     i_fsl = Image(fsr, showsize=(30,30), rate=60, flip='x')
     i_fra = Image(fra, showsize=(30,30), rate=60)
 
-    theater_1 = Theater('sea', i_bg0, gridsize=(40, 40))
+    theater_1 = Theater(i_bg0, gridsize=(40, 40))
     actor2 = vgame.Player(i_fsd)
     actor2.mover.speed.x = 4.
     actor2.mover.speed.y = 4.

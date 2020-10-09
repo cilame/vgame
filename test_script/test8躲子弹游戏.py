@@ -13,7 +13,7 @@ import vgame
 import random
 import time
 s = vgame.Initer()
-t = vgame.Theater('main')
+t = vgame.Theater()
 f = vgame.font.SysFont("simhei", 15)
 bullets = []
 def direct_a(self, d): self.mover.move(d.get('p1'))
@@ -53,7 +53,7 @@ def create_enemy(self):
     n.imager.orig_image = n.imager.load_img(f.render(tm, 3, (255,255,255)))
     l.imager.orig_image = l.imager.load_img(f.render('当前数量:{}'.format(currlens()), 3, (255,255,255)))
     if a.collide(*bullets):
-        s.change_theater('end')
+        s.change_theater(e)
 a.idle = create_enemy
 m = vgame.Actor(f.render('游戏结束(按J重新开始游戏)', 3, (255,255,255)), in_entity=False, in_control=True)
 def restart(self, c):
@@ -62,11 +62,11 @@ def restart(self, c):
         for i in bullets: i.kill()
         bullets = []
         d['starttime'] = time.time()
-        s.change_theater('main')
+        s.change_theater(t)
         a.rect[:2] = 310, 230
 m.control = restart
 m.rect[0:2] = 250, 200
-e = vgame.Theater('end')
+e = vgame.Theater()
 
 t.regist(a, n, l)
 e.regist(m, n, l)

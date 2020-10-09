@@ -10,7 +10,7 @@ import sys;print(sys.stdout.encoding)
 
 import vgame
 s = vgame.Initer(60)
-t = vgame.Theater('main') # 按 ESC 关闭，按 TAB 切换场景(如果只有一个场景就切换不了)
+t = vgame.Theater() # 按 ESC 关闭，按 TAB 切换场景(如果只有一个场景就切换不了)
 
 vgame.Actor.DEBUG = True # 让全部的 Actor 对象都显示 mask 的边框线
 

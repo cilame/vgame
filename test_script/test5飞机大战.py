@@ -15,7 +15,7 @@ import vgame
 # vgame.Map.DEBUG = True
 
 init = vgame.Initer()
-main = vgame.Theater('main')
+main = vgame.Theater()
 
 
 player = vgame.Player(showsize=(80,100)).map.local(main, (10, 13))

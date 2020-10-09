@@ -338,17 +338,19 @@ class Camera:
 
 
 class Theater:
-    Map    = Map
-    Camera = Camera # 用于快速定位并修改某些配置参数： vgame.Theater.Camera.DEBUG
-
     '''
     舞台对象，主要负责布景功能（地图信息主要就是放在这里）
     负责场景的资源加载（加载进全局，留下一个引用的结构）
     这样，已经加载的资源就不会再被加载进内存当中，并且
     调用资源仅仅需要通过自身的实例的绑定就能获取到
     '''
+    Map    = Map
+    Camera = Camera # 用于快速定位并修改某些配置参数： vgame.Theater.Camera.DEBUG
+
+    _theater_numb = 0
+    _theater_format = 'theater:{}'
+
     def __init__(self,
-                 theater_name,       # 场景名字，用于定位、调整、切换场景使用
                  background = None,  # 背景图片，可以传很多类型的数据，详细请看 Image 实例化时的参数
                  size = None,        # 游戏背景大小，背景大小如未设定则使用屏幕大小
                  camera_size = None, # 镜头的尺寸，默认情况下镜头尺寸和游戏背景大小一样
@@ -361,7 +363,7 @@ class Theater:
 
         self.screen       = game_screen
         self.screen_size  = self.screen.get_size()
-        self.theater_name = theater_name
+        self.theater_name = self._mk_theater_name()
         self.size         = size if size else self.screen_size
         self.gridsize     = gridsize
         self.group_menu   = pygame.sprite.Group()
@@ -429,6 +431,10 @@ class Theater:
         if self.background.image:
             self.group.add(self.background)
             self.map._draw_debug_grid(self.background.imager.orig_image)
+
+    def _mk_theater_name(self):
+        Theater._theater_numb += 1
+        return Theater._theater_format.format(Theater._theater_numb)
 
     @property
     def name(self):
