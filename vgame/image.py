@@ -80,7 +80,7 @@ class Image:
             if "papyrus" in pygame.font.get_fonts():
                 Image.dfont = font.SysFont("papyrus", 8)
             else:
-                Image.dfont = font.SysFont(pygame.font.get_default_font(), 15)
+                Image.dfont = font.SysFont(pygame.font.get_fonts()[0], 15)
             Image.vgame = __import__('vgame')
 
     def _get_size(self):
