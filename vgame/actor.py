@@ -320,6 +320,14 @@ class Actor(pygame.sprite.Sprite):
         if value: self.rect[:2] = value
     showpoint = property(_get_showpoint, _set_showpoint)
 
+    def _get_showsize(self): return self._showsize
+    def _set_showsize(self, value):
+        self._showsize = value
+        imager = getattr(self, 'imager', None)
+        if imager:
+            imager.orig_image = pygame.transform.scale(imager.orig_image, self._showsize)
+    showsize = property(_get_showsize, _set_showsize)
+
     def _get_status(self): return self._status
     def _set_status(self, value): 
         if self._status is None:
