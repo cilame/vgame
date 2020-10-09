@@ -232,6 +232,12 @@ class draw:
         self.parent = parent
 
     @staticmethod
+    def handle_return(_Surface):
+        if isinstance(_Surface, Background):
+             _Surface = _Surface.theater
+        return _Surface
+
+    @staticmethod
     def rect(Surface, color, Rect, width=0):
         _Surface = Surface
         '''
@@ -245,7 +251,7 @@ class draw:
             w,h = Surface.get_rect()[2:]
             Rect = (pad,pad,w-pad*2,h-pad*2)
         pygame.draw.rect(Surface, color, Rect, width)
-        return _Surface
+        return draw.handle_return(_Surface)
     @staticmethod
     def polygon(Surface, color, pointlist, width=0):
         _Surface = Surface
@@ -253,7 +259,7 @@ class draw:
         if imager:
             Surface = imager.orig_image
         pygame.draw.polygon(Surface, color, pointlist, width)
-        return _Surface
+        return draw.handle_return(_Surface)
     @staticmethod
     def circle(Surface, color, pos, radius, width=0):
         _Surface = Surface
@@ -261,7 +267,7 @@ class draw:
         if imager:
             Surface = imager.orig_image
         pygame.draw.circle(Surface, color, pos, radius, width)
-        return _Surface
+        return draw.handle_return(_Surface)
     @staticmethod
     def ellipse(Surface, color, Rect, width=0):
         _Surface = Surface
@@ -269,7 +275,7 @@ class draw:
         if imager:
             Surface = imager.orig_image
         pygame.draw.ellipse(Surface, color, Rect, width)
-        return _Surface
+        return draw.handle_return(_Surface)
     @staticmethod
     def arc(Surface, color, Rect, start_angle, stop_angle, width=1):
         _Surface = Surface
@@ -277,7 +283,7 @@ class draw:
         if imager:
             Surface = imager.orig_image
         pygame.draw.arc(Surface, color, Rect, start_angle, stop_angle, width)
-        return _Surface
+        return draw.handle_return(_Surface)
     @staticmethod
     def line(Surface, color, start_pos, end_pos, width=1):
         _Surface = Surface
@@ -285,7 +291,7 @@ class draw:
         if imager:
             Surface = imager.orig_image
         pygame.draw.line(Surface, color, start_pos, end_pos, width)
-        return _Surface
+        return draw.handle_return(_Surface)
     @staticmethod
     def lines(Surface, color, closed, pointlist, width=1):
         _Surface = Surface
@@ -293,7 +299,7 @@ class draw:
         if imager:
             Surface = imager.orig_image
         pygame.draw.lines(Surface, color, closed, pointlist, width)
-        return _Surface
+        return draw.handle_return(_Surface)
     @staticmethod
     def aaline(Surface, color, startpos, endpos, blend=1):
         _Surface = Surface
@@ -301,7 +307,7 @@ class draw:
         if imager:
             Surface = imager.orig_image
         pygame.draw.aaline(Surface, color, startpos, endpos, blend)
-        return _Surface
+        return draw.handle_return(_Surface)
     @staticmethod
     def aalines(Surface, color, closed, pointlist, blend=1):
         _Surface = Surface
@@ -309,7 +315,7 @@ class draw:
         if imager:
             Surface = imager.orig_image
         pygame.draw.aalines(Surface, color, closed, pointlist, blend)
-        return _Surface
+        return draw.handle_return(_Surface)
 
     def __getattribute__(self, key):
         pare = super().__getattribute__('parent')

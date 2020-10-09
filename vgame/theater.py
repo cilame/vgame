@@ -458,3 +458,7 @@ class Theater:
 
     @property
     def rect(self): return self.background.rect
+
+    @property
+    def draw(self): 
+        return vgame.draw(self.background)
