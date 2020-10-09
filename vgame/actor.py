@@ -640,7 +640,7 @@ class Actor(pygame.sprite.Sprite):
         class _menu:
             def local(s, menu, axis):
                 assert isinstance(menu, Menu), 'menu must be vgame.Menu object.'
-                menu.local(self, axis)
+                menu._gridlocal(self, axis)
                 return self
         return _menu()
 
@@ -780,7 +780,7 @@ class Menu(Actor):
         self.theater = theater if theater else self.theater
         return self
 
-    def local(self, actor, axis):
+    def _gridlocal(self, actor, axis):
         center_map = self._get_gridcenter(self.theater, self.grid)
         cx, cy = center_map[tuple(axis)]
         actor.rect.x = int(cx-actor.showsize[0]/2)
