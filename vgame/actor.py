@@ -512,6 +512,7 @@ class Actor(pygame.sprite.Sprite):
             rx,ry = theater.rect.center
             ox,oy = offsets
         self.rect.center = (rx+ox, ry+oy)
+        self.toggle(True)
         return self
 
     @property
