@@ -16,7 +16,7 @@ import vgame
 
 
 init = vgame.Initer(size=(700, 600))
-start = vgame.Theater((0,0,0,255))
+start = vgame.Theater((0,0,0,255)).draw.rect((255,255,255),5,3).draw.rect((255,255,255),10,3)
 sbtn = vgame.Button(vgame.Text('开始游戏', (255,255,255))).local(start, start.rect.center)
 sbtn.click = lambda: vgame.change_theater(main)
 
