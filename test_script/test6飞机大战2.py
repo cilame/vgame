@@ -77,8 +77,8 @@ def enemy_creater(self):
             enemy = vgame.Enemy(path+'/enemy2.png', showsize=enemysize).local(main, (x, y))
             enemy.status['hp'] = 25
             enemy.status['maxhp'] = 25
-            enemy.status['bgbar'] = vgame.Anime((0,0,0), showsize=(enemy.showsize[0], 3)).local(main, (x, y-60))
-            enemy.status['hpbar'] = vgame.Anime((0,255,0), showsize=(enemy.showsize[0], 3)).local(main, (x, y-60))
+            enemy.status['bgbar'] = vgame.Anime((0,0,0), showsize=(enemy.showsize[0], 3)).local(enemy, offsets=(0,-60))
+            enemy.status['hpbar'] = vgame.Anime((0,255,0), showsize=(enemy.showsize[0], 3)).local(enemy, offsets=(0,-60))
         else:
             return
         def idle(self):

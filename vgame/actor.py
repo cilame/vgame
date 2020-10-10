@@ -503,9 +503,8 @@ class Actor(pygame.sprite.Sprite):
     def local(self, theater, point=None, offsets=(0,0)):
         if isinstance(theater, vgame.Theater):
             theater.regist(self)
-        if isinstance(theater, Menu):
-            menu = theater
-            menu.group.add(self)
+        if isinstance(theater, Actor):
+            theater.theater.regist(self)
         if point:
             rx,ry = point
             ox,oy = offsets
