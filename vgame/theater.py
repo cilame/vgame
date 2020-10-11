@@ -278,8 +278,8 @@ class Map:
         return 0
 
     def _draw_debug_grid(self, image):
-        # 用于对背景栅格的调试，绘制显示栅格
-        if vgame.DEBUG and Map.DEBUG:
+        # 用于对背景栅格的调试，绘制显示栅格以及坐标信息
+        if vgame.DEBUG or Map.DEBUG:
             x, y, w, h = image.get_rect()
             x = 0
             while x < w:
@@ -289,6 +289,21 @@ class Map:
             while y < h:
                 y += self.gridh
                 pygame.draw.line(image, vgame.Artist.GRID_LINE_COLOR_MAP_DEBUG, (0, y), (w, y))
+            xys = []
+            x = 0
+            _x = 0
+            while x < w:
+                y = 0
+                _y = 0
+                while y < h:
+                    xys.append((x,y,_x,_y))
+                    y += self.gridh
+                    _y += 1
+                x += self.gridw
+                _x += 1
+            for x,y,_x,_y in xys:
+                ft = vgame.Image.dfont.render(str((_x,_y)), 1, (255,255,255), (50,50,50))
+                image.blit(ft, (x,y,*ft.get_rect()[2:]))
 
     def __str__(self):
         return 'map.size:{}\n{}'.format(self.size, str(self.map2d)) # 默认绘制阻力图
