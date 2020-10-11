@@ -341,6 +341,6 @@ class draw:
 
 
 __author__ = 'cilame'
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 __email__ = 'opaquism@hotmail.com'
 __github__ = 'https://github.com/cilame/vgame'

@@ -704,8 +704,8 @@ class Player(Actor):
     RIGID_BODY = {}
     SHOW_BODY = {}
     def __init__(self, *a, player='p1', **kw):
-        kw['in_control'] = True
-        kw['in_collide'] = True
+        kw.setdefault('in_control', True)
+        kw.setdefault('in_collide', True)
         super().__init__(*a, **kw)
 class NPC(Actor):
     RIGID_BODY = {}
@@ -717,8 +717,8 @@ class Anime(Actor):
     RIGID_BODY = {}
     SHOW_BODY = {}
     def __init__(self, *a, **kw):
-        kw['in_entity'] = False
-        kw['in_bounds'] = False
+        kw.setdefault('in_entity', False)
+        kw.setdefault('in_bounds', False)
         self._loopnumer = kw.pop('loop', -1)
         super().__init__(*a, **kw)
     def update(self,ticks):
@@ -741,24 +741,24 @@ class Enemy(Actor):
     RIGID_BODY = {}
     SHOW_BODY = {}
     def __init__(self, *a, **kw):
-        kw['in_bounds'] = False
-        kw['in_collide'] = True
+        kw.setdefault('in_bounds', False)
+        kw.setdefault('in_collide', True)
         super().__init__(*a, **kw)
 class Bullet(Actor):
     RIGID_BODY = {}
     SHOW_BODY = {}
     def __init__(self, *a, **kw):
-        kw['in_entity'] = False
-        kw['in_bounds'] = False
-        kw['in_collide'] = True
-        kw['in_entitys'] = [] # 默认情况只检测 ENTITYS_DEFAULT 内的物体，子弹类则无需实体检测
+        kw.setdefault('in_entity', False)
+        kw.setdefault('in_bounds', False)
+        kw.setdefault('in_collide', True)
+        kw.setdefault('in_entitys', []) # 默认情况只检测 ENTITYS_DEFAULT 内的物体，子弹类则无需实体检测
         super().__init__(*a, **kw)
 
 class Wall(Actor):
     RIGID_BODY = {}
     SHOW_BODY = {}
     def __init__(self, *a, **kw):
-        kw['in_entitys'] = ENTITYS # 墙体也要自动对其他类型的数据进行互斥，否则墙体运动时候不会与
+        kw.setdefault('in_entitys', ENTITYS) # 墙体也要自动对其他类型的数据进行互斥，否则墙体运动时候不会与
         super().__init__(*a, **kw)
 
 
@@ -781,11 +781,11 @@ class Menu(Actor):
     SHOW_BODY = {}
 
     def __init__(self, *a, **kw):
-        kw['in_entity'] = False
-        kw['in_entitys'] = []
-        kw['cam_follow'] = False # 菜单一般都不需要镜头跟随的处理，之所以都使用
+        kw.setdefault('in_entity', False)
+        kw.setdefault('in_entitys', [])
+        kw.setdefault('cam_follow', False) # 菜单一般都不需要镜头跟随的处理，之所以都使用
         if not a:
-            kw['img'] = (70, 70, 70, 100)
+            kw.setdefault('img', (70, 70, 70, 100))
         super().__init__(*a, **kw)
         self.group = pygame.sprite.Group()
         self.grid = (1, 1)
@@ -864,16 +864,16 @@ class Button(Actor):
         RIGID_BODY = {}
         SHOW_BODY = {}
         def __init__(self, *a, **kw):
-            kw['in_entity'] = False
-            kw['in_entitys'] = []
-            kw['cam_follow'] = False # 背景需要镜头跟随的处理，之所以都使用
+            kw.setdefault('in_entity', False)
+            kw.setdefault('in_entitys', [])
+            kw.setdefault('cam_follow', False) # 背景需要镜头跟随的处理，之所以都使用
             super().__init__(*a, **kw)
 
     def __init__(self, *a, **kw):
-        kw['in_entity'] = False
-        kw['in_entitys'] = []
-        kw['cam_follow'] = False # 菜单一般都不需要镜头跟随的处理，之所以都使用
-        kw['in_control'] = True
+        kw.setdefault('in_entity', False)
+        kw.setdefault('in_entitys', [])
+        kw.setdefault('cam_follow', False) # 菜单一般都不需要镜头跟随的处理，之所以都使用
+        kw.setdefault('in_control', True)
         super().__init__(*a, **kw)
         self.mouse_pos = pygame.mouse.get_pos()
         self.mouse_stat = self._get_mouse_stat()
@@ -960,7 +960,7 @@ class Background(Actor):
     RIGID_BODY = {}
     SHOW_BODY = {}
     def __init__(self, *a, **kw):
-        kw['in_entity'] = False
-        kw['in_entitys'] = []
-        kw['cam_follow'] = True # 背景需要镜头跟随的处理，之所以都使用
+        kw.setdefault('in_entity', False)
+        kw.setdefault('in_entitys', [])
+        kw.setdefault('cam_follow', True) # 背景需要镜头跟随的处理，之所以都使用
         super().__init__(*a, **kw)

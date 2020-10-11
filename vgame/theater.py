@@ -471,23 +471,23 @@ class Theater:
         self.artist.change_theater(name_or_class)
 
     @property
-    def Actor(self):  return iter(Actor.SHOW_BODY[self.name])
+    def Actor(self):  return Actor.SHOW_BODY[self.name]
     @property
-    def Player(self): return iter(Player.SHOW_BODY[self.name])
+    def Player(self): return Player.SHOW_BODY[self.name]
     @property
-    def Wall(self):   return iter(Wall.SHOW_BODY[self.name])
+    def Wall(self):   return Wall.SHOW_BODY[self.name]
     @property
-    def Enemy(self):  return iter(Enemy.SHOW_BODY[self.name])
+    def Enemy(self):  return Enemy.SHOW_BODY[self.name]
     @property
-    def Bullet(self): return iter(Bullet.SHOW_BODY[self.name])
+    def Bullet(self): return Bullet.SHOW_BODY[self.name]
     @property
-    def NPC(self):    return iter(NPC.SHOW_BODY[self.name])
+    def NPC(self):    return NPC.SHOW_BODY[self.name]
     @property
-    def Anime(self):  return iter(Anime.SHOW_BODY[self.name])
+    def Anime(self):  return Anime.SHOW_BODY[self.name]
     @property
-    def Menu(self):   return iter(Menu.SHOW_BODY[self.name])
+    def Menu(self):   return Menu.SHOW_BODY[self.name]
     @property
-    def Button(self): return iter(Button.SHOW_BODY[self.name])
+    def Button(self): return Button.SHOW_BODY[self.name]
 
     @property
     def rect(self): return self.background.rect
