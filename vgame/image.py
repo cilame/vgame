@@ -1,4 +1,5 @@
 import os, re, time
+import types
 import traceback
 from itertools import product
 
@@ -256,7 +257,11 @@ class Text(Image):
         return img
 
     def render(self, text, textcolor, textscale):
-        ft = self.dfont.render(self.textformat.format(text), False, textcolor)
+        if isinstance(self.textformat, types.FunctionType):
+            text = self.textformat(text)
+        else:
+            text = self.textformat.format(text)
+        ft = self.dfont.render(text, False, textcolor)
         w,h = ft.get_rect()[2:]
         _ft = pygame.transform.scale(ft, (int(w*textscale), int(h*textscale))) # 示例：缩放为原尺寸的两倍大小
         return _ft

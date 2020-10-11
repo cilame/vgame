@@ -127,25 +127,34 @@ class SmoothMover(_Mover):
         self.actor.rect[0] = self.actor.rect[0] + speed.x
         if self.actor.in_entity:
             aw = self.collide()
+            side = []
             if aw:
                 for w in aw:
-                    if speed.x > 0: self.actor.rect.x = w.rect.left - self.actor.rect.width
-                    if speed.x < 0: self.actor.rect.x = w.rect.right
+                    if speed.x > 0: self.actor.rect.x = w.rect.left - self.actor.rect.width; side.append((w, 'r'))
+                    if speed.x < 0: self.actor.rect.x = w.rect.right;                        side.append((w, 'l'))
+            if side:
+                self.actor._abound(side)
         self.actor.rect[1] = self.actor.rect[1] + speed.y
         if self.actor.in_entity:
             aw = self.collide()
+            side = []
             if aw:
                 for w in aw:
-                    if speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height
-                    if speed.y < 0: self.actor.rect.y = w.rect.bottom
+                    if speed.y > 0: self.actor.rect.y = w.rect.top - self.actor.rect.height; side.append((w, 'd'))
+                    if speed.y < 0: self.actor.rect.y = w.rect.bottom;                       side.append((w, 'u'))
+            if side:
+                self.actor._abound(side)
         if self.actor.in_bounds:
             w, h = self.actor.theater.size
             w = w - self.actor.rect.width
             h = h - self.actor.rect.height
-            if self.actor.rect.x < 0: self.actor.rect.x = 0
-            if self.actor.rect.x > w: self.actor.rect.x = w
-            if self.actor.rect.y < 0: self.actor.rect.y = 0
-            if self.actor.rect.y > h: self.actor.rect.y = h
+            side = []
+            if self.actor.rect.x < 0: self.actor.rect.x = 0; side.append((None, 'l'))
+            if self.actor.rect.x > w: self.actor.rect.x = w; side.append((None, 'r'))
+            if self.actor.rect.y < 0: self.actor.rect.y = 0; side.append((None, 'u'))
+            if self.actor.rect.y > h: self.actor.rect.y = h; side.append((None, 'd'))
+            if side:
+                self.actor._abound(side)
 
     def gridmove(self, actor, curr_xy, new_xy, speed):
         # 这里的xy均为 actor 的左上角像素级坐标，所以使用这个函数时请先转换到正确的数据再运行
@@ -499,6 +508,13 @@ class Actor(pygame.sprite.Sprite):
         if   self.idle.__code__.co_argcount == 0: self.idle()
         elif self.idle.__code__.co_argcount == 1: self.idle(self)
         elif self.idle.__code__.co_argcount == 2: self.idle(self, ticks)
+
+    @staticmethod
+    def bound(): pass
+    def _abound(self, side):
+        if   self.bound.__code__.co_argcount == 0: self.bound()
+        elif self.bound.__code__.co_argcount == 1: self.bound(side)
+        elif self.bound.__code__.co_argcount == 2: self.bound(self, side)
 
     def local(self, theater, point=None, offsets=(0,0)):
         if isinstance(theater, vgame.Theater):

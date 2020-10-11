@@ -73,6 +73,7 @@ player = load_images(hywz1, vgame.Player, main, (1,1), 10)
 player.direction = direct
 player.control = ctl
 player.idle = p_idle
+player.bound = lambda side:print(side)
 
 enemy1 = load_images(hywz2, vgame.Enemy, main, (8,6), 1)
 enemy2 = load_images(hywz3, vgame.Enemy, main, (6,6), 1)
