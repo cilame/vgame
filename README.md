@@ -9,8 +9,7 @@
 2 简化了碰撞检测，并且增加一些可供开关的 DEBUG 模式，让你快速检查全部角色或单个角色的碰撞边框线
 3 增加一些角色内循环，这些循环和控制的内容一样，速率恒定，不受帧率影响
 4 抽象出了舞台的概念，基于这个概念，你能做的事情有很多，快速暂停，商店场景切换，地图切换，各种各样。
-5 已经初步处理了物体的刚体碰撞，也实现了简单的 摩擦系统 和 重力系统
-    让你的人物可以极快的速度开发，在地面进行移动，甚至进行多段跳了。
+5 已经初步处理了物体的刚体碰撞。 总之就是很简单也很好用。
 
 尚在开发
     目前版本非常早期，所以很多接口暂时还有商榷的部分
@@ -31,34 +30,29 @@ pip3 install vgame
 
 ```python
 import vgame
-s = vgame.Initer() # 该处重要的参数 fps(帧/秒,默认60),title(标题,默认vgame),size(屏幕分辨率,默认640x480)
-s.run()
+vgame.Initer() # 该处重要的参数 fps(帧/秒,默认60),title(标题,默认vgame),size(屏幕分辨率,默认640x480)
 ```
 
 - #### 在屏幕里面放一个方块，并且用键盘的 WASD 操作它
 
 ```python
 import vgame
-s = vgame.Initer()
-t = vgame.Theater('main')
+vgame.Initer()
+main = vgame.Theater() # 生成一个游戏场景
 
-a = vgame.Player()
-a.direction = lambda self,d: self.mover.move(d.get('p1'))
-
-t.regist(a) # 将 a 注入舞台 t
-s.regist(t) # 将 t 注入游戏 s
-s.run()
+player = vgame.Player().local(main) # 生成一个玩家，放到 main 场景的中心
+player.direction = lambda self,d: self.mover.move(d.get('p1'))
 ```
 
 - #### 上面一块代码的带有注释的描述，额外说明自动实体检测的功能
 
 ```python
 import vgame
-s = vgame.Initer()
-t = vgame.Theater('main')
+vgame.Initer()
+main = vgame.Theater() # 生成一个游戏场景
 
-a = vgame.Player()
-b = vgame.Wall(showsize=(300,100), showpoint=(100,200))
+player = vgame.Player().local(main) # 生成一个玩家，放到 main 场景的中心
+wall = vgame.Wall(showsize=(300,100)).local(main, point=(400,400)) # 以point为wall的中心将wall放到指定中心位置上
 
 def move_d(self, d):
     # self 代表了被覆盖了 direction 函数的对象本身，即为 Player 实例。
@@ -89,11 +83,15 @@ def move_d(self, d):
     # 这样可以非常方便的实现一个简单的互斥效果
     # 如果感兴趣，你可以简单的注释掉上面的移动代码，使用下面的移动代码试试效果
 
-a.direction = move_d
-a.mover.speed.x = 4 # 默认为 5
-a.mover.speed.y = 8 # 默认为 5
+player.direction = move_d
 
-t.regist(a, b) # 将 a, b 注入舞台 t
-s.regist(t) # 将 t 注入游戏 s
-s.run()
+# 你也可以不必在这里设置速度，直接在 mover.move 函数的第二个参数里面设置速度会更加直观
+# 而且那样调整速度会更加符合开发对速度的理解
+player.mover.speed.x = 10 # 默认为 5
+player.mover.speed.y = 4 # 默认为 5
+
+# player 是默认带有实体检测，也就是说碰到墙之后就走不过去
+# 另外这里给了一个回调函数 bound 用于覆盖，这样当你控制的对象在 mover.move 移动的时候
+# 碰到了实体过不去时，就会回调这个函数，用于显示你是用了 player 的哪一个边碰到了哪个实体
+player.bound = lambda side: print(side)
 ```

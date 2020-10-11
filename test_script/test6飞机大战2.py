@@ -98,7 +98,7 @@ def enemy_creater(self):
                     self.status['hpbar'].kill()
                     self.status['bgbar'].kill()
                     label.text += score
-                    vgame.Anime(enemy_dead, rate=50, showsize=enemysize).local(main, self.rect.center)
+                    deadanime = vgame.Anime(enemy_dead, rate=50, showsize=enemysize, loop=1).local(main, self.rect.center)
                     enemy0_dplayer.play()
                 else:
                     if self.status['hpbar']: 
@@ -110,13 +110,10 @@ def enemy_creater(self):
                 self.status['hpbar'].kill()
                 self.status['bgbar'].kill()
                 v[0].kill(); self.kill()
-                anime = vgame.Anime(hero_blowup, rate=50, showsize=(50, 62)).local(main, v[0].rect.center)
-                # Anime 特有的动画播放回调
-                def end(self, cycnumber):
-                    if cycnumber == 1: # 死亡动画播放完一个循环以后执行的函数
-                        self.kill()
-                        vgame.change_theater(death)
-                anime.endanime = end
+                # 将玩家控制对象删除，并且在控制对象死亡的位置生成死亡动画
+                anime = vgame.Anime(hero_blowup, rate=50, showsize=(50, 62), loop=1).local(main, v[0].rect.center)
+                # Anime 特有的动画播放结束后的回调函数
+                anime.endanime = lambda :vgame.change_theater(death)
         enemy.idle = idle
         enemy.in_entity = False
 

@@ -704,25 +704,31 @@ class NPC(Actor):
     SHOW_BODY = {}
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
+
 class Anime(Actor):
     RIGID_BODY = {}
     SHOW_BODY = {}
     def __init__(self, *a, **kw):
         kw['in_entity'] = False
         kw['in_bounds'] = False
+        self._loopnumer = kw.pop('loop', -1)
         super().__init__(*a, **kw)
     def update(self,ticks):
         super().update(ticks)
         if self.imager.rects is not None:
             cycnumber = self.imager.rects.get_cycle_number()
             idxnumber = self.imager.rects.get_idx_number()
-            self._aendanime(cycnumber, idxnumber)
+            if cycnumber == self._loopnumer:
+                self.kill()
+                self._aendanime(cycnumber, idxnumber)
     @staticmethod
     def endanime(): pass
     def _aendanime(self, cycnumber, idxnumber):
-        if   self.endanime.__code__.co_argcount == 1: self.endanime(self)
+        if   self.endanime.__code__.co_argcount == 0: self.endanime()
+        elif self.endanime.__code__.co_argcount == 1: self.endanime(self)
         elif self.endanime.__code__.co_argcount == 2: self.endanime(self, cycnumber)
         elif self.endanime.__code__.co_argcount == 3: self.endanime(self, cycnumber, idxnumber)
+
 class Enemy(Actor):
     RIGID_BODY = {}
     SHOW_BODY = {}
