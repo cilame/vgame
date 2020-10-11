@@ -31,13 +31,14 @@ class Artist:
 
     ARTIST = None # 想了想，既然 artist 是唯一的，那么就让 theater 实例化时候自动注册进来即可
 
-    def __init__(self, screen, ticks):
+    def __init__(self, screen, ticks, grid=(20,15)):
         self.screen      = screen
         self.screen_rect = self.screen.get_rect()
         self.ticks       = ticks
         self.theaters    = {}
         self.framerate   = pygame.time.Clock()
-        self.current    = None
+        self.current     = None
+        self.grid        = grid # 全局 theater 使用的默认的切割数量
 
     def update(self):
         self.framerate.tick(self.ticks)

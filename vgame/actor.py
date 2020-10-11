@@ -714,12 +714,15 @@ class Anime(Actor):
     def update(self,ticks):
         super().update(ticks)
         if self.imager.rects is not None:
-            if self.imager.rects.get_cycle_number() == 1:
-                self.kill()
-                self.endanime()
+            cycnumber = self.imager.rects.get_cycle_number()
+            idxnumber = self.imager.rects.get_idx_number()
+            self._aendanime(cycnumber, idxnumber)
     @staticmethod
-    def endanime():
-        pass
+    def endanime(): pass
+    def _aendanime(self, cycnumber, idxnumber):
+        if   self.endanime.__code__.co_argcount == 1: self.endanime(self)
+        elif self.endanime.__code__.co_argcount == 2: self.endanime(self, cycnumber)
+        elif self.endanime.__code__.co_argcount == 3: self.endanime(self, cycnumber, idxnumber)
 class Enemy(Actor):
     RIGID_BODY = {}
     SHOW_BODY = {}

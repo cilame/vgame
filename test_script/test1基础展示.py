@@ -44,9 +44,9 @@ if __name__ == "__main__":
     theater_0 = Theater(i_bg1) # theater(舞台) 必须要指定两个元素，1背景图片资源，2舞台名字
     actor1 = Actor(i_cur, in_control=True) # in_control 负责接收控制指令，目前控制指令只会打印相关的操作内容
     theater_0.regist(actor1) # actor(演员) 需要注册进场景才能使用
-    actor1.direction = lambda info: print('morse_info', info) if info else None # 方向键操作的回调 hook
-    actor1.mouse     = lambda info: print('direc_info', info) if info else None # 鼠标键操作的回调 hook
-    actor1.control   = lambda info: print('cntro_info', info) if info else None # 功能键操作的回调 hook
+    actor1.direction = lambda self, info: print('morse_info', info) if info else None # 方向键操作的回调 hook
+    actor1.mouse     = lambda self, info: print('direc_info', info) if info else None # 鼠标键操作的回调 hook
+    actor1.control   = lambda self, info: print('cntro_info', info) if info else None # 功能键操作的回调 hook
     main.regist(theater_0) # threater(舞台) 需要注册进初始对象才能使用
 
     # 场景二

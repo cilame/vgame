@@ -281,9 +281,13 @@ class Map:
         # 用于对背景栅格的调试，绘制显示栅格
         if vgame.DEBUG and Map.DEBUG:
             x, y, w, h = image.get_rect()
-            for x in range(0, w, self.gridw):
+            x = 0
+            while x < w:
+                x += self.gridw
                 pygame.draw.line(image, vgame.Artist.GRID_LINE_COLOR_MAP_DEBUG, (x, 0), (x, h))
-            for y in range(0, h, self.gridh):
+            y = 0
+            while y < h:
+                y += self.gridh
                 pygame.draw.line(image, vgame.Artist.GRID_LINE_COLOR_MAP_DEBUG, (0, y), (w, y))
 
     def __str__(self):
@@ -354,22 +358,30 @@ class Theater:
                  background = None,  # 背景图片，可以传很多类型的数据，详细请看 Image 实例化时的参数
                  size = None,        # 游戏背景大小，背景大小如未设定则使用屏幕大小
                  camera_size = None, # 镜头的尺寸，默认情况下镜头尺寸和游戏背景大小一样
-                 gridsize = (32, 32),
+                 grid = None,        # 使用固定数量进行坐标切割方便开发，grid 与 gridsize 只能同时使用一个，默认使用 20,15
+                 gridsize = None,    # 使用像素对游戏内容进行坐标切割
                  ):
 
         game_screen = pygame.display.get_surface() # 游戏屏幕(镜头)显示的大小
         if game_screen is None or not vgame.Artist.ARTIST:
             raise 'pls use vgame.Initer() to init game first.'
-
+        self.artist       = vgame.Artist.ARTIST
         self.screen       = game_screen
         self.screen_size  = self.screen.get_size()
         self.theater_name = self._mk_theater_name()
         self.size         = size if size else self.screen_size
-        self.gridsize     = gridsize
+        if grid is not None and gridsize is not None:
+            raise Exception('At most one of "grid" and "gridsize" can be configured')
+        if gridsize is not None:
+            self.gridsize = gridsize
+        else:
+            self.grid     = grid if grid else self.artist.grid
+            rw, rh        = self.size
+            gx, gy        = self.grid
+            self.gridsize = rw/gx, rh/gy
         self.group_menu   = pygame.sprite.Group()
         self.group        = pygame.sprite.Group()
         self.background   = None
-        self.artist       = vgame.Artist.ARTIST
         self.camera       = self.regist_camera(Camera(*self.screen_size))
         self.map          = self.regist_map(Map(*self.gridsize, *self.screen_size))
 
