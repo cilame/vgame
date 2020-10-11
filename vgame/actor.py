@@ -74,9 +74,11 @@ class SmoothMover(_Mover):
     ALLDIR = [6, 4, 2, 8]
 
     def __init__(self):
-        self.actor     = None
-        self.speed     = pygame.Vector2(5., 5.) # 初始化有个值，方便看到效果，可以通过对象修改
+        self.actor = None
+        self.speed = pygame.Vector2(5., 5.) # 初始化有个值，方便看到效果，可以通过对象修改
         super().__init__()
+        self.tempx = None
+        self.tempy = None
 
     def move(self, d, speed=None):
         if d and not self.actor._toggle['gridmove_start']:
@@ -124,7 +126,12 @@ class SmoothMover(_Mover):
         speed = pygame.Vector2(vx, vy)
         if rotate:
             speed = speed.rotate(rotate)
-        self.actor.rect[0] = self.actor.rect[0] + speed.x
+        if self.tempx is None: self.tempx = self.actor.rect[0]
+        if self.tempy is None: self.tempy = self.actor.rect[1]
+        if abs(self.tempx - self.actor.rect.x) > 2: self.tempx = self.actor.rect.x
+        if abs(self.tempy - self.actor.rect.y) > 2: self.tempy = self.actor.rect.y
+        self.tempx += speed.x
+        self.actor.rect[0] = self.tempx
         if self.actor.in_entity:
             aw = self.collide()
             side = []
@@ -134,7 +141,8 @@ class SmoothMover(_Mover):
                     if speed.x < 0: self.actor.rect.x = w.rect.right;                        side.append((w, 'l'))
             if side:
                 self.actor._abound(side)
-        self.actor.rect[1] = self.actor.rect[1] + speed.y
+        self.tempy += speed.y
+        self.actor.rect[1] = self.tempy
         if self.actor.in_entity:
             aw = self.collide()
             side = []
@@ -377,7 +385,7 @@ class Actor(pygame.sprite.Sprite):
             rect.y = ry
             rect.w = rw
             rect.h = rh
-            return rect
+            return pygame.Rect(rect)
 
     def getoffset(self):
         if not self.rectsize:
