@@ -112,7 +112,7 @@ class Initer:
         self.running = False
         Artist.ARTIST = self.artist
         pygame.display.set_caption(title)
-        self.hook_main_thread_end()
+        self.hook_without_run()
 
     def regist(self,*theaters):
         for theater in theaters:
@@ -159,11 +159,15 @@ class Initer:
         pygame.quit()
         sys.exit()
 
-    def hook_main_thread_end(self):
+    def hook_without_run(self):
         # 让你在执行脚本的时候 vgame.Initer 实例不用再在最后执行 run() 函数。少写一行是一行。
         # 不过需要注意的是，这里处理的逻辑是：用钩子钩住主线程的线程收尾函数，
         # 所以，如果主线程里面有个什么循环啥卡住，这里是不会执行的，了解执行逻辑即可。
         # 当然你也可以直接用原来的 vgame.Initer() 实例在最末尾直接执行也行。
+        self._hook_main_thread_end()
+        self._hook_idlelib_console()
+
+    def _hook_main_thread_end(self):
         from threading import current_thread, main_thread
         def _stop(s):
             if not self.running:
@@ -179,6 +183,17 @@ class Initer:
             mt._stop = lambda: _stop(mt)
         else:
             raise Exception('If vgame.Initer is not in the main thread, it is likely to cause program exceptions')
+
+    def _hook_idlelib_console(self):
+        if 'idlelib' in str(sys.stdout):
+            import idlelib.run
+            _flush_stdout = idlelib.run.flush_stdout
+            def flush_stdout(*a, **kw):
+                if not self.running:
+                    try: self.run()
+                    except SystemExit: pass
+                _flush_stdout(*a, **kw)
+            idlelib.run.flush_stdout = flush_stdout
 
 def change_theater(name):
     try:
@@ -341,6 +356,6 @@ class draw:
 
 
 __author__ = 'cilame'
-__version__ = '0.1.5'
+__version__ = '0.1.6'
 __email__ = 'opaquism@hotmail.com'
 __github__ = 'https://github.com/cilame/vgame'

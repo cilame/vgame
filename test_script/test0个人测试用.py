@@ -49,4 +49,3 @@ a.mover.speed.y = 8 # 默认为 5
 
 t.regist(a, b) # 将 a, b 注入舞台 t
 s.regist(t) # 将 t 注入游戏 s
-s.run()
