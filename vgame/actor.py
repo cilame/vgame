@@ -44,8 +44,8 @@ class _Mover:
         if not self.has_bind:
             if self.actor.theater: # 通常来说，未绑定 theater 的对象可能由其他子配件绑定，例如菜单。
                 cur = self.actor.theater.artist.current
-                if self.actor.in_entity:  self.actor.RIGID_BODY[cur].append(self.actor)
-                if self.actor.in_collide:  self.actor.SHOW_BODY[cur].append(self.actor)
+                if self.actor.in_entity: self.actor.RIGID_BODY[cur].append(self.actor)
+                if self.actor.in_collide: self.actor.SHOW_BODY[cur].append(self.actor)
             self.has_bind = True
 
     def collide(self):
@@ -536,7 +536,7 @@ class Actor(pygame.sprite.Sprite):
             rx,ry = theater.rect.center
             ox,oy = offsets
         self.rect.center = (rx+ox, ry+oy)
-        self.toggle(True)
+        self._bindbody()
         return self
 
     @property
@@ -608,20 +608,24 @@ class Actor(pygame.sprite.Sprite):
         else:
             # 恢复碰撞检测
             self._regist(self)
-            cur = self.theater.artist.current
-            if self.in_entity and self not in self.RIGID_BODY[cur]:
-                self.RIGID_BODY[cur].append(self)
-            if self.in_collide and self not in self.SHOW_BODY[cur]:
-                self.SHOW_BODY[cur].append(self)
+            self._bindbody()
         if self.axis:
-            # 清理/恢复栅格游戏类型中的阻值
-            if alive:
-                if self.obstruct == float('inf'):
-                    self.theater.map.map2d._local_set(self.axis, 0)
-                else:
-                    self.theater.map.map2d._local_del(self.axis, self.obstruct)
+            # 清理/恢复栅格游戏类型中的阻值，如果 alive 则关闭
+            self._bindmap(not alive)
+
+    def _bindmap(self, open_close:bool):
+        if open_close:
+            self.theater.map.map2d._local_add(self.axis, self.obstruct)
+        else:
+            if self.obstruct == float('inf'):
+                self.theater.map.map2d._local_set(self.axis, 0)
             else:
-                self.theater.map.map2d._local_add(self.axis, self.obstruct)
+                self.theater.map.map2d._local_del(self.axis, self.obstruct)
+
+    def _bindbody(self):
+        cur = self.theater.artist.current
+        if self.in_entity and self not in self.RIGID_BODY[cur]: self.RIGID_BODY[cur].append(self)
+        if self.in_collide and self not in self.SHOW_BODY[cur]: self.SHOW_BODY[cur].append(self)
 
     def outbounds(self):
         # 返回超过边界的方向和长度，这样更方便控制边界
