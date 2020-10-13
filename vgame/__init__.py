@@ -107,6 +107,8 @@ class Initer:
         self.ticks   = fps
         self.title   = title
         self.size    = size
+        self.flag    = flag
+        self.depth   = depth
         self.screen  = pygame.display.set_mode(size, flag, depth)
         self.artist  = Artist(self.screen, self.ticks)
         self.running = False
@@ -132,17 +134,8 @@ class Initer:
             if pygame.key.get_pressed()[K_ESCAPE]:
                 self.quit()
 
-            # 测试时候使用
-            # 按下 TAB 键按照一定的顺序循环切换至下一个场景
-            # 后期肯定会删除掉的功能
-            def _random_change(self):
-                v = list(self.artist.theaters)
-                i = (v.index(self.artist.current)+1)%len(v)
-                self.artist.change_theater(v[i])
             for event in pygame.event.get():
-                if event.type == QUIT:exit()
-                if event.type == KEYDOWN:
-                    if event.key == K_TAB :_random_change(self)
+                if event.type == QUIT: exit()
 
                 # 因为 pygame.event.get() 的处理方式类似于管道消息，不适合作为并行消息处理，
                 # 所以在 controler.py 内使用的是 pygame.mouse.get_pressed() 处理多个并行消息。
@@ -151,6 +144,14 @@ class Initer:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 4: Controller.roll = 4
                     if event.button == 5: Controller.roll = 5
+
+                # 动态修改高宽
+                # 这里暂时还没有考虑好该怎么该，因为直接改会出现像素级的问题，
+                # 人为直接拉伸那么鼠标的坐标信息就可能产生不准的问题，牵一发动全身，较真去改各个地方都需要改，
+                # 暂时没考虑到有什么好的方法处理，这里就先留下一个半成品注释代码，是残缺功能的代码。
+                # ## flag=pygame.RESIZABLE
+                # if event.type == pygame.VIDEORESIZE:
+                #     self.screen = pygame.display.set_mode(event.size, self.flag, self.depth)
 
     def change_theater(self, name):
         self.artist.change_theater(name)
