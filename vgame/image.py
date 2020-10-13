@@ -158,8 +158,7 @@ class Image:
             #     image = pygame.transform.flip(image, self.flipx, self.flipy)
             return image
         except:
-            print(traceback.format_exc())
-            raise Exception("无法加载图片. {}".format(img))
+            raise Exception("无法加载图片. {}\n{}".format(img, traceback.format_exc()))
 
     def update_image(self, ticks):
         if self.active and self._time_update(ticks):
