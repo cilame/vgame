@@ -228,7 +228,7 @@ class Image:
 
 class Text(Image):
     dfont = None
-    def __init__(self, text=None, textcolor=(0,0,0), textscale=2, textwidth=None, textside=None, textformat='{}'):
+    def __init__(self, text=None, textcolor=(255,0,0), textscale=2, textwidth=None, textside=None, textformat='{}'):
         if not Text.dfont:
             Text.dfont  = font.SysFont('simsunnsimsun', 12)
             Text.vgame  = __import__('vgame')

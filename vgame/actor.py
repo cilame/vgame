@@ -414,7 +414,7 @@ class Actor(pygame.sprite.Sprite):
             m, d, c = self.controller.update(ticks)
             # [鼠标操作/控制键操作/方向键操作]
             if self._mouse_dly.update(ticks): self._amouse(m, ticks)
-            if self._contl_dly.update(ticks): self._acontrol(c, ticks)
+            if self._contl_dly.update(ticks): self._acontrol(c, d, ticks)
             if self._dirct_dly.update(ticks): self._adirction(d, c, ticks)
         # 空闲状态时执行的函数
         if self._idler_dly.update(ticks): self._aidle(ticks)
@@ -506,10 +506,11 @@ class Actor(pygame.sprite.Sprite):
         elif self.direction.__code__.co_argcount == 4: self.direction(self, d, c, ticks) # 2d卷轴游戏可能需要别的键作为跳跃功能，所以需要处理更多消息
     @staticmethod
     def control(control_info): pass
-    def _acontrol(self, c, ticks):
+    def _acontrol(self, c, d, ticks):
         if   self.control.__code__.co_argcount == 1: self.control(c)    
         elif self.control.__code__.co_argcount == 2: self.control(self, c)
-        elif self.control.__code__.co_argcount == 3: self.control(self, c, ticks)
+        elif self.control.__code__.co_argcount == 3: self.control(self, c, d)
+        elif self.control.__code__.co_argcount == 4: self.control(self, c, d, ticks)
     @staticmethod
     def idle(): pass
     def _aidle(self, ticks):
