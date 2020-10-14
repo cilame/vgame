@@ -339,8 +339,7 @@ class Actor(pygame.sprite.Sprite):
 
     def _get_showsize(self): return self._showsize
     def _set_showsize(self, value):
-        if value:
-            self._showsize = list(map(int, value))
+        self._showsize = list(map(int, value)) if value else value
         imager = getattr(self, 'imager', None)
         if imager:
             imager.orig_image = pygame.transform.scale(imager.orig_image, self._showsize)
