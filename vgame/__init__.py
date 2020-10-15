@@ -33,7 +33,9 @@ class Artist:
 
     def __init__(self, screen, ticks, grid=(20,15)):
         self.screen      = screen
+        self._screen     = self.screen
         self.screen_rect = self.screen.get_rect()
+        self.screen_neor = self.screen_rect
         self.ticks       = ticks
         self.theaters    = {}
         self.framerate   = pygame.time.Clock()
@@ -44,8 +46,11 @@ class Artist:
         self.framerate.tick(self.ticks)
         ticks = pygame.time.get_ticks()
 
-        self.screen.fill(self.BGCOLOR)
-        self.draw_grid() # 黑幕线，当没有背景时用于凸显黑幕的方式。
+        # self.screen.fill(self.BGCOLOR)
+        if self.screen_rect[2:] != self.screen_neor[2:]:
+            self._screen = pygame.Surface(self.screen_rect[2:]).convert_alpha()
+        self._screen.fill(self.BGCOLOR)
+        self._screen = self.draw_grid(self._screen) # 黑幕线，当没有背景时用于凸显黑幕的方式。
 
         # 这里就需要对指定的剧场进行更新，就是场景切换的扩展就都放在这里
         # 修改场景就只需要改场景的名字自动就修改掉了场景，方便切换。
@@ -59,30 +64,35 @@ class Artist:
             for sprite in self.theaters[self.current].group:
                 if sprite.cam_follow:
                     (x, y, w, h), (ox, oy) = _camera.apply(sprite), sprite.getoffset()
-                    self.screen.blit(sprite.image, (x-ox, y-oy, w, h))
+                    self._screen.blit(sprite.image, (x-ox, y-oy, w, h))
                 else:
-                    self.screen.blit(sprite.image, sprite.rect)
+                    self._screen.blit(sprite.image, sprite.rect)
             _camera.debug_padding()
 
             # 菜单,总是置顶
             self.theaters[self.current].group_menu.update(ticks)
             for menu in self.theaters[self.current].group_menu:
                 menu.group.update(ticks)
-                self.screen.blit(menu.image, menu.rect)
+                self._screen.blit(menu.image, menu.rect)
                 for sprite in menu.group:
-                    self.screen.blit(sprite.image, sprite.rect)
+                    self._screen.blit(sprite.image, sprite.rect)
 
             # 由于 pygame 缺陷，并发鼠标消息处理函数 pygame.mouse.get_pressed() 没有鼠标滚轮消息，
             # 所以用其他方式实现并发滚轮消息的接收处理，这里是收尾工作
             Controller.roll = 0
 
+        self.screen_neor = self.screen.get_rect()
+        self._screen = pygame.transform.scale(self._screen, self.screen_neor[2:])
+        self.screen.blit(self._screen, self.screen_neor)
         pygame.display.flip()
 
-    def draw_grid(self):
-        for x in range(0, self.screen_rect.width, self.GRID_TILE):
-            pygame.draw.line(self.screen, self.GRID_LINE_COLOR, (x, 0), (x, self.screen_rect.height))
-        for y in range(0, self.screen_rect.height, self.GRID_TILE):
-            pygame.draw.line(self.screen, self.GRID_LINE_COLOR, (0, y), (self.screen_rect.width, y))
+    def draw_grid(self, image):
+        rect = image.get_rect()
+        for x in range(0, rect.width, self.GRID_TILE):
+            pygame.draw.line(image, self.GRID_LINE_COLOR, (x, 0), (x, rect.height))
+        for y in range(0, rect.height, self.GRID_TILE):
+            pygame.draw.line(image, self.GRID_LINE_COLOR, (0, y), (rect.width, y))
+        return image
 
     def change_theater(self, name):
         self.current = name.name if isinstance(name, Theater) else name
@@ -99,7 +109,7 @@ class Initer:
                  fps   = 60,         # 帧/秒
                  title = 'vgame',    # 标题名
                  size  = (640, 480), # 屏幕分辨率
-                 flag  = 0,          # pygame.display.set_mode 第二个参数
+                 flag  = pygame.RESIZABLE,          # pygame.display.set_mode 第二个参数
                  depth = 32,         # pygame.display.set_mode 第三个参数
                  ):
 
@@ -150,8 +160,8 @@ class Initer:
                 # 人为直接拉伸那么鼠标的坐标信息就可能产生不准的问题，牵一发动全身，较真去改各个地方都需要改，
                 # 暂时没考虑到有什么好的方法处理，这里就先留下一个半成品注释代码，是残缺功能的代码。
                 # ## flag=pygame.RESIZABLE
-                # if event.type == pygame.VIDEORESIZE:
-                #     self.screen = pygame.display.set_mode(event.size, self.flag, self.depth)
+                if event.type == pygame.VIDEORESIZE:
+                    self.screen = pygame.display.set_mode(event.size, self.flag, self.depth)
 
     def change_theater(self, name):
         self.artist.change_theater(name)

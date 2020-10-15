@@ -4,6 +4,8 @@ from string import printable
 import pygame
 from pygame.locals import *
 
+import vgame
+
 UP    = 8 # 固定值
 DOWN  = 2 # 固定值
 LEFT  = 4 # 固定值
@@ -22,7 +24,7 @@ class Controller:
     '''
     roll = 0
     def __init__(self):
-        self.actor    = None
+        self.actor = None
 
         # 因为之后设计的所有按键操作都将会“放弃”通过 pygame.event.get() 获取事件的方式来获取控制
         # 因为 pygame.event.get() 多次在不同地方使用的时候，会出现各种问题（测试结论）。
@@ -87,6 +89,13 @@ class Controller:
     #               #
     #===============#
 
+
+    def get_pos(self):
+        x, y = pygame.mouse.get_pos()
+        ow, oh = vgame.Artist.ARTIST.screen_rect[2:]
+        tw, th = vgame.Artist.ARTIST.screen_neor[2:]
+        return int(x/tw*ow), int(y/th*oh)
+
     #==============#
     # 一般鼠标操作 #
     #==============#
@@ -94,7 +103,7 @@ class Controller:
     # 注意，滚轮有滚动操作和按下操作两种，
     def general_mouse_key(self,ticks,model='a'):
         if self.roll:
-            cur_pos = pygame.mouse.get_pos()
+            cur_pos = self.get_pos()
             return (1, self.roll, (cur_pos, cur_pos))
         rem = self._mouse_pressed() 
         # rem 究竟是什么，详细请看 _mouse_pressed 函数注释。
@@ -127,7 +136,8 @@ class Controller:
             return True
     def _mouse_pressed(self):
         # 【返回参数】：
-        # 按键id（0左键，1中键[不包含滚轮]，2右键），按键状态（0无按，1按下，2松开瞬间），起点坐标，终点坐标，两坐标之间的长
+        # 按键id（0左键，1中键[包含滚轮]，2右键），按键状态（0无按，1按下，2松开瞬间），起点坐标，终点坐标，两坐标之间的长
+        # 虽然包含滚轮消息，但是由于 pygame 一定缺陷，滚轮消息在 Initer 里面的主循环内实现。
         mouse = pygame.mouse.get_pressed()
         # 鼠标未被按下
         if self.mouse_status == 0:
@@ -138,18 +148,18 @@ class Controller:
         # 鼠标按下的处理
         if self.mouse_status == 1:
             if self.mouse_toggle:
-                self.mouse_pos = pygame.mouse.get_pos() # 起始坐标
+                self.mouse_pos = self.get_pos() # 起始坐标
                 self.mouse_toggle = False
             if mouse.count(1) != 1: # 按住左键同时又按住右键，这样不会存在松开的状态
                 self.mouse_status = 2
-            cur_pos = pygame.mouse.get_pos() # 鼠标松开的坐标点
+            cur_pos = self.get_pos() # 鼠标松开的坐标点
             len_for_2point = ((self.mouse_pos[0]-cur_pos[0])**2 + (self.mouse_pos[1]-cur_pos[1])**2)**.5
             return self.mouse_id, 1 ,self.mouse_pos, cur_pos, len_for_2point
         # 鼠标松开的瞬间
         if self.mouse_status == 2:
             self.mouse_status = 0 # 松开后立马将状态转换成未按下的状态，让鼠标松开的操作仅返回一次
             self.mouse_toggle = True # 同时将鼠标单次记录开关打开
-            cur_pos = pygame.mouse.get_pos() # 鼠标松开的坐标点
+            cur_pos = self.get_pos() # 鼠标松开的坐标点
             len_for_2point = ((self.mouse_pos[0]-cur_pos[0])**2 + (self.mouse_pos[1]-cur_pos[1])**2)**.5
             # 按键id，按键状态，起止两个坐标点，两坐标之间的长度
             return self.mouse_id, 2, self.mouse_pos, cur_pos, len_for_2point

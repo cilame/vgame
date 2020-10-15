@@ -880,7 +880,7 @@ class Button(Actor):
         kw.setdefault('cam_follow', False) # 菜单一般都不需要镜头跟随的处理，之所以都使用
         kw.setdefault('in_control', True)
         super().__init__(*a, **kw)
-        self.mouse_pos = pygame.mouse.get_pos()
+        self.mouse_pos = self.controller.get_pos()
         self.mouse_stat = self._get_mouse_stat()
         self._hover_dly = self.regist(Delayer(30))
         self._init_hover_color()
@@ -901,7 +901,7 @@ class Button(Actor):
         elif self.click.__code__.co_argcount == 2: self.click(self, m)
 
     def _idle(self, ticks):
-        pos = pygame.mouse.get_pos()
+        pos = self.controller.get_pos()
         if self.mouse_pos != pos:
             self.mouse_pos = pos
             mstat = self._get_mouse_stat()
