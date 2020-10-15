@@ -471,23 +471,23 @@ class Theater:
         self.artist.change_theater(name_or_class)
 
     @property
-    def Actor(self):  return Actor.SHOW_BODY[self.name]
+    def Actor(self):  return Actor.SHOW_BODY[self.name].copy()
     @property
-    def Player(self): return Player.SHOW_BODY[self.name]
+    def Player(self): return Player.SHOW_BODY[self.name].copy()
     @property
-    def Wall(self):   return Wall.SHOW_BODY[self.name]
+    def Wall(self):   return Wall.SHOW_BODY[self.name].copy()
     @property
-    def Enemy(self):  return Enemy.SHOW_BODY[self.name]
+    def Enemy(self):  return Enemy.SHOW_BODY[self.name].copy()
     @property
-    def Bullet(self): return Bullet.SHOW_BODY[self.name]
+    def Bullet(self): return Bullet.SHOW_BODY[self.name].copy()
     @property
-    def NPC(self):    return NPC.SHOW_BODY[self.name]
+    def NPC(self):    return NPC.SHOW_BODY[self.name].copy()
     @property
-    def Anime(self):  return Anime.SHOW_BODY[self.name]
+    def Anime(self):  return Anime.SHOW_BODY[self.name].copy()
     @property
-    def Menu(self):   return Menu.SHOW_BODY[self.name]
+    def Menu(self):   return Menu.SHOW_BODY[self.name].copy()
     @property
-    def Button(self): return Button.SHOW_BODY[self.name]
+    def Button(self): return Button.SHOW_BODY[self.name].copy()
 
     @property
     def rect(self): return self.background.rect

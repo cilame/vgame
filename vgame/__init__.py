@@ -46,7 +46,6 @@ class Artist:
         self.framerate.tick(self.ticks)
         ticks = pygame.time.get_ticks()
 
-        # self.screen.fill(self.BGCOLOR)
         if self.screen_rect[2:] != self.screen_neor[2:]:
             self._screen = pygame.Surface(self.screen_rect[2:]).convert_alpha()
         self._screen.fill(self.BGCOLOR)
@@ -81,8 +80,10 @@ class Artist:
             # 所以用其他方式实现并发滚轮消息的接收处理，这里是收尾工作
             Controller.roll = 0
 
+        # 处理界面的直接缩放
         self.screen_neor = self.screen.get_rect()
-        self._screen = pygame.transform.scale(self._screen, self.screen_neor[2:])
+        if self.screen_rect[2:] != self.screen_neor[2:]:
+            self._screen = pygame.transform.scale(self._screen, self.screen_neor[2:])
         self.screen.blit(self._screen, self.screen_neor)
         pygame.display.flip()
 

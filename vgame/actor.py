@@ -44,8 +44,8 @@ class _Mover:
         if not self.has_bind:
             if self.actor.theater: # 通常来说，未绑定 theater 的对象可能由其他子配件绑定，例如菜单。
                 cur = self.actor.theater.artist.current
-                if self.actor.in_entity: self.actor.RIGID_BODY[cur].append(self.actor)
-                if self.actor.in_collide: self.actor.SHOW_BODY[cur].append(self.actor)
+                if self.actor.in_entity and self.actor not in self.actor.RIGID_BODY[cur]: self.actor.RIGID_BODY[cur].append(self.actor)
+                if self.actor.in_collide and self.actor not in self.actor.SHOW_BODY[cur]: self.actor.SHOW_BODY[cur].append(self.actor)
             self.has_bind = True
 
     def collide(self):

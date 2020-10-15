@@ -32,7 +32,6 @@ def _restart():
     for i in main.Bullet: i.kill()
     label.text = 0
     vgame.change_theater(main)
-    player.toggle(True)
     player.local(main, (120,400))
 restart.click = _restart
 restart.control = lambda self, c: _restart() if self.delay(c and c.get('p1')[1]) else None
