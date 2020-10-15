@@ -66,15 +66,15 @@ def idle(self):
         if self.status['speedx'] < 0: self.status['speedx'] += 1
 
 def bound(self, b):
-    if b and b[0][1] == 'd': self.status['jump_number'] = 2
-    if b and b[0][1] == 'd': self.status['dash_number'] = 2
+    if b and b[0][1] == 'd': self.status['jump_number'] = self.status['jump_number_def']
+    if b and b[0][1] == 'd': self.status['dash_number'] = self.status['dash_number_def']
 
 player.direction = direct
 player.control = ctl
 player.status['speedx'] = 0
 player.status['speedy'] = -9
-player.status['jump_number'] = 2
-player.status['dash_number'] = 2
+player.status['jump_number'] = player.status['jump_number_def'] = 2 # 跳跃次数
+player.status['dash_number'] = player.status['dash_number_def'] = 2 # 冲刺次数
 player.status['dash_toggle'] = False
 player.status['dash_speedx'] = 0
 player.status['dash_speedy'] = 0
