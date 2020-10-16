@@ -83,7 +83,7 @@ class Artist:
         # 处理界面的直接缩放
         self.screen_neor = self.screen.get_rect()
         if self.screen_rect[2:] != self.screen_neor[2:]:
-            self._screen = pygame.transform.scale(self._screen, self.screen_neor[2:])
+            self._screen = pygame.transform.smoothscale(self._screen, self.screen_neor[2:])
         self.screen.blit(self._screen, self.screen_neor)
         pygame.display.flip()
 
