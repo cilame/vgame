@@ -67,7 +67,6 @@ b2 = vgame.Anime(vgame.Text('Ｋ键关闭菜单', (0,0,0), 2, textwidth=280, tex
 a1 = vgame.Anime(vgame.Text(0, (0,0,0), 2, textwidth=280, textside='r', textformat='Ｊ点击次数:{:>2d}')).menu.local(menu2, (2, 4))
 a2 = vgame.Anime(vgame.Text(0, (0,0,0), 2, textwidth=280, textside='r', textformat='Ｋ点击次数:{:>2d}')).menu.local(menu2, (2, 5))
 a3 = vgame.Anime(vgame.Text(0, (0,0,0), 2, textwidth=280, textside='r', textformat='头像点击次数:{:>2d}')).menu.local(menu2, (2, 6))
-a3 = vgame.Anime(vgame.Text(0, (0,0,0), 2, textwidth=280, textside='r', textformat='头像点击次数:{:>2d}')).menu.local(menu2, (2, 6))
 
 import time
 timestamp = time.strftime("%H-%M-%S", time.localtime())

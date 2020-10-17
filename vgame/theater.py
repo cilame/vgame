@@ -109,7 +109,6 @@ class Map:
     @property
     def size(self):
         return self.mapw, self.maph
-    
 
     def local(self, actor, axis, obstruct=0):
         if not actor._toggle['gridmove_start']:

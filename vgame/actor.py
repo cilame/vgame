@@ -37,17 +37,6 @@ class _Mover:
     '''
     用于处理碰撞检测的原始函数部分，一般的mover直接继承使用
     '''
-    def __init__(self):
-        self.has_bind = False
-
-    def _delay_bind(self):
-        if not self.has_bind:
-            if self.actor.theater: # 通常来说，未绑定 theater 的对象可能由其他子配件绑定，例如菜单。
-                cur = self.actor.theater.artist.current
-                if self.actor.in_entity and self.actor not in self.actor.RIGID_BODY[cur]: self.actor.RIGID_BODY[cur].append(self.actor)
-                if self.actor.in_collide and self.actor not in self.actor.SHOW_BODY[cur]: self.actor.SHOW_BODY[cur].append(self.actor)
-            self.has_bind = True
-
     def collide(self):
         cur = self.actor.theater.artist.current
         rigid_bodys = []
@@ -331,6 +320,13 @@ class Actor(pygame.sprite.Sprite):
 
         self._set_showpoint(showpoint)
         self.bug_check  = None
+        self.has_bind   = False
+
+    def _delay_bind(self):
+        if not self.has_bind:
+            if self.theater:
+                self._bindbody()
+            self.has_bind = True
 
     def _get_showpoint(self): return self.rect[:2]
     def _set_showpoint(self, value): 
@@ -430,7 +426,7 @@ class Actor(pygame.sprite.Sprite):
                         func, a, immediate = self._chain[ch].pop(0)
                         func(*a)
 
-        self.mover._delay_bind()
+        self._delay_bind()
         self._image_tuning()
 
     def collide(self, *list_sprite):
@@ -766,6 +762,15 @@ class Wall(Actor):
         kw.setdefault('in_entitys', ENTITYS) # 墙体也要自动对其他类型的数据进行互斥，否则墙体运动时候不会与
         super().__init__(*a, **kw)
 
+# 该处的背景类仅用于规范游戏的范围使用的
+class Background(Actor):
+    RIGID_BODY = {}
+    SHOW_BODY = {}
+    def __init__(self, *a, **kw):
+        kw.setdefault('in_entity', False)
+        kw.setdefault('in_entitys', [])
+        kw.setdefault('cam_follow', True) # 背景需要镜头跟随的处理，之所以都使用
+        super().__init__(*a, **kw)
 
 ENTITYS = [Player, NPC, Enemy, Wall]
 ENTITYS_DEFAULT = [Wall]
@@ -780,7 +785,7 @@ COLLIDE = [Player, NPC, Enemy, Bullet]
 # 后来发现一个场景一个 sprite.group 可能不够，要更加方便的管理应该是 一个大类元素使用一个 sprite.group
 # 因为这样分层管理起来会更加容易的实现前景，背景之类谁先谁后渲染顺序的处理，例如“菜单”必须要置顶于游戏之上
 # 否则菜单就没有意义。
-class Menu(Actor):
+class GridMap(Actor):
     DEBUG = False
     RIGID_BODY = {}
     SHOW_BODY = {}
@@ -788,7 +793,7 @@ class Menu(Actor):
     def __init__(self, *a, **kw):
         kw.setdefault('in_entity', False)
         kw.setdefault('in_entitys', [])
-        kw.setdefault('cam_follow', False) # 菜单一般都不需要镜头跟随的处理，之所以都使用
+        kw.setdefault('cam_follow', False)
         grid = kw.pop('grid', (1, 1))
         if not a:
             kw.setdefault('img', (70, 70, 70, 100))
@@ -881,6 +886,11 @@ class Menu(Actor):
         if self.DEBUG:
             img = self.aload_image(self.img)
             self.aload_image(self._griddraw(img.image, self.grid))
+
+class Menu(GridMap):
+    DEBUG = False
+    RIGID_BODY = {}
+    SHOW_BODY = {}
 
 class Button(Actor):
     RIGID_BODY = {}
@@ -982,12 +992,3 @@ class Button(Actor):
 
 
 
-# 该处的背景类仅用于规范游戏的范围使用的
-class Background(Actor):
-    RIGID_BODY = {}
-    SHOW_BODY = {}
-    def __init__(self, *a, **kw):
-        kw.setdefault('in_entity', False)
-        kw.setdefault('in_entitys', [])
-        kw.setdefault('cam_follow', True) # 背景需要镜头跟随的处理，之所以都使用
-        super().__init__(*a, **kw)

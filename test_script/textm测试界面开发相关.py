@@ -26,3 +26,7 @@ vgame.Initer()
 main = vgame.Theater((0,0,0)).draw.rect((255,255,255), 5, 3)
 menu = vgame.Menu(grid=(9,9), showsize=(main.size[0]-50,200-50)).local(main, offsets=(0,140))
 player = vgame.Player(showsize=(40,20)).menu.local(menu, (1,1))
+
+# 16*9
+
+
