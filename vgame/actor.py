@@ -795,7 +795,10 @@ class Menu(Actor):
         self.group = pygame.sprite.Group()
         self.grid = (1, 1)
 
-    def init(self, theater, grid=None, side=None, ratio=(1, 1), offsets=(0, 0)):
+    # def local(self, *a, **kw):
+        
+
+    def init_by_ratio(self, theater, grid=None, side=None, ratio=(1, 1), offsets=(0, 0)):
         '''
         grid    --> 用于划分格子，后续用格子坐标来整理/展示图文。
         ratio   --> 如果 ratio 只有一个数字，则 side 所用的方向均使用这个比例，两个数字则分别为宽/高比例

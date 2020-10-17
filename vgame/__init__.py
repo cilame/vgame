@@ -42,7 +42,7 @@ class Artist:
         self.framerate   = pygame.time.Clock()
         self.current     = None
         self.grid        = grid # 全局 theater 使用的默认的切割数量
-        self.proportion  = True # 是否在窗口进行缩放后保持比例
+        self.equalscale  = True # 是否在窗口进行缩放后保持比例
         self.screen_offx = 0
         self.screen_offy = 0
 
@@ -118,7 +118,7 @@ class Artist:
         if self.screen_rect[2:] != self.screen_neor[2:]:
             ow, oh = self.screen_rect[2:]
             rw, rh = self.screen_neor[2:]
-            if self.proportion:
+            if self.equalscale:
                 kw, kh = rw/ow, rh/oh
                 ox = oy = 0
                 if kw >= kh:
@@ -248,6 +248,8 @@ def change_theater(name):
     except:
         traceback.print_exc()
 
+def get_pos():
+    return Controller.get_pos()
 
 
 # pygame.draw.rect()

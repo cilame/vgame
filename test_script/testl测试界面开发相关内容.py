@@ -50,7 +50,7 @@ player = vgame.Player((0,150,100,0), rectsize=(12, 8)).map.local(main, (5, 5), 1
 player.control = ctl
 # player.mouse = mouse
 bgcolor = (247,197,198,255)
-menu1 = vgame.Menu(bgcolor).init(main, (16, 7), 'd', .35)
+menu1 = vgame.Menu(bgcolor).init_by_ratio(main, (16, 7), 'd', .35)
 im = vgame.Image('../test_data/1A00.bmp', showsize=(64, 80))
 head = vgame.Button(im, showsize=(64, 80)).menu.local(menu1, (3, 2))
 name = vgame.Anime(vgame.Text('英雄名字', (0,0,0), 2, textside='r')).menu.local(menu1, (3, 4))
@@ -60,7 +60,7 @@ def click(self, m):
     print(self, m)
 head.click = click
 
-menu2 = vgame.Menu(bgcolor).init(main, (5, 12), 'ul', (.5-.04, .63-.09), offsets=(.02, .10)).draw.rect((0,0,0), 3, 3)
+menu2 = vgame.Menu(bgcolor).init_by_ratio(main, (5, 12), 'ul', (.5-.04, .63-.09), offsets=(.02, .10)).draw.rect((0,0,0), 3, 3)
 b0 = vgame.Anime(vgame.Text('打开状态', (0,0,0), 2, textwidth=280, textside='r')).menu.local(menu2, (2, 1))
 b1 = vgame.Anime(vgame.Text('Ｊ键打开菜单', (0,0,0), 2, textwidth=280, textside='r')).menu.local(menu2, (2, 2))
 b2 = vgame.Anime(vgame.Text('Ｋ键关闭菜单', (0,0,0), 2, textwidth=280, textside='r')).menu.local(menu2, (2, 3))
@@ -71,7 +71,7 @@ a3 = vgame.Anime(vgame.Text(0, (0,0,0), 2, textwidth=280, textside='r', textform
 
 import time
 timestamp = time.strftime("%H-%M-%S", time.localtime())
-menu_time = vgame.Menu(bgcolor).init(main, (1, 1), 'ul', (.3, .08), offsets=(.18, .01)).draw.rect((0,0,0), 3, 3)
+menu_time = vgame.Menu(bgcolor).init_by_ratio(main, (1, 1), 'ul', (.3, .08), offsets=(.18, .01)).draw.rect((0,0,0), 3, 3)
 a5 = vgame.Button(vgame.Text(timestamp, (0,0,0), 1.7, textwidth=180, textside='r')).menu.local(menu_time, (0, 0))
 def change_time(self):
     ctime = time.strftime("%H-%M-%S", time.localtime())

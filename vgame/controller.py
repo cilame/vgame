@@ -89,11 +89,13 @@ class Controller:
     #               #
     #===============#
 
-
-    def get_pos(self):
+    @staticmethod
+    def get_pos():
         x, y = pygame.mouse.get_pos()
         artist = vgame.Artist.ARTIST
-        if artist.proportion:
+        if not artist:
+            return x, y
+        if artist.equalscale:
             ow, oh = artist.screen_rect[2:]
             tw, th = artist.screen_neor[2:]
             fx, fy = artist.screen_offx, artist.screen_offy

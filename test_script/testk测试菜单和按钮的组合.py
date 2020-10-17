@@ -31,7 +31,7 @@ player.control = ctl
 # player.mouse = mouse
 
 bgcolor = (247,197,198,255)
-menu1 = vgame.Menu(bgcolor).init(main, (16, 3), 'd', .35)
+menu1 = vgame.Menu(bgcolor).init_by_ratio(main, (16, 3), 'd', .35)
 im = vgame.Image('../test_data/1A00.bmp', showsize=(64, 80))
 head0 = vgame.Button(im, showsize=(64, 80)).menu.local(menu1, (1, 1))
 head1 = vgame.Button(im, showsize=(64, 80)).menu.local(menu1, (4, 1))
@@ -66,7 +66,7 @@ head1.click = click
 # head2.click = click
 
 bgcolor = (247,197,198,255)
-menu2 = vgame.Menu(bgcolor).init(main, (5, 12), 'ul', (.5-.04, .65-.09), offsets=(.02, .08))
+menu2 = vgame.Menu(bgcolor).init_by_ratio(main, (5, 12), 'ul', (.5-.04, .65-.09), offsets=(.02, .08))
 p = 5
 w,h = menu2.rect[2:]
 vgame.draw.rect(menu2, (0,0,0,255), (p,p,w-p*2,h-p*2), 4)
