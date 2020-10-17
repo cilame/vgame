@@ -92,9 +92,19 @@ class Controller:
 
     def get_pos(self):
         x, y = pygame.mouse.get_pos()
-        ow, oh = vgame.Artist.ARTIST.screen_rect[2:]
-        tw, th = vgame.Artist.ARTIST.screen_neor[2:]
-        return int(x/tw*ow), int(y/th*oh)
+        artist = vgame.Artist.ARTIST
+        if artist.proportion:
+            ow, oh = artist.screen_rect[2:]
+            tw, th = artist.screen_neor[2:]
+            fx, fy = artist.screen_offx, artist.screen_offy
+            if fx:    rx, ry = int((x-fx)/th*oh), int(y/th*oh)
+            elif fy:  rx, ry = int(x/tw*ow), int((y-fy)/tw*ow)
+            else:     rx, ry = int(x/tw*ow), int(y/th*oh)
+        else:
+            ow, oh = artist.screen_rect[2:]
+            tw, th = artist.screen_neor[2:]
+            rx, ry = int(x/tw*ow), int(y/th*oh)
+        return rx, ry
 
     #==============#
     # 一般鼠标操作 #

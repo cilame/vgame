@@ -25,6 +25,7 @@ class Artist:
     '''
 
     BGCOLOR = (40, 40, 40)
+    BBGCOLOR = (0, 0, 0)
     GRID_TILE = 32
     GRID_LINE_COLOR = (100, 100, 100)
     GRID_LINE_COLOR_MAP_DEBUG = (255, 0, 0)
@@ -41,15 +42,16 @@ class Artist:
         self.framerate   = pygame.time.Clock()
         self.current     = None
         self.grid        = grid # 全局 theater 使用的默认的切割数量
+        self.proportion  = True # 是否在窗口进行缩放后保持比例
+        self.screen_offx = 0
+        self.screen_offy = 0
 
     def update(self):
         self.framerate.tick(self.ticks)
         ticks = pygame.time.get_ticks()
 
-        if self.screen_rect[2:] != self.screen_neor[2:]:
-            self._screen = pygame.Surface(self.screen_rect[2:]).convert_alpha()
-        self._screen.fill(self.BGCOLOR)
-        self._screen = self.draw_grid(self._screen) # 黑幕线，当没有背景时用于凸显黑幕的方式。
+        # 初始化背景，处理部分窗口缩放的功能
+        self._init_bg()
 
         # 这里就需要对指定的剧场进行更新，就是场景切换的扩展就都放在这里
         # 修改场景就只需要改场景的名字自动就修改掉了场景，方便切换。
@@ -80,10 +82,8 @@ class Artist:
             # 所以用其他方式实现并发滚轮消息的接收处理，这里是收尾工作
             Controller.roll = 0
 
-        # 处理界面的直接缩放
-        self.screen_neor = self.screen.get_rect()
-        if self.screen_rect[2:] != self.screen_neor[2:]:
-            self._screen = pygame.transform.smoothscale(self._screen, self.screen_neor[2:])
+        # 处理缩放问题的收尾问题
+        self._end_bg()
         self.screen.blit(self._screen, self.screen_neor)
         pygame.display.flip()
 
@@ -104,6 +104,38 @@ class Artist:
             theater.artist = self
             if not self.current:
                 self.current = theater.theater_name # 第一次注册的舞台将默认作为入口舞台
+
+    def _init_bg(self):
+        self.screen.fill(self.BBGCOLOR)
+        if self.screen_rect[2:] != self.screen_neor[2:]:
+            self._screen = pygame.Surface(self.screen_rect[2:]).convert_alpha()
+        self._screen.fill(self.BGCOLOR)
+        self._screen = self.draw_grid(self._screen) # 黑幕线，当没有背景时用于凸显黑幕的方式。
+
+    def _end_bg(self):
+        # 处理界面的缩放问题
+        self.screen_neor = self.screen.get_rect()
+        if self.screen_rect[2:] != self.screen_neor[2:]:
+            ow, oh = self.screen_rect[2:]
+            rw, rh = self.screen_neor[2:]
+            if self.proportion:
+                kw, kh = rw/ow, rh/oh
+                ox = oy = 0
+                if kw >= kh:
+                    _rw = int(kh * ow)
+                    ox = int((rw - _rw)/2)
+                    self.screen_offx = ox
+                    self.screen_offy = 0
+                    self.screen_neor.x = ox
+                    rw = _rw
+                else:
+                    _rh = int(kw * oh)
+                    oy = int((rh - _rh)/2)
+                    self.screen_offx = 0
+                    self.screen_offy = oy
+                    self.screen_neor.y = oy
+                    rh = _rh
+            self._screen = pygame.transform.smoothscale(self._screen, [rw, rh])
 
 class Initer:
     def __init__(self,
