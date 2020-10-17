@@ -303,7 +303,7 @@ class Map:
                 _x += 1
             for x,y,_x,_y in xys:
                 ft = vgame.Image.dfont.render(str((_x,_y)), 1, (255,255,255), (50,50,50))
-                image.blit(ft, (x,y,*ft.get_rect()[2:]))
+                image.blit(ft, (x+1,y+1,*ft.get_rect()[2:]))
 
     def __str__(self):
         return 'map.size:{}\n{}'.format(self.size, str(self.map2d)) # 默认绘制阻力图

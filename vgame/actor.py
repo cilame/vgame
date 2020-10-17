@@ -789,14 +789,26 @@ class Menu(Actor):
         kw.setdefault('in_entity', False)
         kw.setdefault('in_entitys', [])
         kw.setdefault('cam_follow', False) # 菜单一般都不需要镜头跟随的处理，之所以都使用
+        grid = kw.pop('grid', (1, 1))
         if not a:
             kw.setdefault('img', (70, 70, 70, 100))
         super().__init__(*a, **kw)
         self.group = pygame.sprite.Group()
-        self.grid = (1, 1)
+        self.grid = grid
 
-    # def local(self, *a, **kw):
-        
+    def local(self, theater, point=None, offsets=(0,0)):
+        if isinstance(theater, vgame.Theater):
+            theater.regist_menu(self)
+        if point:
+            rx,ry = point
+            ox,oy = offsets
+        else:
+            rx,ry = theater.rect.center
+            ox,oy = offsets
+        self.rect.center = (rx+ox, ry+oy)
+        self._bindbody()
+        self._debug_draw()
+        return self
 
     def init_by_ratio(self, theater, grid=None, side=None, ratio=(1, 1), offsets=(0, 0)):
         '''
@@ -823,13 +835,9 @@ class Menu(Actor):
         self.rect.x += theater.size[0] * kx
         self.rect.y += theater.size[1] * ky
         self.showsize = int(self.rect.w), int(self.rect.h)
-        img = self.aload_image(self.img)
-        if self.DEBUG:
-            self.aload_image(self._griddraw(img.image, grid))
-
-        # self._get_gridcenter(theater, img.image, grid)
         self.grid    = grid    if grid    else self.grid
         self.theater = theater if theater else self.theater
+        self._debug_draw()
         return self
 
     def _gridlocal(self, actor, axis):
@@ -862,6 +870,11 @@ class Menu(Actor):
                 if _x <= ww and _y <= wh:
                     center_map[(ix, iy)] = _x, _y
         return center_map
+
+    def _debug_draw(self):
+        if self.DEBUG:
+            img = self.aload_image(self.img)
+            self.aload_image(self._griddraw(img.image, self.grid))
 
 class Button(Actor):
     RIGID_BODY = {}

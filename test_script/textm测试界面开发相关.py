@@ -11,14 +11,17 @@ import sys;print(sys.stdout.encoding)
 
 import vgame
 # vgame.DEBUG = True
-# vgame.Menu.DEBUG = True
+vgame.Menu.DEBUG = True
 
 vgame.Initer()
 
-main = vgame.Theater((0,0,0)).draw.rect((255,255,255), 5, 3)
-btn1 = vgame.Button(vgame.Text('一号场景', (255,255,255))).local(main, offsets=(0, -15))
-btn1.click = lambda: vgame.change_theater(main2)
+# main = vgame.Theater((0,0,0)).draw.rect((255,255,255), 5, 3)
+# btn1 = vgame.Button(vgame.Text('一号场景', (255,255,255))).local(main, offsets=(0, -15))
+# btn1.click = lambda: vgame.change_theater(main2)
 
-main2 = vgame.Theater((0,0,0)).draw.rect((255,255,255), 5, 3)
-btn2 = vgame.Button(vgame.Text('二号场景', (255,255,255))).local(main2, offsets=(0, -15))
-btn2.click = lambda: vgame.change_theater(main)
+# main2 = vgame.Theater((0,0,0)).draw.rect((255,255,255), 5, 3)
+# btn2 = vgame.Button(vgame.Text('二号场景', (255,255,255))).local(main2, offsets=(0, -15))
+# btn2.click = lambda: vgame.change_theater(main)
+
+main = vgame.Theater((0,0,0)).draw.rect((255,255,255), 5, 3)
+menu = vgame.Menu(showsize=(main.size[0],200)).local(main, offsets=(0,140))
