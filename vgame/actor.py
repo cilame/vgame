@@ -812,6 +812,8 @@ class Menu(Actor):
 
     def init_by_ratio(self, theater, grid=None, side=None, ratio=(1, 1), offsets=(0, 0)):
         '''
+        # 后续发现这个函数并没有想象中那么好用，直接统一使用 Actor 的 local 会更舒服一些。
+        # 这里的 init_by_ratio 这个函数后续可能会抛弃，因为对于开发者来说学习成本很高。且功能不方便。
         grid    --> 用于划分格子，后续用格子坐标来整理/展示图文。
         ratio   --> 如果 ratio 只有一个数字，则 side 所用的方向均使用这个比例，两个数字则分别为宽/高比例
         side    --> udlr:up,down,left,right，只能用最大两个(合法角落)字母，即为不能同时上下，不能同时左右
@@ -851,10 +853,12 @@ class Menu(Actor):
     def _griddraw(self, image, grid):
         x, y, w, h = image.get_rect()
         xw, xh = grid
-        gw, gh = int(w/xw), int(h/xh)
-        for x in range(0, w, gw):
+        gw, gh = w/xw, h/xh
+        for ix in range(xw):
+            x = int(gw*ix)
             pygame.draw.line(image, vgame.Artist.GRID_LINE_COLOR_MAP_DEBUG, (x, 0), (x, h))
-        for y in range(0, h, gh):
+        for iy in range(xh):
+            y = int(gh*iy)
             pygame.draw.line(image, vgame.Artist.GRID_LINE_COLOR_MAP_DEBUG, (0, y), (w, y))
         return image
 
@@ -862,10 +866,12 @@ class Menu(Actor):
         ox, oy, w, h = self.rect
         ww, wh = theater.size
         xw, xh = grid
-        gw, gh = int(w/xw), int(h/xh)
+        gw, gh = w/xw, h/xh
         center_map = {}
-        for ix, x in enumerate(range(0, w, gw)):
-            for iy, y in enumerate(range(0, h, gh)):
+        for ix in range(xw):
+            x = gw*ix
+            for iy in range(xh):
+                y = gh*iy
                 _x, _y = int(x+gw/2+ox), int(y+gh/2+oy)
                 if _x <= ww and _y <= wh:
                     center_map[(ix, iy)] = _x, _y

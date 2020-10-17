@@ -24,4 +24,6 @@ vgame.Initer()
 # btn2.click = lambda: vgame.change_theater(main)
 
 main = vgame.Theater((0,0,0)).draw.rect((255,255,255), 5, 3)
-menu = vgame.Menu(showsize=(main.size[0],200)).local(main, offsets=(0,140))
+menu = vgame.Menu(grid=(9,9), showsize=(main.size[0]-50,200-50)).local(main, offsets=(0,140))
+
+player = vgame.Player(showsize=(40,20)).menu.local(menu, (1,1))
