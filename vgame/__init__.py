@@ -138,7 +138,7 @@ class Artist:
                     self.screen_offy = oy
                     self.screen_neor.y = oy
                     rh = _rh
-            self._screen = pygame.transform.smoothscale(self._screen, [rw, rh])
+            self._screen = pygame.transform.scale(self._screen, [rw, rh])
 
 class Initer:
     def __init__(self,
