@@ -884,8 +884,9 @@ class _Grid(Actor):
     def _gridlocal(self, actor, axis):
         center_map = self._get_gridcenter(self.theater, self.grid)
         cx, cy = center_map[tuple(axis)]
-        actor.rect.x = int(cx-actor.showsize[0]/2)
-        actor.rect.y = int(cy-actor.showsize[1]/2)
+        rx, ry = actor.rectsize if actor.rectsize else actor.showsize
+        actor.rect.x = int(cx-rx/2)
+        actor.rect.y = int(cy-ry/2)
         actor.axis = axis
         self.group.add(actor)
         actor.theater = self.theater
