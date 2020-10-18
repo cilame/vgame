@@ -8,6 +8,7 @@ from pygame.mask import from_surface
 
 from .image import Image, ImageMaker, Text
 from .controller import Controller
+from .dijkstra import shortest_path
 
 import vgame
 
@@ -80,12 +81,12 @@ class SmoothMover(_Mover):
             actor = self.actor
             caxis = actor.axis
             if caxis:
-                naxis = actor.theater.map._calc_center_by_rect(actor)
+                naxis = actor._map.map2d._calc_center_by_rect(actor)
                 obstruct = actor.obstruct or 0
                 if caxis != naxis:
                     actor.axis = naxis
                     if obstruct:
-                        actor.theater.map.map2d._local_add_del(caxis, naxis, obstruct)
+                        actor._map.map2d._local_add_del(caxis, naxis, obstruct)
         except:
             traceback.print_exc()
             print('Actor out of bounds. {}'.format(self.actor.axis))
@@ -294,6 +295,7 @@ class Actor(pygame.sprite.Sprite):
 
         self.axis       = None # 用于栅格类游戏，角色可以在 theater.map 中的函数处理运动，最短路径计算等
         self.obstruct   = None # 用于栅格类游戏，用于寻路算法，使用
+        self._map       = None # 用于绑定 map
 
         self.debug      = debug # 如果 DEBUG 为 False，这里为 True 则仅仅让该 Actor 这个对象用 debug 模式
         self.rect       = self.getrect()
@@ -536,31 +538,6 @@ class Actor(pygame.sprite.Sprite):
         self._bindbody()
         return self
 
-    @property
-    def map(self):
-        class _map:
-            def move(s, trace, speed=4.):
-                self.theater.map.move(self, trace, speed)
-            def local(s, theater, axis, obstruct=0):
-                if theater:
-                    theater.regist(self)
-                    theater.map.local(self, axis, obstruct)
-                else:
-                    try:
-                        self.theater.map.local(self, axis, obstruct)
-                    except AttributeError as e:
-                        if 'map' in str(e) and 'NoneType' in str(e):
-                            raise Exception('pls use theater.regist to register the object in theater, '
-                                            'or use the third parameter of map.local to register automatically.')
-                return self
-            def trace(s, actor_or_point):
-                return self.theater.map.trace(self, actor_or_point)
-            def direct(s, side, speed=4.):
-                return self.theater.map.direct(self, side, speed)
-            def __str__(s):
-                return str(self.theater.map)
-        return _map()
-
     def _delay(self, time, delayer, ticks):
         try:
             # 这里的 delay 函数事实上是运行在 Actor.update 函数里面的"函数的内部"，
@@ -680,6 +657,56 @@ class Actor(pygame.sprite.Sprite):
                 return self
         return _menu()
 
+    @property
+    def map(self):
+        class _map:
+            def local(s, map, axis, obstruct=0):
+                assert isinstance(map, Map), 'map must be vgame.Map object.'
+                self._map = map._map_local(self, axis, obstruct)
+                return self
+            def trace(s, actor_or_point):
+                if self._map:
+                    return self._map.trace(self, actor_or_point)
+                else:
+                    raise Exception('map is not init, pls use "Actor.map.local(map, axis)" bind map.')
+        return _map()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -782,10 +809,38 @@ COLLIDE = [Player, NPC, Enemy, Bullet]
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # 后来发现一个场景一个 sprite.group 可能不够，要更加方便的管理应该是 一个大类元素使用一个 sprite.group
 # 因为这样分层管理起来会更加容易的实现前景，背景之类谁先谁后渲染顺序的处理，例如“菜单”必须要置顶于游戏之上
 # 否则菜单就没有意义。
-class GridMap(Actor):
+class _Grid(Actor):
     DEBUG = False
     RIGID_BODY = {}
     SHOW_BODY = {}
@@ -800,10 +855,17 @@ class GridMap(Actor):
         super().__init__(*a, **kw)
         self.group = pygame.sprite.Group()
         self.grid = grid
+        gw, gh = self.grid
+        sw, sh = self.showsize
+        self.gridw = sw/gw
+        self.gridh = sh/gh
+        self.mapw  = gw
+        self.maph  = gh
+        self._debug_toggle = False
 
     def local(self, theater, point=None, offsets=(0,0)):
         if isinstance(theater, vgame.Theater):
-            theater.regist_menu(self)
+            theater.regist_grid(self)
         if point:
             rx,ry = point
             ox,oy = offsets
@@ -815,37 +877,9 @@ class GridMap(Actor):
         self._debug_draw()
         return self
 
-    def init_by_ratio(self, theater, grid=None, side=None, ratio=(1, 1), offsets=(0, 0)):
-        '''
-        # 后续发现这个函数并没有想象中那么好用，直接统一使用 Actor 的 local 会更舒服一些。
-        # 这里的 init_by_ratio 这个函数后续可能会抛弃，因为对于开发者来说学习成本很高。且功能不方便。
-        grid    --> 用于划分格子，后续用格子坐标来整理/展示图文。
-        ratio   --> 如果 ratio 只有一个数字，则 side 所用的方向均使用这个比例，两个数字则分别为宽/高比例
-        side    --> udlr:up,down,left,right，只能用最大两个(合法角落)字母，即为不能同时上下，不能同时左右
-        offsets --> 初始化整块图片时的坐标偏移，和 ratio 一样以宽/高比例做偏移。
-        '''
-        theater.regist_menu(self)
-        if isinstance(ratio, (int, float)): kw = kh = ratio
-        if isinstance(ratio, (tuple, list)): kw, kh = ratio
-        if isinstance(offsets, (int, float)): kx = ky = offsets
-        if isinstance(offsets, (tuple, list)): kx, ky = offsets
-        side = 'd' if side is None else side
-        ta = 'd' in side or 'u' in side
-        tb = 'r' in side or 'l' in side
-        if ta and tb: self.rect.h, self.rect.w = theater.size[1]*kh, theater.size[0]*kw
-        else:
-            if ta: self.rect.h, self.rect.w = theater.size[1]*kh, theater.size[0]
-            if tb: self.rect.w, self.rect.h = theater.size[0]*kw, theater.size[1]
-        w, h = theater.size
-        if 'd' in side: self.rect.y = h - self.rect.h
-        if 'r' in side: self.rect.x = w - self.rect.w
-        self.rect.x += theater.size[0] * kx
-        self.rect.y += theater.size[1] * ky
-        self.showsize = int(self.rect.w), int(self.rect.h)
-        self.grid    = grid    if grid    else self.grid
-        self.theater = theater if theater else self.theater
-        self._debug_draw()
-        return self
+    @property
+    def gridsize(self):
+        return self.gridw, self.gridh
 
     def _gridlocal(self, actor, axis):
         center_map = self._get_gridcenter(self.theater, self.grid)
@@ -854,6 +888,7 @@ class GridMap(Actor):
         actor.rect.y = int(cy-actor.showsize[1]/2)
         actor.axis = axis
         self.group.add(actor)
+        actor.theater = self.theater
 
     def _griddraw(self, image, grid):
         x, y, w, h = image.get_rect()
@@ -883,14 +918,159 @@ class GridMap(Actor):
         return center_map
 
     def _debug_draw(self):
-        if self.DEBUG:
+        if self.DEBUG and not self._debug_toggle:
+            self._debug_toggle = True
             img = self.aload_image(self.img)
             self.aload_image(self._griddraw(img.image, self.grid))
 
-class Menu(GridMap):
+class Menu(_Grid):
     DEBUG = False
     RIGID_BODY = {}
     SHOW_BODY = {}
+    # TODO 菜单需要实现一些方向键控制按钮的功能，以及绑定某些按键的功能
+    # 以及呼出菜单后自动只接收某些函数功能，一般的 player 功能将会隐藏。
+
+class Map(_Grid):
+    DEBUG = False
+    RIGID_BODY = {}
+    SHOW_BODY = {}
+    class Map2D:
+        DEFAULT_OBSTRUCT = 1 # 默认阻值
+        DEFAULT_GAP = 3
+        def __init__(self, map, mapw, maph):
+            self.map   = map
+            self.gridw = map.gridw
+            self.gridh = map.gridh
+            self.mapw  = mapw
+            self.maph  = maph
+            self.world = self._create_map2ds()
+            self.graph = self._create_graph()
+            self.gap   = self.DEFAULT_GAP
+        def _create_map2ds(self):
+            d = {}
+            d['_obs2d'] = self._create_obs2d()  # 存放默认阻值，均为 DEFAULT_OBSTRUCT
+            d['obs2d']  = self._create_obs2d(0) # 地图单位阻值，初始均为 0
+            return d
+        def _create_obs2d(self, obstruct=None):
+            w = []
+            for i in range(self.maph):
+                m = []
+                for j in range(self.mapw):
+                    m.append(Map.Map2D.DEFAULT_OBSTRUCT if obstruct is None else obstruct)
+                w.append(m)
+            return w
+        def _create_graph(self):
+            d = {}
+            for i in range(self.mapw):
+                for j in range(self.maph):
+                    d[(i, j)] = self._init_point(i, j)
+            return d
+        def _init_point(self, x, y):
+            p = {}
+            lx, ly = x-1, y # l
+            rx, ry = x+1, y # r
+            ux, uy = x, y-1 # u
+            dx, dy = x, y+1 # d
+            if lx >= 0:        p[(lx, ly)] = self.world['_obs2d'][ly][lx] # Map.Map2D.DEFAULT_OBSTRUCT
+            if rx < self.mapw: p[(rx, ry)] = self.world['_obs2d'][ry][rx] # Map.Map2D.DEFAULT_OBSTRUCT
+            if uy >= 0:        p[(ux, uy)] = self.world['_obs2d'][uy][ux] # Map.Map2D.DEFAULT_OBSTRUCT
+            if dy < self.maph: p[(dx, dy)] = self.world['_obs2d'][dy][dx] # Map.Map2D.DEFAULT_OBSTRUCT
+            return p
+        def _shortest_path(self, actor_a, actor_b):
+            axis_a = getattr(actor_a, 'axis', actor_a) # axis or actor
+            axis_b = getattr(actor_b, 'axis', actor_b)
+            try:
+                return shortest_path(self.graph, axis_a, axis_b)
+            except Exception as e:
+                print('dijkstra error:{}, the destination address cannot reach or exceed the boundary.'.format(e))
+                return []
+        def _local(self, actor, axis, obstruct): 
+            actor.axis = axis # 让 actor 绑定一个坐标地址
+            actor.obstruct = obstruct
+            self._local_set(actor.axis, obstruct)
+        def _local_set(self, axis, val): self.world['obs2d'][axis[1]][axis[0]]  = val; self._local_calc_graph(axis)
+        def _local_del(self, axis, val): self.world['obs2d'][axis[1]][axis[0]] -= val; self._local_calc_graph(axis)
+        def _local_add(self, axis, val): self.world['obs2d'][axis[1]][axis[0]] += val; self._local_calc_graph(axis)
+        def _local_add_del(self, caxis, naxis, val):
+            a = caxis[1] >= 0 and caxis[1] < self.maph and caxis[0] >= 0 and caxis[0] < self.mapw
+            b = naxis[1] >= 0 and naxis[1] < self.maph and naxis[0] >= 0 and naxis[0] < self.mapw
+            if a and b:
+                self._local_del(caxis, val)
+                self._local_add(naxis, val)
+            else:
+                if a: self._local_del(caxis, val)
+                if b: self._local_add(naxis, val)
+        def _local_calc_graph(self, axis):
+            _val = self.world['_obs2d'][axis[1]][axis[0]] + self.world['obs2d'][axis[1]][axis[0]]
+            for i in self.graph[axis]:
+                if axis in self.graph[i]: self.graph[i][axis] = _val
+        def _calc_center_by_rect(self, actor):
+            ox, oy = self.map.rect[:2]
+            _x, _y, w, h = actor.rect
+            px, py = actor.axis
+            tx = int(_x + w / 2) - ox
+            ty = int(_y + h / 2) - oy
+            ux = int(round((tx + self.gridw / 2) / self.gridw, 0) - 1)
+            uy = int(round((ty + self.gridh / 2) / self.gridh, 0) - 1)
+            return ux, uy
+        def __str__(self):
+            pks = []
+            for i in self.world['obs2d']:
+                pks.append(' '.join(['_'*self.gap if j == 0 else ('{:'+str(self.gap)+'}').format(j) for j in i]))
+            return '\n'.join(pks)
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.map2d = Map.Map2D(self, self.mapw, self.maph)
+
+    @property
+    def gsize(self):
+        return self.mapw, self.maph
+
+    def _map_local(self, actor, axis, obstruct=0):
+        self._gridlocal(actor, axis)
+        self.map2d._local(actor, axis, obstruct)
+        return self
+
+    def trace(self, actor_a, actor_b):
+        return self.map2d._shortest_path(actor_a, actor_b)
+
+    def __str__(self):
+        return 'map.gsize:{}\n{}'.format(self.gsize, str(self.map2d)) # 默认绘制阻力图
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class Button(Actor):
     RIGID_BODY = {}

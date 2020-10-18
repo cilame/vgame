@@ -14,14 +14,16 @@ vgame.DEBUG = True
 vgame.Map.DEBUG = True
 
 init = vgame.Initer()
-main = vgame.Theater(gridsize=(32, 32))
+main = vgame.Theater()
+
+map = vgame.Map(showsize=main.showsize, grid=(20,15))
+map.local(main)
 
 
 
 
 
-
-print(main.gridsize)
+print(map.gridsize)
 gy = '../test_data/fc吞食天地素材/行走图/关羽.png'
 vgame.Image(gy)
 imake = vgame.ImageMaker(gy)
@@ -30,15 +32,12 @@ playerimg_u = vgame.Image(s[12:16], rate=200, showsize=(32,32))
 playerimg_d = vgame.Image(s[ 0: 4], rate=200, showsize=(32,32))
 playerimg_r = vgame.Image(s[ 8:12], rate=200, showsize=(32,32))
 playerimg_l = vgame.Image(s[ 4: 8], rate=200, showsize=(32,32))
-player = vgame.Player(playerimg_d, rectsize=(32, 32)).map.local(main, (1,1), 10)
+player = vgame.Player(playerimg_d, rectsize=(32, 32)).map.local(map, (1,1), 10)
 player.status['direction']['up']    = playerimg_u
 player.status['direction']['down']  = playerimg_d
 player.status['direction']['right'] = playerimg_r
 player.status['direction']['left']  = playerimg_l
 
-def direct(self, d):
-    if d: self.map.direct(d.get('p1'), 7)
-player.direction = direct
 
 atk = '../test_data/fc吞食天地素材/战斗_头像图/攻击图1.png'
 imake = vgame.ImageMaker(atk)
@@ -54,6 +53,4 @@ def ctl(self, c):
         self.aload_image(self.status['direction']['atkl'])
 
 player.control = ctl
-
-
 init.run()

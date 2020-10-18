@@ -16,8 +16,8 @@ import vgame
 s = vgame.Initer()
 main = vgame.Theater()
 
-labeler = vgame.Player(vgame.Text('J键修改数字', (255,0,0), 2, textwidth=300, textside='r')).map.local(main, (0, 0))
-player = vgame.Player(vgame.Text('0', (255,0,0), 2, textwidth=150, textside='r')).map.local(main, (10,10))
+labeler = vgame.Player(vgame.Text('J键修改数字', (255,0,0), 2, textwidth=300, textside='r')).local(main, (100, 100))
+player = vgame.Player(vgame.Text('0', (255,0,0), 2, textwidth=150, textside='r')).local(main, (200,200))
 
 nums = {'v': 0}
 def ctl(self, c):

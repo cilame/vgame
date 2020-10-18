@@ -18,17 +18,17 @@ init = vgame.Initer()
 main = vgame.Theater()
 
 
-player = vgame.Player(showsize=(80,100)).map.local(main, (10, 13))
+player = vgame.Player(showsize=(80,100)).local(main, offsets=(0, 180))
 score = 0
 txt = vgame.Text(str(score), textcolor=(255,0,0), textscale=2)
-label = vgame.Enemy(txt).map.local(main, (17, 0), )
+label = vgame.Enemy(txt).local(main, (100, 100), )
 
 
 bullets = []
 def enemycreater(self):
-    if self.delay(True, time=1000, repeat=True):
-        x = random.randint(4,16)
-        e = vgame.Enemy((0,255,5), showsize=(32,32), in_bounds=False).map.local(main, (x, 0))
+    if self.delay(True, time=100, repeat=True):
+        x = random.randint(40,600)
+        e = vgame.Enemy((0,255,5), showsize=(32,32), in_bounds=False).local(main, (x, 0))
         def idle(self):
             global score, bullets
             self.mover.move([2], 1)
@@ -48,7 +48,7 @@ label.idle = enemycreater
 
 def direct(self, d):
     if d:
-        self.mover.move(d.get('p1'))
+        self.mover.move(d.get('p1'), 20)
 
 def ctl(self, c):
     if self.delay(c and c.get('p1'),repeat=True,time=0):

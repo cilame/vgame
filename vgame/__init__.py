@@ -6,9 +6,9 @@ import pygame.font as font
 from pygame import Rect
 from pygame.locals import *
 
-from .theater import Theater, Map
-from .actor import Actor, Image, ImageMaker, Text
-from .actor import Player, Wall, Bullet, Enemy, NPC, Anime, Menu, Background, Button # 比较高一层的封装
+from .theater import Theater
+from .actor import Actor, Image, ImageMaker, Text, Map, Background
+from .actor import Player, Wall, Bullet, Enemy, NPC, Anime, Menu, Button # 比较高一层的封装
 from .actor import Delayer, Controller
 from .music import Music
 
@@ -32,7 +32,7 @@ class Artist:
 
     ARTIST = None # 想了想，既然 artist 是唯一的，那么就让 theater 实例化时候自动注册进来即可
 
-    def __init__(self, screen, ticks, grid=(20,15)):
+    def __init__(self, screen, ticks):
         self.screen      = screen
         self._screen     = self.screen
         self.screen_rect = self.screen.get_rect()
@@ -41,7 +41,6 @@ class Artist:
         self.theaters    = {}
         self.framerate   = pygame.time.Clock()
         self.current     = None
-        self.grid        = grid # 全局 theater 使用的默认的切割数量
         self.equalscale  = True # 是否在窗口进行缩放后保持比例
         self.screen_offx = 0
         self.screen_offy = 0
@@ -71,12 +70,16 @@ class Artist:
             _camera.debug_padding()
 
             # 菜单,总是置顶
-            self.theaters[self.current].group_menu.update(ticks)
-            for menu in self.theaters[self.current].group_menu:
-                menu.group.update(ticks)
-                self._screen.blit(menu.image, menu.rect)
-                for sprite in menu.group:
-                    self._screen.blit(sprite.image, sprite.rect)
+            self.theaters[self.current].group_grid.update(ticks)
+            for grid in self.theaters[self.current].group_grid:
+                grid.group.update(ticks)
+                self._screen.blit(grid.image, grid.rect)
+                for sprite in grid.group:
+                    if sprite.cam_follow:
+                        (x, y, w, h), (ox, oy) = _camera.apply(sprite), sprite.getoffset()
+                        self._screen.blit(sprite.image, (x-ox, y-oy, w, h))
+                    else:
+                        self._screen.blit(sprite.image, sprite.rect)
 
             # 由于 pygame 缺陷，并发鼠标消息处理函数 pygame.mouse.get_pressed() 没有鼠标滚轮消息，
             # 所以用其他方式实现并发滚轮消息的接收处理，这里是收尾工作

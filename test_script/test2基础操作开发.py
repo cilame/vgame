@@ -10,12 +10,14 @@ import sys;print(sys.stdout.encoding)
 
 import vgame
 # vgame.DEBUG = True
+# vgame.Map.DEBUG = True
 
 vgame.Initer()
-main = vgame.Theater(grid=(20,15))
+main = vgame.Theater()
+maps = vgame.Map(grid=(20,15), showsize=main.size).local(main)
 label = vgame.Anime(vgame.Text('wasd控制,j跳跃k冲刺')).local(main)
 
-player = vgame.Player((255,0,0), showsize=main.gridsize).map.local(main, (0, 14))
+player = vgame.Player((255,0,0), showsize=maps.gridsize).map.local(maps, (0, 14))
 
 def direct(self, d):
     d = d.get('p1')
