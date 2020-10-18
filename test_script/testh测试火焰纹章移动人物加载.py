@@ -45,7 +45,13 @@ def load_images(imgpath, Class, map, local, speed):
 map = vgame.Map(showsize=main.showsize, grid=(20,15))
 map.local(main)
 
+
+def ctl(self, c):
+    if self.delay(c and c.get('p1')[0]):
+        print(map)
+
 player = load_images(hywz1, vgame.Player, map, (1,1), 10)
+player.control = ctl
 enemy1 = load_images(hywz2, vgame.Enemy, map, (8,6), 1)
 enemy2 = load_images(hywz3, vgame.Enemy, map, (9,9), 1)
 
