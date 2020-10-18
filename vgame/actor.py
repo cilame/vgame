@@ -555,19 +555,32 @@ class Actor(pygame.sprite.Sprite):
         self.repeaters[delayer] = judge
         return bool(judge) != bool(pjudge)
 
-    def delay(self, judge, time=0, repeat=False, delayer=None, ticks=None):
+    def _keyup(self, judge, delayer, keyup):
+        if keyup:
+            if delayer not in self.repeaters:
+                self.repeaters[delayer] = False
+            pjudge = self.repeaters[delayer]
+            self.repeaters[delayer] = judge
+            if bool(judge) != bool(pjudge) and not judge:
+                keyup()
+
+    def delay(self, judge, time=0, repeat=False, keyup=None, delayer=None, ticks=None):
         '''
-        delayer -> 标识延迟器的唯一标识符，用数字字符串标识均可
-        ticks   -> 请检查如何在 Actor 对象覆盖 control,direction,mouse,idle 函数怎么传递该参数
+        keyup   -> 你可以在 keyup 参数传入一个回调专门用于按键弹起时执行该函数
+                   并且该参数同时作用于 repeat 的两种状态，让开发变得更加简洁。
 
         # 原本使用 inspect.stack 来获取函数调用栈的信息，不过这个函数每次都会获取全部的空间信息导致非常耗时
-        # 现在直接使用 sys._getframe() 来获取，可以节约大量时间，现在你几乎可以无需主动配置 delayer, ticks 这两个参数
+        # 现在直接使用 sys._getframe() 来获取，可以节约大量时间，现在你可以无需主动配置 delayer, ticks 这两个参数
+        # 只要你能理解函数栈，你就能明白这里处理的绝妙性。
+        delayer -> 标识延迟器的唯一标识符，用数字字符串标识均可
+        ticks   -> 游戏循环体内唯一的 ticks 信息。参考 Actor.update 函数位置的传递。
         '''
         if delayer == None:
             frame = sys._getframe().f_back
             delayer = '{}:{}'.format(id(frame), frame.f_lineno) # (被调用函数所在函数空间的函数id and 被调用时delay函数所在的行数)
         if ticks is None:   ticks = sys._getframe().f_back.f_back.f_locals['ticks']
         if repeat or self._repeat(judge, delayer):
+            self._keyup(judge, delayer+':keyup', keyup) # 用于钩住键盘松开瞬间，执行一个回调函数 keyup。
             return judge and self._delay(time, delayer, ticks)
 
     def toggle(self, open_close:bool=None):
