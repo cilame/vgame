@@ -21,15 +21,26 @@ menu = vgame.Menu(grid=(9,9), showsize=(main.size[0]-50,200-50)).local(main, off
 player = vgame.Player(showsize=(40,20)).menu.local(menu, (1,1))
 
 maps = vgame.Map(grid=(9,9), showsize=(main.size[0]-200,200-50)).local(main, offsets=(0,-140))
-enemy = vgame.Enemy(showsize=(30, 10)).map.local(maps, (3, 3), 9)
-enemy2 = vgame.Enemy(showsize=(30, 10)).map.local(maps, (8, 8), 2)
+vgame.Enemy(showsize=(30, 10)).map.local(maps, (3, 3), 2)
+vgame.Enemy(showsize=(30, 10)).map.local(maps, (3, 4), 2)
+vgame.Enemy(showsize=(30, 10)).map.local(maps, (3, 5), 2)
+enemy = vgame.Enemy(showsize=(30, 10)).map.local(maps, (8, 8), 2)
 player = vgame.Player(showsize=(30, 15)).map.local(maps, (4, 5), 1)
 
 
 def ctl(self, c):
     if self.delay(c and c.get('p1')[0]):
         print(maps)
-        print(self.map.trace(enemy2))
+        print(self.map.trace(enemy))
+
+        self.status['trace'] = self.status.get('trace') or []
+        for i in self.status['trace']:
+            i.kill()
+        for i in self.map.tracelimit(4):
+            t = vgame.Anime((255,0,0,100), showsize=maps.gridsize).map.local(maps, i)
+            self.status['trace'].append(t)
+
+        print(maps)
 
 player.direction = lambda self, d:self.mover.move(d.get('p1'))
 player.control = ctl

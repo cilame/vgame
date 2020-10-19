@@ -337,7 +337,7 @@ class Actor(pygame.sprite.Sprite):
 
     def _get_showsize(self): return self._showsize
     def _set_showsize(self, value):
-        self._showsize = list(map(int, value)) if value else value
+        self._showsize = (int(round(value[0])), int(round(value[1]))) if value else value
         imager = getattr(self, 'imager', None)
         if imager:
             imager.orig_image = pygame.transform.scale(imager.orig_image, self._showsize)
@@ -682,6 +682,19 @@ class Actor(pygame.sprite.Sprite):
                     return self._map.trace(self, actor_or_point)
                 else:
                     raise Exception('map is not init, pls use "Actor.map.local(map, axis)" bind map.')
+            def area(s, max, min=1):
+                if self._map:
+                    return self._map.area(self, max, min)
+                else:
+                    raise Exception('map is not init, pls use "Actor.map.local(map, axis)" bind map.')
+            def tracelimit(s, max, min=1):
+                if self._map:
+                    return self._map.tracelimit(self, max, min)
+                else:
+                    raise Exception('map is not init, pls use "Actor.map.local(map, axis)" bind map.')
+            @property
+            def graph(s):
+                return self._map.map2d.graph
         return _map()
 
 
@@ -998,10 +1011,38 @@ class Map(_Grid):
             except Exception as e:
                 print('dijkstra error:{}, the destination address cannot reach or exceed the boundary.'.format(e))
                 return []
+        def _area(self, actor, max, min):
+            x, y = axis = getattr(actor, 'axis', actor) # axis or actor
+            a = set()
+            for i in range(max+1):
+                for j in range(max+1):
+                    if i+j >= min and i+j <= max:
+                        _a = (x+i, y+j)
+                        _b = (x+i, y-j)
+                        _c = (x-i, y+j)
+                        _d = (x-i, y-j)
+                        if _a in self.graph: a.add(_a)
+                        if _b in self.graph: a.add(_b)
+                        if _c in self.graph: a.add(_c)
+                        if _d in self.graph: a.add(_d)
+            return a
+        def _tracelimit(self, actor, max, min):
+            ret = []
+            for axis in self._area(actor, max, 1):
+                trs = self._shortest_path(actor, axis)
+                cos = self._trace_cost(trs)
+                if cos >= min and cos <= max and trs:
+                    ret.append(trs[-1])
+            return ret
+        def _trace_cost(self, trace):
+            cost = 0
+            for i in range(len(trace)-1):
+                cost += self.graph[trace[i]][trace[i+1]]
+            return cost
         def _local(self, actor, axis, obstruct): 
             actor.axis = axis # 让 actor 绑定一个坐标地址
             actor.obstruct = obstruct
-            self._local_set(actor.axis, obstruct)
+            self._local_add(actor.axis, obstruct)
         def _local_set(self, axis, val): self.world['obs2d'][axis[1]][axis[0]]  = val; self._local_calc_graph(axis)
         def _local_del(self, axis, val): self.world['obs2d'][axis[1]][axis[0]] -= val; self._local_calc_graph(axis)
         def _local_add(self, axis, val): self.world['obs2d'][axis[1]][axis[0]] += val; self._local_calc_graph(axis)
@@ -1048,6 +1089,12 @@ class Map(_Grid):
 
     def trace(self, actor_a, actor_b):
         return self.map2d._shortest_path(actor_a, actor_b)
+
+    def tracelimit(self, actor, max, min=1):
+        return self.map2d._tracelimit(actor, max, min)
+
+    def area(self, actor, max, min=1):
+        return self.map2d._area(actor, max, min)
 
     def __str__(self):
         return 'map.gsize:{}\n{}'.format(self.gsize, str(self.map2d)) # 默认绘制阻力图
