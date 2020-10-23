@@ -495,6 +495,16 @@ class Actor(pygame.sprite.Sprite):
         if   self.mouse.__code__.co_argcount == 1: self.mouse(self)
         elif self.mouse.__code__.co_argcount == 2: self.mouse(self, m)
         elif self.mouse.__code__.co_argcount == 3: self.mouse(self, m, ticks)
+        if m and m[1] == 0:
+            if self.clicker.collide(m[2][0]):
+                self._aclick(m)
+    @staticmethod
+    def click(): pass
+    def _aclick(self, m):
+        if   self.click.__code__.co_argcount == 0: self.click()
+        elif self.click.__code__.co_argcount == 1: self.click(self)
+        elif self.click.__code__.co_argcount == 2: self.click(self, m)
+
     @staticmethod
     def direction(direction_info): pass
     def _adirction(self, d, c, ticks):
@@ -1157,21 +1167,6 @@ class Button(Actor):
         self.mouse_stat = self._get_mouse_stat()
         self._hover_dly = self.regist(Delayer(30))
         self._init_hover_color()
-
-    @staticmethod
-    def mouse(self, m):
-        if m:
-            if m[1] == 0:
-                if self.clicker.collide(m[2][0]):
-                    self._click(m)
-
-    @staticmethod
-    def click(): pass
-
-    def _click(self, m):
-        if   self.click.__code__.co_argcount == 0: self.click()
-        elif self.click.__code__.co_argcount == 1: self.click(m)
-        elif self.click.__code__.co_argcount == 2: self.click(self, m)
 
     def _idle(self, ticks):
         pos = self.controller.get_pos()
