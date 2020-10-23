@@ -492,20 +492,20 @@ class Actor(pygame.sprite.Sprite):
     @staticmethod
     def mouse(mouse_info): pass
     def _amouse(self, m, ticks):
-        if   self.mouse.__code__.co_argcount == 1: self.mouse(m)
+        if   self.mouse.__code__.co_argcount == 1: self.mouse(self)
         elif self.mouse.__code__.co_argcount == 2: self.mouse(self, m)
         elif self.mouse.__code__.co_argcount == 3: self.mouse(self, m, ticks)
     @staticmethod
     def direction(direction_info): pass
     def _adirction(self, d, c, ticks):
-        if   self.direction.__code__.co_argcount == 1: self.direction(d)
+        if   self.direction.__code__.co_argcount == 1: self.direction(self)
         elif self.direction.__code__.co_argcount == 2: self.direction(self, d)
         elif self.direction.__code__.co_argcount == 3: self.direction(self, d, c)
         elif self.direction.__code__.co_argcount == 4: self.direction(self, d, c, ticks) # 2d卷轴游戏可能需要别的键作为跳跃功能，所以需要处理更多消息
     @staticmethod
     def control(control_info): pass
     def _acontrol(self, c, d, ticks):
-        if   self.control.__code__.co_argcount == 1: self.control(c)    
+        if   self.control.__code__.co_argcount == 1: self.control(self)    
         elif self.control.__code__.co_argcount == 2: self.control(self, c)
         elif self.control.__code__.co_argcount == 3: self.control(self, c, d)
         elif self.control.__code__.co_argcount == 4: self.control(self, c, d, ticks)
@@ -520,7 +520,7 @@ class Actor(pygame.sprite.Sprite):
     def bound(): pass
     def _abound(self, side):
         if   self.bound.__code__.co_argcount == 0: self.bound()
-        elif self.bound.__code__.co_argcount == 1: self.bound(side)
+        elif self.bound.__code__.co_argcount == 1: self.bound(self)
         elif self.bound.__code__.co_argcount == 2: self.bound(self, side)
 
     def local(self, theater, point=None, offsets=(0,0)):

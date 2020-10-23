@@ -68,7 +68,7 @@ if __name__ == "__main__":
     # 这里的处理可以很方便的使用默认的操作消息，通过修改默认处理消息的函数就能利用这些操作消息
     # 下面就是鼠标、方向键、功能键的操作消息的处理，不修改则默认打印消息内容
     # 1修改 actor2 的方向键的挂钩操作处理 # 用小键盘的方向数字描述上下左右
-    def my_direction(m):
+    def my_direction(self, m):
         d = 5
         for i in m.get('p1') or []:
             if i == 8: actor2.rect[1] = actor2.rect[1] - d
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     # 2修改 actor2 鼠标处理，下面的功能是用鼠标拖动角色对象
     minfo1 = None
     minfo2 = None
-    def my_mouse(m):
+    def my_mouse(self, m):
         global minfo1, minfo2
         if m and m[1] == 2:
             x,y,w,h = actor2.rect
@@ -92,7 +92,7 @@ if __name__ == "__main__":
                 actor2.rect[1] = ey - dy
     # 3修改需要的控制键，默认使用的key是 jk
     actor2.controller.control_keys_p1 = [vgame.K_j, vgame.K_k, vgame.K_l]
-    def my_control(c):
+    def my_control(self, c):
         if c:
             j,k,l = c.get('p1')
             if any(c.get('p1')):
