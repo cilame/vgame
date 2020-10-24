@@ -177,7 +177,7 @@ class Image:
             if self.actor.rectsize:
                 # 暂时还没能解决该处与框架主动设置 rectsize 时候旋转定位相适配。
                 raise Exception('rotate parameter cannot be used if rectsize parameter is set.')
-            rotated = pygame.transform.rotate(image, self.actor.rotate)
+            rotated = pygame.transform.rotate(image, -self.actor.rotate) # 统一使用逆时针旋转做正角
             self.actor.rect = rotated.get_rect(center=self.actor.rect.center)
             return rotated
         else:

@@ -128,6 +128,7 @@ def create_bullet():
                 self.kill()
             self.mover.move_angle(ag-90, 10)
         bullet.idle = idle
+        bullet.rotate = ag
         bullet_player.play()
     def two(): one(-10) or one(10)
     def three(): one(-15,-15) or one(0) or one(15,15)
