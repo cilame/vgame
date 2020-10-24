@@ -519,11 +519,15 @@ class Actor(pygame.sprite.Sprite):
     def _mouseover(self):
         if   self.mouseover.__code__.co_argcount == 0: self.mouseover()
         elif self.mouseover.__code__.co_argcount == 1: self.mouseover(self)
+        else:
+            raise Exception('cos mouseover not in_control update loop. so this func only get "self" parameter.')
     @staticmethod
     def mouseout(self): pass
     def _mouseout(self):
         if   self.mouseout.__code__.co_argcount == 0: self.mouseout()
         elif self.mouseout.__code__.co_argcount == 1: self.mouseout(self)
+        else:
+            raise Exception('cos mouseout not in_control update loop. so this func only get "self" parameter.')
     def _hover_idle(self, ticks):
         pos = self.controller.get_pos()
         if self.mouse_pos != pos:
@@ -592,7 +596,7 @@ class Actor(pygame.sprite.Sprite):
                 self.delayers[delayer] = self.regist(Delayer(time))
             return self.delayers[delayer].update(ticks)
         except:
-            raise 'delay function must work in (Actor.mouse, Actor.control, Actor.direction, Actor.idle).'
+            raise Exception('delay function must work in (Actor.mouse, Actor.control, Actor.direction, Actor.idle).')
 
     def _repeat(self, judge, delayer):
         if delayer not in self.repeaters:
