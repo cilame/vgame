@@ -267,6 +267,7 @@ class Actor(pygame.sprite.Sprite):
                   in_collide = None,  # 需要自动添加进碰撞检测列表的对象
                   rate       = 0,     # 动态图循环的速率
                   offsets    = (0,0), # 图片的偏移位置
+                  rotate     = 0,     # 默认图片旋转角
                   cam_follow = True,  # 镜头跟随，默认开启
                   debug      = False  # 是否开启单个 Actor 对象的 Debug 模式
             ):
@@ -276,6 +277,7 @@ class Actor(pygame.sprite.Sprite):
         # 所以后续要考虑怎么更加合理的添加角色状态动画的处理
         self.img        = img
         self.rate       = rate
+        self.rotate     = rotate
         self.showsize   = showsize # showsize 用于墙体检测，所以比较常用，尽量主动设置
         self.rectsize   = rectsize # 默认情况下直接使用 showsize 作为墙体检测
         self.masksize   = masksize # masksize 用于碰撞检测，使用默认的从图片中读取即可

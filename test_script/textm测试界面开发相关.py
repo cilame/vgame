@@ -41,6 +41,7 @@ def ctl(self, c):
             self.status['trace'].append(t)
 
         print(maps)
+        self.rotate += 20
 
 player.direction = lambda self, d:self.mover.move(d.get('p1'))
 player.control = ctl

@@ -68,6 +68,7 @@ class Image:
         self.src_image  = None
         self.cur_tick   = 0
         self.rects      = None # 后续用于动图
+        self.rotate     = 20
         self.flip       = flip
         if self.flip:
             self.flipx  = 'x' in flip or 'X' in flip
@@ -165,11 +166,30 @@ class Image:
             self.orig_image = self.src_image.subsurface(next(self.rects)) if self.src_image else next(self.rects)
             if self.showsize: 
                 self.orig_image = pygame.transform.scale(self.orig_image, self.showsize)
-            self.image = self.orig_image.copy()
+            self.image = self._rotate(self.orig_image.copy())
             self.mask  = self._mk_mask()
         else:
-            self.image = self.orig_image.copy() # 该处用于处理按钮闪烁相关的操作
+            self.image = self._rotate(self.orig_image.copy()) # 该处用于处理按钮闪烁相关的操作
         self._delay_bind_debug()
+
+    def _rotate(self, image):
+        if self.actor and self.actor.rotate:
+            if self.actor.rectsize:
+                # 暂时还没能解决该处与框架主动设置 rectsize 时候旋转定位相适配。
+                raise Exception('rotate parameter cannot be used if rectsize parameter is set.')
+            rotated = pygame.transform.rotate(image, self.actor.rotate)
+            self.actor.rect = rotated.get_rect(center=self.actor.rect.center)
+            return rotated
+        else:
+            return image.copy()
+
+        def rot_center(image, angle):
+            orig_rect = image.get_rect()
+            rot_image = pygame.transform.rotate(image, angle)
+            rot_rect = orig_rect.copy()
+            rot_rect.center = rot_image.get_rect().center
+            rot_image = rot_image.subsurface(rot_rect).copy()
+            return rot_image
 
     def _mk_mask(self):
         if self.masksize:
