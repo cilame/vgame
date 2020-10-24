@@ -516,14 +516,14 @@ class Actor(pygame.sprite.Sprite):
         return 'over' if self.clicker.collide((dx, dy)) else 'out'
     @staticmethod
     def mouseover(self): pass
-    def _mouseover(self):
+    def _amouseover(self):
         if   self.mouseover.__code__.co_argcount == 0: self.mouseover()
         elif self.mouseover.__code__.co_argcount == 1: self.mouseover(self)
         else:
             raise Exception('cos mouseover not in_control update loop. so this func only get "self" parameter.')
     @staticmethod
     def mouseout(self): pass
-    def _mouseout(self):
+    def _amouseout(self):
         if   self.mouseout.__code__.co_argcount == 0: self.mouseout()
         elif self.mouseout.__code__.co_argcount == 1: self.mouseout(self)
         else:
@@ -536,13 +536,13 @@ class Actor(pygame.sprite.Sprite):
             if mstat != self.mouse_stat:
                 self.mouse_stat = mstat
                 if mstat == 'over':
-                    self._mouseover()
-                    self._hover(toggle=True)
+                    self._amouseover()
+                    self._hoving(toggle=True)
                 elif mstat == 'out':
-                    self._mouseout()
-                    self._hover(toggle=False)
-        self._hover(update=True, ticks=ticks)
-    def _hover(self, toggle=None, update=None, ticks=None):
+                    self._amouseout()
+                    self._hoving(toggle=False)
+        self._hoving(update=True, ticks=ticks)
+    def _hoving(self, toggle=None, update=None, ticks=None):
         pass
     @staticmethod
     def direction(direction_info): pass
@@ -1215,7 +1215,7 @@ class Button(Actor):
             del bg
             return image
         return func
-    def _hover(self, toggle=True, update=False, ticks=None):
+    def _hoving(self, toggle=True, update=False, ticks=None):
         if update:
             if self._hover_dly.update(ticks):
                 self._hover_aph = next(self._hover_lst)
