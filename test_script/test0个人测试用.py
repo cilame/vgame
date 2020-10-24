@@ -8,23 +8,22 @@ import sys;print(sys.stdout.encoding)
 
 
 import vgame
-s = vgame.Initer()
-t = vgame.Theater()
+vgame.Initer()
+main = vgame.Theater()
 
-a = vgame.Player()
-b = vgame.Wall(showsize=(300,100), showpoint=(100,200))
+a = vgame.Player().local(main, (100,100))
+b = vgame.Wall(showsize=(300,100)).local(main, (200,200))
 
 def move_d(self, d):
     # self 代表了被覆盖了 direction 函数的对象本身，即为 Player 实例。
     # 这个实例有一个 mover 方法，可以将获取到的操作信息直接用 mover.move 函数接收
     # 这样能直接移动，如果需要修改各个方向的加速度分量，
-    # 用 mover.speed.x 修改 x 方向每次接收信息移动的像素，y 方向同理。
     # p1:WASD  p2:上下左右键 # 这个 get('p1') 消息实际上是一个数字的列表
     # 这个列表长度最大为2，从小键盘上看到的 8264 方向即作为方向表示，比英文更加直观
     # 这里的消息 d 也是经过处理了的，同时按下超过三个方向键这里的消息就会返回空。
     # 同时按下左右，或者同时按下上下均返回空消息。所以这些接收的消息必然是八方向其中的一个。
     # 放心使用即可。
-    self.mover.move(d.get('p1'))
+    self.mover.move(d.get('p1'), 13)
 
     # 实际上 Player 实例本身就是一个更加强大的 Sprite 类，所以自身也拥有 rect 属性
     # 你也可以通过直接修改 rect 的 x，y 来修改该对象的坐标来实现移动
@@ -44,8 +43,4 @@ def move_d(self, d):
     # 如果感兴趣，你可以简单的注释掉上面的移动代码，使用下面的移动代码试试效果
 
 a.direction = move_d
-a.mover.speed.x = 4 # 默认为 5
-a.mover.speed.y = 8 # 默认为 5
-
-t.regist(a, b) # 将 a, b 注入舞台 t
-s.regist(t) # 将 t 注入游戏 s
+a.bound = lambda self, b:print(b)

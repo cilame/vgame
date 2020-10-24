@@ -14,11 +14,7 @@ import vgame
 
 class Delayer:
     '''
-    主要负责 actor 的一些持续行为，想要实现一些敌反馈机制
-    目前开发的方向主要是想要能够通过 Actor 对象内直接调用到
-    例如：
-        act = Actor()
-        act.idle
+    延迟器，很重要的一个类，用于循环内分离不同操作需要的不同的更新频率
     '''
     def __init__(self, delay=15):
         self.actor = None
@@ -120,6 +116,10 @@ class SmoothMover(_Mover):
         if self.tempy is None: self.tempy = self.actor.rect[1]
         if abs(self.tempx - self.actor.rect.x) > 2: self.tempx = self.actor.rect.x
         if abs(self.tempy - self.actor.rect.y) > 2: self.tempy = self.actor.rect.y
+        if self.actor.in_bounds:
+            w, h = self.actor.theater.size
+            _w = w - self.actor.rect.width
+            _h = h - self.actor.rect.height
         self.tempx += speed.x
         self.actor.rect[0] = self.tempx
         if self.actor.in_entity:
@@ -131,6 +131,12 @@ class SmoothMover(_Mover):
                     if speed.x < 0: self.actor.rect.x = w.rect.right;                        side.append((w, 'l'))
             if side:
                 self.actor._abound(side)
+            if self.actor.in_bounds:
+                side = []
+                if self.actor.rect.x < 0:  self.actor.rect.x = 0;  side.append((None, 'l'))
+                if self.actor.rect.x > _w: self.actor.rect.x = _w; side.append((None, 'r'))
+                if side:
+                    self.actor._abound(side)
         self.tempy += speed.y
         self.actor.rect[1] = self.tempy
         if self.actor.in_entity:
@@ -142,17 +148,12 @@ class SmoothMover(_Mover):
                     if speed.y < 0: self.actor.rect.y = w.rect.bottom;                       side.append((w, 'u'))
             if side:
                 self.actor._abound(side)
-        if self.actor.in_bounds:
-            w, h = self.actor.theater.size
-            w = w - self.actor.rect.width
-            h = h - self.actor.rect.height
-            side = []
-            if self.actor.rect.x < 0: self.actor.rect.x = 0; side.append((None, 'l'))
-            if self.actor.rect.x > w: self.actor.rect.x = w; side.append((None, 'r'))
-            if self.actor.rect.y < 0: self.actor.rect.y = 0; side.append((None, 'u'))
-            if self.actor.rect.y > h: self.actor.rect.y = h; side.append((None, 'd'))
-            if side:
-                self.actor._abound(side)
+            if self.actor.in_bounds:
+                side = []
+                if self.actor.rect.y < 0:  self.actor.rect.y = 0;  side.append((None, 'u'))
+                if self.actor.rect.y > _h: self.actor.rect.y = _h; side.append((None, 'd'))
+                if side:
+                    self.actor._abound(side)
 
     def gridmove(self, actor, curr_xy, new_xy, speed):
         # 这里的xy均为 actor 的左上角像素级坐标，所以使用这个函数时请先转换到正确的数据再运行
