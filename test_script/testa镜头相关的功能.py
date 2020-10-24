@@ -16,7 +16,7 @@ t = vgame.Theater(size=(1024, 640))
 
 a = vgame.Player()
 b = vgame.Wall(showsize=(500,10),showpoint=(20,300))
-a.direction = lambda self,d: self.mover.move(d.get('p1'))
+a.direction = lambda self,d: self.mover.move(d.get('p1'),10)
 a.mouse = lambda self,m: self.clicker.dnd(m) # 设置a对象可以被鼠标左键拖动
 
 
@@ -24,7 +24,8 @@ a.mouse = lambda self,m: self.clicker.dnd(m) # 设置a对象可以被鼠标左�
 # import pygame
 # v = pygame.display.get_surface().get_size()
 
-t.camera.follow = a
+# t.camera.follow = a
+a.follow(t)
 
 t.regist(a, b)
 

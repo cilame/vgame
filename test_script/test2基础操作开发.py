@@ -9,15 +9,19 @@ import sys;print(sys.stdout.encoding)
 
 
 import vgame
-# vgame.DEBUG = True
+vgame.DEBUG = True
 # vgame.Map.DEBUG = True
 
 vgame.Initer()
-main = vgame.Theater()
+main = vgame.Theater(size=(960, 720))
 maps = vgame.Map(grid=(20,15), showsize=main.size).local(main)
 label = vgame.Anime(vgame.Text('wasd控制,j跳跃k冲刺')).local(main)
 
 player = vgame.Player((255,0,0), showsize=maps.gridsize).map.local(maps, (0, 14))
+
+# 窗口大小由 Initer 配置
+# 游戏内窗大小由 Theater 配置（如不配置默认随窗口大小）
+player.follow(main, 20)
 
 def direct(self, d):
     d = d.get('p1')

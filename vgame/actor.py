@@ -588,6 +588,9 @@ class Actor(pygame.sprite.Sprite):
         self._bindbody()
         return self
 
+    def follow(self, theater, speed=10):
+        theater.follow(self, speed)
+
     def _delay(self, time, delayer, ticks):
         try:
             # 这里的 delay 函数事实上是运行在 Actor.update 函数里面的"函数的内部"，

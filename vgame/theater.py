@@ -4,6 +4,7 @@ from pygame.locals import *
 from .actor import Actor
 from .actor import Player, Wall, Enemy, Bullet, NPC, Anime, Map
 from .actor import Menu, Background, Button
+from .actor import Delayer
 
 import vgame
 
@@ -20,6 +21,7 @@ class Camera:
         self.camera     = pygame.Rect(0, 0, self.w, self.h)
         self.theater    = None
         self.follow     = None # 单角色跟随
+        self.fspeed     = 1
         self.padding    = pygame.Vector2(200, 100)
         self.debug_area = None
 
@@ -29,20 +31,25 @@ class Camera:
         self.paddings   = None # 尚在开发中的接口，后续将解决多角色跟随问题
 
         self.margin     = pygame.Vector2(*((100, 100) if vgame.DEBUG else (0, 0))) # 调试时候使用，方便查看边界
+        self.delayer    = Delayer()
 
     def apply(self, entity):
         return entity.rect.move(self.camera.topleft)
 
-    def update(self):
+    def update(self, ticks):
         if self.follow:
             _x, _y = self.follow.rect.center
             x = -_x + int(self.w/2)
             y = -_y + int(self.h/2)
             x = min(self.margin.x, x) # top
             y = min(self.margin.y, y) # left
-            x = max(x, -(self.theater.size[0] - self.w + self.margin.x)) # right
-            y = max(y, -(self.theater.size[1] - self.h + self.margin.y)) # bottom
-            self.camera = pygame.Rect(x, y, self.w, self.h)
+            tx = max(x, -(self.theater.size[0] - self.w + self.margin.x)) # right
+            ty = max(y, -(self.theater.size[1] - self.h + self.margin.y)) # bottom
+            ox, oy = self.camera[:2]
+            if self.delayer.update(ticks):
+                _tx = ox + (tx - ox)/self.fspeed
+                _ty = oy + (ty - oy)/self.fspeed
+                self.camera = pygame.Rect(_tx, _ty, self.w, self.h)
 
     def debug_padding(self):
         if vgame.DEBUG and Camera.DEBUG:
@@ -151,6 +158,10 @@ class Theater:
     
     def change_theater(self, name_or_class):
         self.artist.change_theater(name_or_class)
+
+    def follow(self, actor, speed):
+        self.camera.follow = actor
+        self.camera.fspeed = speed
 
     @property
     def Actor(self):  return Actor.SHOW_BODY[self.name].copy()

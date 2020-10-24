@@ -60,7 +60,7 @@ class Artist:
             # 游戏内容
             self.theaters[self.current].group.update(ticks)
             _camera = self.theaters[self.current].camera
-            _camera.update()
+            _camera.update(ticks)
             for sprite in self.theaters[self.current].group:
                 if sprite.cam_follow:
                     (x, y, w, h), (ox, oy) = _camera.apply(sprite), sprite.getoffset()
