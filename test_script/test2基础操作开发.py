@@ -21,6 +21,7 @@ player = vgame.Player((255,0,0), showsize=maps.gridsize).map.local(maps, (0, 14)
 
 # 窗口大小由 Initer 配置
 # 游戏内窗大小由 Theater 配置（如不配置默认随窗口大小）
+# 这里让 player 作为main窗口的跟随移动进行处理，这样可以让某些动作类的游戏窗口的移动更加平滑。
 player.follow(main, 20)
 
 def direct(self, d):
