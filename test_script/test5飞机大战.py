@@ -41,6 +41,8 @@ def enemycreater(self):
                     self.kill()
                     score += 1
                     label.text = score
+            if self.outbounds():
+                self.kill()
         e.idle = idle
         main.regist(e)
 
@@ -54,7 +56,7 @@ def ctl(self, c):
     if self.delay(c and c.get('p1'),repeat=True,time=0):
         def idle(self):
             self.mover.move([8], 7)
-            if self.rect.x < 0:
+            if self.outbounds():
                 self.kill()
         b = vgame.Bullet(showsize=(10, 10), showpoint=self.rect.center, in_bounds=False)
         b.idle = idle
