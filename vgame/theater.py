@@ -22,6 +22,7 @@ class Camera:
         self.theater    = None
         self.follow     = None # 单角色跟随
         self.fspeed     = 1
+        self.offsets    = (0, 0)
         self.padding    = pygame.Vector2(200, 100)
         self.debug_area = None
 
@@ -34,17 +35,20 @@ class Camera:
         self.delayer    = Delayer()
 
     def apply(self, entity):
-        return entity.rect.move(self.camera.topleft)
+        x, y = self.camera.topleft
+        x += self.offsets[0]
+        y += self.offsets[1]
+        return entity.rect.move((x, y))
 
     def update(self, ticks):
         if self.follow:
             _x, _y = self.follow.rect.center
             x = -_x + int(self.w/2)
             y = -_y + int(self.h/2)
-            x = min(self.margin.x, x) # top
-            y = min(self.margin.y, y) # left
-            tx = max(x, -(self.theater.size[0] - self.w + self.margin.x)) # right
-            ty = max(y, -(self.theater.size[1] - self.h + self.margin.y)) # bottom
+            x = min(self.margin.x + self.offsets[0], x) # top
+            y = min(self.margin.y + self.offsets[1], y) # left
+            tx = max(x, -(self.theater.size[0] - self.w + self.margin.x + self.offsets[0])) # right
+            ty = max(y, -(self.theater.size[1] - self.h + self.margin.y + self.offsets[1])) # bottom
             ox, oy = self.camera[:2]
             if self.delayer.update(ticks):
                 _tx = ox + (tx - ox)/self.fspeed
@@ -159,9 +163,10 @@ class Theater:
     def change_theater(self, name_or_class):
         self.artist.change_theater(name_or_class)
 
-    def follow(self, actor, speed):
-        self.camera.follow = actor
-        self.camera.fspeed = speed
+    def follow(self, actor, speed, offsets):
+        self.camera.follow  = actor
+        self.camera.fspeed  = speed
+        self.camera.offsets = offsets
 
     @property
     def Actor(self):  return Actor.SHOW_BODY[self.name].copy()

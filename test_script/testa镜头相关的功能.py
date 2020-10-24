@@ -25,7 +25,7 @@ a.mouse = lambda self,m: self.clicker.dnd(m) # 设置a对象可以被鼠标左�
 # v = pygame.display.get_surface().get_size()
 
 # t.camera.follow = a
-a.follow(t)
+a.follow(t, offsets=(0,100))
 
 t.regist(a, b)
 

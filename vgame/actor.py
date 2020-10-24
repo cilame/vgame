@@ -588,8 +588,8 @@ class Actor(pygame.sprite.Sprite):
         self._bindbody()
         return self
 
-    def follow(self, theater, speed=10):
-        theater.follow(self, speed)
+    def follow(self, theater, speed=10, offsets=(0,0)):
+        theater.follow(self, speed, offsets)
 
     def _delay(self, time, delayer, ticks):
         try:
