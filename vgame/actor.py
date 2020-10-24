@@ -324,6 +324,10 @@ class Actor(pygame.sprite.Sprite):
         self.bug_check  = None
         self.has_bind   = False
 
+        # hover 功能，让 Actor 带有鼠标移入移出单位时候的可配置函数的处理
+        self.mouse_pos  = self.controller.get_pos()
+        self.mouse_stat = self._get_mouse_stat()
+
     def _delay_bind(self):
         if not self.has_bind:
             if self.theater:
@@ -504,7 +508,37 @@ class Actor(pygame.sprite.Sprite):
         if   self.click.__code__.co_argcount == 0: self.click()
         elif self.click.__code__.co_argcount == 1: self.click(self)
         elif self.click.__code__.co_argcount == 2: self.click(self, m)
-
+    def _get_mouse_stat(self):
+        dx, dy = self.mouse_pos
+        dx = int(dx + self.rect[2]/2 - self.showsize[0]/2)
+        dy = int(dy + self.rect[3]/2 - self.showsize[1]/2)
+        return 'over' if self.clicker.collide((dx, dy)) else 'out'
+    @staticmethod
+    def mouseover(self): pass
+    def _mouseover(self):
+        if   self.mouseover.__code__.co_argcount == 0: self.mouseover()
+        elif self.mouseover.__code__.co_argcount == 1: self.mouseover(self)
+    @staticmethod
+    def mouseout(self): pass
+    def _mouseout(self):
+        if   self.mouseout.__code__.co_argcount == 0: self.mouseout()
+        elif self.mouseout.__code__.co_argcount == 1: self.mouseout(self)
+    def _hover_idle(self, ticks):
+        pos = self.controller.get_pos()
+        if self.mouse_pos != pos:
+            self.mouse_pos = pos
+            mstat = self._get_mouse_stat()
+            if mstat != self.mouse_stat:
+                self.mouse_stat = mstat
+                if mstat == 'over':
+                    self._mouseover()
+                    self._hover(toggle=True)
+                elif mstat == 'out':
+                    self._mouseout()
+                    self._hover(toggle=False)
+        self._hover(update=True, ticks=ticks)
+    def _hover(self, toggle=None, update=None, ticks=None):
+        pass
     @staticmethod
     def direction(direction_info): pass
     def _adirction(self, d, c, ticks):
@@ -522,6 +556,7 @@ class Actor(pygame.sprite.Sprite):
     @staticmethod
     def idle(): pass
     def _aidle(self, ticks):
+        self._hover_idle(ticks)
         if   self.idle.__code__.co_argcount == 0: self.idle()
         elif self.idle.__code__.co_argcount == 1: self.idle(self)
         elif self.idle.__code__.co_argcount == 2: self.idle(self, ticks)
@@ -832,7 +867,7 @@ class Background(Actor):
     def __init__(self, *a, **kw):
         kw.setdefault('in_entity', False)
         kw.setdefault('in_entitys', [])
-        kw.setdefault('cam_follow', True) # 背景需要镜头跟随的处理，之所以都使用
+        kw.setdefault('cam_follow', True) # 背景需要镜头跟随的处理
         super().__init__(*a, **kw)
 
 ENTITYS = [Player, NPC, Enemy, Wall]
@@ -1147,84 +1182,42 @@ class Button(Actor):
     RIGID_BODY = {}
     SHOW_BODY = {}
 
-    # Hover
-    class HoverImage(Actor):
-        RIGID_BODY = {}
-        SHOW_BODY = {}
-        def __init__(self, *a, **kw):
-            kw.setdefault('in_entity', False)
-            kw.setdefault('in_entitys', [])
-            kw.setdefault('cam_follow', False) # 背景需要镜头跟随的处理，之所以都使用
-            super().__init__(*a, **kw)
-
     def __init__(self, *a, **kw):
         kw.setdefault('in_entity', False)
         kw.setdefault('in_entitys', [])
-        kw.setdefault('cam_follow', False) # 菜单一般都不需要镜头跟随的处理，之所以都使用
+        kw.setdefault('cam_follow', False) # 菜单一般都不需要镜头跟随的处理
         kw.setdefault('in_control', True)
         super().__init__(*a, **kw)
-        self.mouse_pos = self.controller.get_pos()
-        self.mouse_stat = self._get_mouse_stat()
-        self._hover_dly = self.regist(Delayer(30))
         self._init_hover_color()
 
-    def _idle(self, ticks):
-        pos = self.controller.get_pos()
-        if self.mouse_pos != pos:
-            self.mouse_pos = pos
-            mstat = self._get_mouse_stat()
-            if mstat != self.mouse_stat:
-                self.mouse_stat = mstat
-                if mstat == 'over':
-                    self._mouseover()
-                    self.hover(True)
-                elif mstat == 'out':
-                    self._mouseout()
-                    self.hover(False)
-        if self._hover_dly.update(ticks):
-            self._hover_aph = next(self._hover_lst)
-
-    def _aidle(self, ticks):
-        self._idle(ticks)
-        super()._aidle(ticks)
-
-    def _get_mouse_stat(self):
-        dx, dy = self.mouse_pos
-        dx = int(dx + self.rect[2]/2 - self.showsize[0]/2)
-        dy = int(dy + self.rect[3]/2 - self.showsize[1]/2)
-        return 'over' if self.clicker.collide((dx, dy)) else 'out'
-
-    @staticmethod
-    def mouseover(self): pass
-    def _mouseover(self):
-        if   self.mouseover.__code__.co_argcount == 0: self.mouseover()
-        elif self.mouseover.__code__.co_argcount == 1: self.mouseover(self)
-    @staticmethod
-    def mouseout(self): pass
-    def _mouseout(self):
-        if   self.mouseout.__code__.co_argcount == 0: self.mouseout()
-        elif self.mouseout.__code__.co_argcount == 1: self.mouseout(self)
-
     def _init_hover_color(self):
+        class HoverImage(Actor):
+            RIGID_BODY = {}
+            SHOW_BODY = {}
+            def __init__(self, *a, **kw):
+                kw.setdefault('in_entity', False)
+                kw.setdefault('in_entitys', [])
+                kw.setdefault('cam_follow', False) # 背景需要镜头跟随的处理
+                super().__init__(*a, **kw)
         colors = list(range(20, 200, 20))
         self._hover_lst = cycle(colors + colors[::-1])
         self._hover_col = (255, 255, 255)
         self._hover_aph = next(self._hover_lst)
+        self._hover_dly = self.regist(Delayer(30))
         def func(image):
-            bg = Button.HoverImage((*self._hover_col,self._hover_aph), showsize=image.get_rect()[2:])
+            bg = HoverImage((*self._hover_col,self._hover_aph), showsize=image.get_rect()[2:])
             image.blit(bg.image, bg.rect)
             del bg
             return image
         return func
-
-    def hover(self, toggle=True):
-        if toggle:
-            self._tuning[0] = self._init_hover_color()
+    def _hover(self, toggle=True, update=False, ticks=None):
+        if update:
+            if self._hover_dly.update(ticks):
+                self._hover_aph = next(self._hover_lst)
         else:
-            del self._tuning[0]
-
-
-
-
-
+            if toggle:
+                self._tuning[0] = self._init_hover_color()
+            else:
+                if self._tuning:
+                    del self._tuning[0]
 
