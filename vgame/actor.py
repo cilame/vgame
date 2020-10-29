@@ -212,9 +212,8 @@ class Clicker:
     后续看情况增强额外功能。
     '''
     def __init__(self,):
-        self.m1    = None # 用于处理拖动图标功能
-        self.m2    = None # 用于处理拖动图标功能
         self.actor = None
+        self.hasclick = False
 
     def dnd(self, m, lr='left'): # 实现鼠标拖拽对象的功能
         # m 为鼠标的消息信息
@@ -222,20 +221,25 @@ class Clicker:
         # m[0] 表示按键，数字0代表左键，数字2代表右键
         # m[1] 表示模式，数字0代表单击，数字2代表拖动
         # m[2] 表示两个点的坐标，m[2][0] 为按下鼠标时的坐标， m[2][1] 为松开鼠标时的坐标
-        if m and m[1] == 2:
-            if (lr == 'left'  and m[0] == 0) or \
-               (lr == 'right' and m[0] == 2):
-                x,y,w,h = self.actor.rect
-                sx,sy = m[2][0]
-                ex,ey = m[2][1]
-                self.m1,self.m2 = ((sx,sy),(x, y, w, h)) if self.m1 != (sx,sy) else (self.m1,self.m2)
-                if ( (sx >= self.m2[0] and sx <= self.m2[0] + self.m2[2]) and 
-                     (sy >= self.m2[1] and sy <= self.m2[1] + self.m2[3]) ):
-                    dx,dy = self.m1[0] - self.m2[0], self.m1[1] - self.m2[1]
-                    self.actor.rect[0] = ex - dx
-                    self.actor.rect[1] = ey - dy
+        if m:
+            if m and m[1] == 2:
+                pos1 = self._loc_in_theater(m[2][0], self.actor.theater)
+                if self.collidepoint(pos1):
+                    self.hasclick = True
+            if self.hasclick:
+                pos2 = self._loc_in_theater(m[2][1], self.actor.theater)
+                self.actor.local(self.actor.theater, pos2)
+        else:
+            self.hasclick = False
 
-    def collide(self, pos):
+    def _loc_in_theater(self, pos, theater):
+        rx, ry = pos
+        ox, oy = theater.camera.camera[:2]
+        return rx-ox, ry-oy
+
+    def collidepoint(self, pos, theater=None):
+        if theater:
+            pos = self._loc_in_theater(pos, theater)
         return self.actor.rect.collidepoint(pos)
 
 class Actor(pygame.sprite.Sprite):
@@ -503,19 +507,32 @@ class Actor(pygame.sprite.Sprite):
         elif self.mouse.__code__.co_argcount == 2: self.mouse(self, m)
         elif self.mouse.__code__.co_argcount == 3: self.mouse(self, m, ticks)
         if m and m[1] == 0:
-            if self.clicker.collide(m[2][0]):
-                self._aclick(m)
+            if self.clicker.collidepoint(m[2][0], self.theater):
+                self._aclick(m, self.theater)
+            if self.clicker.collidepoint(m[2][0]):
+                self._aabsclick(m)
     @staticmethod
     def click(): pass
-    def _aclick(self, m):
+    def _aclick(self, m, theater):
+        # 真实坐标，用在游戏场景里面
+        pos1 = self.clicker._loc_in_theater(m[2][0], theater)
+        pos2 = self.clicker._loc_in_theater(m[2][1], theater)
+        m = (m[0], m[1], (pos1, pos2))
         if   self.click.__code__.co_argcount == 0: self.click()
         elif self.click.__code__.co_argcount == 1: self.click(self)
         elif self.click.__code__.co_argcount == 2: self.click(self, m)
-    def _get_mouse_stat(self):
+    @staticmethod
+    def absclick(): pass
+    def _aabsclick(self, m):
+        # 绝对坐标，用在一些窗口菜单上面
+        if   self.absclick.__code__.co_argcount == 0: self.absclick()
+        elif self.absclick.__code__.co_argcount == 1: self.absclick(self)
+        elif self.absclick.__code__.co_argcount == 2: self.absclick(self, m)
+    def _get_mouse_stat(self, theater=None):
         dx, dy = self.mouse_pos
         dx = int(dx + self.rect[2]/2 - self.showsize[0]/2)
         dy = int(dy + self.rect[3]/2 - self.showsize[1]/2)
-        return 'over' if self.clicker.collide((dx, dy)) else 'out'
+        return 'over' if self.clicker.collidepoint((dx, dy), theater) else 'out'
     @staticmethod
     def mouseover(self): pass
     def _amouseover(self):
@@ -534,7 +551,7 @@ class Actor(pygame.sprite.Sprite):
         pos = self.controller.get_pos()
         if self.mouse_pos != pos:
             self.mouse_pos = pos
-            mstat = self._get_mouse_stat()
+            mstat = self._get_mouse_stat(self.theater)
             if mstat != self.mouse_stat:
                 self.mouse_stat = mstat
                 if mstat == 'over':
@@ -592,6 +609,7 @@ class Actor(pygame.sprite.Sprite):
 
     def follow(self, theater, speed=10, offsets=(0,0)):
         theater.follow(self, speed, offsets)
+        return self
 
     def _delay(self, time, delayer, ticks):
         try:

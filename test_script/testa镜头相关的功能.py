@@ -11,23 +11,15 @@ import vgame
 
 vgame.DEBUG = True
 
-s = vgame.Initer()
-t = vgame.Theater(size=(1024, 640))
+vgame.Initer()
+main = vgame.Theater(size=(1024, 640))
 
-a = vgame.Player()
-b = vgame.Wall(showsize=(500,10),showpoint=(20,300))
-a.direction = lambda self,d: self.mover.move(d.get('p1'),10)
-a.mouse = lambda self,m: self.clicker.dnd(m) # 设置a对象可以被鼠标左键拖动
+player = vgame.Player().local(main, (80,600)).follow(main, .05) # 在没有超过边界时，窗口会平滑居中移动
+wall = vgame.Wall(showsize=(500,10)).local(main, (400,300))
+player.direction = lambda self,d: self.mover.move(d.get('p1'),10)
+player.mouse = lambda self,m: self.clicker.dnd(m) # 设置a对象可以被鼠标左键拖动
 
-
-# b.idle = lambda self:self.mover.move([8])
-# import pygame
-# v = pygame.display.get_surface().get_size()
-
-# t.camera.follow = a
-a.follow(t, offsets=(0,100))
-
-t.regist(a, b)
-
-s.regist(t)
-s.run()
+player.bound = lambda self, b: print(self, b)
+player.click = lambda self: print(123)
+player.mouseover = lambda self: print('over')
+player.mouseout = lambda self: print('out')

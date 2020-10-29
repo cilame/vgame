@@ -19,6 +19,7 @@ class Camera:
         self.w          = width
         self.h          = height
         self.camera     = pygame.Rect(0, 0, self.w, self.h)
+        self.camera_xy  = (0., 0.)
         self.theater    = None
         self.follow     = None # 单角色跟随
         self.fspeed     = 1
@@ -26,13 +27,20 @@ class Camera:
         self.padding    = pygame.Vector2(200, 100)
         self.debug_area = None
 
-        # 这里的处理稍微有点麻烦，因为要考虑到镜头的缩放
-        # 有点类似于 死神vs火影 游戏中那种镜头拉远，两个角色始终在游戏屏幕中间的处理
+        # 多角色镜头缩放的处理目前几乎无解，这里的接口后续将很长时间内没有进展，毕竟通用游戏框架对于此处的需求并不强烈。
         self.follows    = None # 尚在开发中的接口，后续将解决多角色跟随问题
         self.paddings   = None # 尚在开发中的接口，后续将解决多角色跟随问题
 
-        self.margin     = pygame.Vector2(*((100, 100) if vgame.DEBUG else (0, 0))) # 调试时候使用，方便查看边界
+        # self.margin     = pygame.Vector2(*((100, 100) if vgame.DEBUG else (0, 0))) # 调试时候使用，方便查看边界
+        self.margin     = pygame.Vector2((0,0)) # 调试时候使用，方便查看边界
         self.delayer    = Delayer()
+
+    def _get_fspeed(self): return self._fspeed
+    def _set_fspeed(self, value): 
+        if value <= 0 or value > 1:
+            raise ValueError('fspeed limit in "0 < fspeed <= 1".')
+        self._fspeed = value
+    fspeed = property(_get_fspeed, _set_fspeed)
 
     def apply(self, entity):
         x, y = self.camera.topleft
@@ -45,15 +53,16 @@ class Camera:
             _x, _y = self.follow.rect.center
             x = -_x + int(self.w/2)
             y = -_y + int(self.h/2)
-            x = min(self.margin.x + self.offsets[0], x) # top
-            y = min(self.margin.y + self.offsets[1], y) # left
-            tx = max(x, -(self.theater.size[0] - self.w + self.margin.x + self.offsets[0])) # right
-            ty = max(y, -(self.theater.size[1] - self.h + self.margin.y + self.offsets[1])) # bottom
-            ox, oy = self.camera[:2]
+            x = min(self.margin.x, x) # top
+            y = min(self.margin.y, y) # left
+            tx = max(x, -(self.theater.size[0] - self.w + self.margin.x)) # right
+            ty = max(y, -(self.theater.size[1] - self.h + self.margin.y)) # bottom
+            cx, cy = self.camera_xy
             if self.delayer.update(ticks):
-                _tx = ox + (tx - ox)/self.fspeed
-                _ty = oy + (ty - oy)/self.fspeed
+                _tx = cx + (tx - cx) * self.fspeed
+                _ty = cy + (ty - cy) * self.fspeed
                 self.camera = pygame.Rect(_tx, _ty, self.w, self.h)
+                self.camera_xy = _tx, _ty
 
     def debug_padding(self):
         if vgame.DEBUG and Camera.DEBUG:
