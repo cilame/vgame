@@ -38,7 +38,7 @@ class Camera:
     def _get_fspeed(self): return self._fspeed
     def _set_fspeed(self, value): 
         if value <= 0 or value > 1:
-            raise ValueError('fspeed limit in "0 < fspeed <= 1".')
+            raise ValueError('fspeed:{} limit in "0 < fspeed <= 1".'.format(value))
         self._fspeed = value
     fspeed = property(_get_fspeed, _set_fspeed)
 

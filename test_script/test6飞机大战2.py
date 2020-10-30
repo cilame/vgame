@@ -15,9 +15,9 @@ import random
 path = '../test_data/fjdz/image'
 
 vgame.Initer(size=(240, 430))
-main = vgame.Theater(path+'/background.png')
-pause = vgame.Theater(path+'/background.png')
-death = vgame.Theater(path+'/background.png')
+main = vgame.Theater(path+'/background.png',size=(340, 530))
+pause = vgame.Theater(path+'/background.png',size=(340, 530))
+death = vgame.Theater(path+'/background.png',size=(340, 530))
 unpause = vgame.Button(vgame.Text('暂停')).local(pause, pause.background.rect.center)
 restart = vgame.Button(vgame.Text('重开')).local(death, death.background.rect.center)
 
@@ -44,7 +44,7 @@ player_imgs = [
     path+'/hero1.png',
     path+'/hero2.png',
 ]
-player = vgame.Player(player_imgs, rate=200, showsize=(50, 62)).local(main, (120,400))
+player = vgame.Player(player_imgs, rate=200, showsize=(50, 62)).local(main, (120,400)).follow(main, .2)
 player.direction = lambda self, d: self.mover.move(d.get('p1'), 6)
 def control(self, c):
     if self.delay(c and c.get('p1')[0], time=100, repeat=True): create_bullet()

@@ -12,13 +12,14 @@ vgame.DEBUG = True
 
 path = '../test_data/fjdz/image'
 
-vgame.Initer()
-main = vgame.Theater(path+'/background.png')
+vgame.Initer(size=(240, 480))
+main = vgame.Theater(path+'/background.png',(640, 480))
+print(main.size)
 player_imgs = [
     path+'/hero1.png',
     path+'/hero2.png',
 ]
-player = vgame.Player(player_imgs, rate=200, showsize=(50, 62)).local(main, (120,400))
+player = vgame.Player(player_imgs, rate=200, showsize=(50, 62)).local(main, (120,400)).follow(main, .05)
 player.direction = lambda self, d: self.mover.move(d.get('p1'), 6)
 def control(self, c):
     if self.delay(c and c.get('p1')[0], time=50, repeat=True): create_bullet()
