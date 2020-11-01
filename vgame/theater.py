@@ -24,7 +24,7 @@ class Camera:
         self.follow     = None # 单角色跟随
         self.fspeed     = 1
         self.offsets    = (0, 0)
-        self.padding    = pygame.Vector2(200, 100)
+        self.padding    = pygame.Vector2(0, 0)
         self.debug_area = None
 
         # 多角色镜头缩放的处理目前几乎无解，这里的接口后续将很长时间内没有进展，毕竟通用游戏框架对于此处的需求并不强烈。
@@ -61,6 +61,10 @@ class Camera:
             if self.delayer.update(ticks):
                 _tx = cx + (tx - cx) * self.fspeed
                 _ty = cy + (ty - cy) * self.fspeed
+                ox, oy = self.camera[:2]
+                jx, jy = abs(self.w/2-(_x+ox)), abs(self.h/2-(_y+oy))
+                if jx < self.padding.x/2: _tx = ox
+                if jy < self.padding.y/2: _ty = oy
                 self.camera = pygame.Rect(_tx, _ty, self.w, self.h)
                 self.camera_xy = _tx, _ty
 
@@ -72,7 +76,7 @@ class Camera:
                 self.debug_area = Actor((0,0,0,30), showsize=showsize, showpoint=showpoint)
             self.debug_area.imager._delay_bind_debug()
             self.theater.screen.blit(self.debug_area.image, self.debug_area.rect)
-            self.theater.screen.blit(self.debug_area.image, self.apply(self.debug_area))
+            # self.theater.screen.blit(self.debug_area.image, self.apply(self.debug_area))
 
 
 class Theater:
@@ -172,10 +176,11 @@ class Theater:
     def change_theater(self, name_or_class):
         self.artist.change_theater(name_or_class)
 
-    def follow(self, actor, speed, offsets):
+    def follow(self, actor, speed, offsets, padding):
         self.camera.follow  = actor
         self.camera.fspeed  = speed
         self.camera.offsets = offsets
+        self.camera.padding[:2] = padding
 
     @property
     def Actor(self):  return Actor.SHOW_BODY[self.name].copy()

@@ -10,6 +10,7 @@ import sys;print(sys.stdout.encoding)
 import vgame
 
 vgame.DEBUG = True
+vgame.Camera.DEBUG = True
 
 vgame.Initer()
 main = vgame.Theater(size=(1024, 640))
