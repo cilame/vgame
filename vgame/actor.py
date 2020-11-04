@@ -89,6 +89,7 @@ class SmoothMover(_Mover):
 
     def auto_change_direct(self, d):
         curr = self.actor.status['current']
+        targ = None
         if 4 in d or 6 in d:
             if 4 in d: targ = self.actor.status['direction'].get('left')
             if 6 in d: targ = self.actor.status['direction'].get('right')
