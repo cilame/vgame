@@ -1,5 +1,13 @@
+# 增加环境变量，仅测试使用
+import os
+import sys
+p = os.path.split(os.getcwd())[0]
+sys.path = [p] + sys.path
+import sys;print(sys.stdout.encoding)
+
+
 import vgame
-# vgame.DEBUG = True
+vgame.DEBUG = True
 # vgame.Camera.DEBUG = True
 
 pathA = '../test_data/人物状态测试数据'
