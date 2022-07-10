@@ -619,7 +619,7 @@ class Actor(pygame.sprite.Sprite):
         try:
             # 这里的 delay 函数事实上是运行在 Actor.update 函数里面的"函数的内部"，
             # 调用的深度固定，所以用指定调用栈可以准确的用如下方式找到 ticks ，这样就避免了让开发者直接接触到 ticks 的处理
-            if delayer not in self.delayers:
+            if delayer not in self.delayers or self.delayers[delayer].delay != time:
                 self.delayers[delayer] = self.regist(Delayer(time))
             return self.delayers[delayer].update(ticks)
         except:
